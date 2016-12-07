@@ -20,11 +20,7 @@
 package org.apache.samza.operators;
 
 import org.apache.samza.operators.data.MessageEnvelope;
-import org.apache.samza.operators.functions.FilterFunction;
-import org.apache.samza.operators.functions.FlatMapFunction;
-import org.apache.samza.operators.functions.JoinFunction;
-import org.apache.samza.operators.functions.MapFunction;
-import org.apache.samza.operators.functions.SinkFunction;
+import org.apache.samza.operators.functions.*;
 import org.apache.samza.operators.spec.OperatorSpec;
 import org.apache.samza.operators.spec.OperatorSpecs;
 import org.apache.samza.operators.windows.Window;
@@ -32,11 +28,7 @@ import org.apache.samza.operators.windows.WindowFn;
 import org.apache.samza.operators.windows.WindowOutput;
 import org.apache.samza.operators.windows.WindowState;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.*;
 import java.util.function.BiFunction;
 
 
@@ -107,8 +99,8 @@ public class MessageStreamImpl<M extends MessageEnvelope> implements MessageStre
     // TODO: need to add default store functions for the two partial join functions
 
     ((MessageStreamImpl<JM>) otherStream).registeredOperatorSpecs.add(
-        OperatorSpecs.createPartialJoinOperator(parJoin2, outputStream));
-    this.registeredOperatorSpecs.add(OperatorSpecs.createPartialJoinOperator(parJoin1, outputStream));
+        OperatorSpecs.<JM, K, M, RM>createPartialJoinOperator(parJoin2, outputStream));
+    this.registeredOperatorSpecs.add(OperatorSpecs.<M, K, JM, RM>createPartialJoinOperator(parJoin1, outputStream));
     return outputStream;
   }
 
@@ -130,5 +122,11 @@ public class MessageStreamImpl<M extends MessageEnvelope> implements MessageStre
    */
   public Collection<OperatorSpec> getRegisteredOperatorSpecs() {
     return Collections.unmodifiableSet(this.registeredOperatorSpecs);
+  }
+
+  static void switchSource(MessageStreamImpl source,
+      MessageStreamImpl dest, OperatorSpec opSpec) {
+    source.registeredOperatorSpecs.remove(opSpec);
+    dest.registeredOperatorSpecs.add(opSpec);
   }
 }
