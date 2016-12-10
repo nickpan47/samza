@@ -23,9 +23,11 @@ import org.apache.samza.system.SystemStream;
 
 import java.util.Map;
 
-public interface MessageStreamBuilder {
+
+public interface MessageStreamsBuilder {
 
   <M extends MessageEnvelope> MessageStream<M> addInputStream(SystemStream input);
 
   Map<SystemStream, MessageStream> getAllInputStreams();
+
 }

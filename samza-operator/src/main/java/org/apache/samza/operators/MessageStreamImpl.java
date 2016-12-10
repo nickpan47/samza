@@ -27,6 +27,8 @@ import org.apache.samza.operators.windows.Window;
 import org.apache.samza.operators.windows.WindowFn;
 import org.apache.samza.operators.windows.WindowOutput;
 import org.apache.samza.operators.windows.WindowState;
+import org.apache.samza.system.OutgoingMessageEnvelope;
+import org.apache.samza.system.SystemStream;
 
 import java.util.*;
 import java.util.function.BiFunction;
@@ -109,9 +111,14 @@ public class MessageStreamImpl<M extends MessageEnvelope> implements MessageStre
     MessageStreamImpl<M> outputStream = new MessageStreamImpl<>();
 
     otherStreams.add(this);
-    otherStreams.forEach(other ->
-        ((MessageStreamImpl<M>) other).registeredOperatorSpecs.add(OperatorSpecs.createMergeOperator(outputStream)));
+    otherStreams.forEach(other -> ((MessageStreamImpl<M>) other).registeredOperatorSpecs
+        .add(OperatorSpecs.createMergeOperator(outputStream)));
     return outputStream;
+  }
+
+  @Override public MessageStream<M> through(SystemStream systemStream) {
+    this.sink((m, mc, tc) -> mc.send(new OutgoingMessageEnvelope(systemStream, m.getKey(), m.getMessage())));
+    return new MessageStreamImpl<M>();
   }
 
   /**
@@ -124,9 +131,28 @@ public class MessageStreamImpl<M extends MessageEnvelope> implements MessageStre
     return Collections.unmodifiableSet(this.registeredOperatorSpecs);
   }
 
-  static void switchSource(MessageStreamImpl source,
-      MessageStreamImpl dest, OperatorSpec opSpec) {
-    source.registeredOperatorSpecs.remove(opSpec);
-    dest.registeredOperatorSpecs.add(opSpec);
+  public MessageStream<M> switchTo(MessageStreamImpl<M> dest) {
+    this.registeredOperatorSpecs.forEach(opSpec -> dest.registeredOperatorSpecs.add(opSpec));
+    this.registeredOperatorSpecs.clear();
+    return dest;
+  }
+
+  public MessageStreamImpl<M> getClone(Map<MessageStreamImpl, MessageStreamImpl> clonedStreams) {
+    if (clonedStreams.containsKey(this)) {
+      // already cloned
+      return clonedStreams.get(this);
+    }
+    MessageStreamImpl<M> dest = new MessageStreamImpl<>();
+    this.registeredOperatorSpecs.forEach(opSpec -> {
+        if (opSpec.getOutputStream() != null) {
+          OperatorSpec cloneOpSpec = opSpec.getClone(opSpec.getOutputStream().getClone(clonedStreams));
+          dest.registeredOperatorSpecs.add(cloneOpSpec);
+        } else {
+          OperatorSpec cloneOpSpec = opSpec.getClone(null);
+          dest.registeredOperatorSpecs.add(cloneOpSpec);
+        }
+      });
+    clonedStreams.put(this, dest);
+    return dest;
   }
 }

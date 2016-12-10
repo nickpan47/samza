@@ -19,13 +19,13 @@
 
 package org.apache.samza.operators.spec;
 
+import org.apache.samza.operators.MessageStreamImpl;
 import org.apache.samza.operators.data.MessageEnvelope;
 import org.apache.samza.operators.functions.FlatMapFunction;
 import org.apache.samza.operators.functions.SinkFunction;
-import org.apache.samza.operators.MessageStreamImpl;
-import org.apache.samza.operators.windows.WindowState;
 import org.apache.samza.operators.windows.WindowFn;
 import org.apache.samza.operators.windows.WindowOutput;
+import org.apache.samza.operators.windows.WindowState;
 
 import java.util.ArrayList;
 import java.util.UUID;
@@ -39,7 +39,7 @@ public class OperatorSpecs {
 
   private OperatorSpecs() {}
 
-  private static String getOperatorId() {
+  static String getOperatorId() {
     // TODO: need to change the IDs to be a consistent, durable IDs that can be recovered across container and job restarts
     return UUID.randomUUID().toString();
   }
@@ -96,7 +96,7 @@ public class OperatorSpecs {
    */
   public static <M extends MessageEnvelope<K, ?>, K, JM extends MessageEnvelope<K, ?>, OM extends MessageEnvelope> PartialJoinOperatorSpec<M, K, JM, OM> createPartialJoinOperator(
       BiFunction<M, JM, OM> partialJoinFn, MessageStreamImpl<OM> joinOutput) {
-    return new PartialJoinOperatorSpec<>(partialJoinFn, joinOutput, OperatorSpecs.getOperatorId());
+    return new PartialJoinOperatorSpec<M, K, JM, OM>(partialJoinFn, joinOutput, OperatorSpecs.getOperatorId());
   }
 
   /**

@@ -18,8 +18,6 @@
  */
 package org.apache.samza.operators.impl;
 
-
-import org.apache.samza.operators.MessageStream;
 import org.apache.samza.operators.MessageStreamImpl;
 import org.apache.samza.operators.data.MessageEnvelope;
 import org.apache.samza.operators.spec.OperatorSpec;
@@ -52,7 +50,7 @@ public class OperatorImpls {
    * creates the corresponding DAG of {@link OperatorImpl}s, and returns its root {@link RootOperatorImpl} node.
    *
    * @param source  the input {@link MessageStreamImpl} to instantiate {@link OperatorImpl}s for
-   * @param <M>  the type of {@link MessageEnvelope}s in the {@code source} {@link MessageStream}
+   * @param <M>  the type of {@link MessageEnvelope}s in the {@code source} {@link MessageStreamImpl}
    * @param context  the {@link TaskContext} required to instantiate operators
    * @return  root node for the {@link OperatorImpl} DAG
    */
@@ -80,13 +78,13 @@ public class OperatorImpls {
    * @return  the operator implementation for the operatorSpec
    */
   private static <M extends MessageEnvelope> OperatorImpl<M, ? extends MessageEnvelope> createAndRegisterOperatorImpl(OperatorSpec operatorSpec,
-      MessageStream source, TaskContext context) {
+      MessageStreamImpl source, TaskContext context) {
     if (!OPERATOR_IMPLS.containsKey(operatorSpec)) {
       OperatorImpl<M, ? extends MessageEnvelope> operatorImpl = createOperatorImpl(operatorSpec);
       if (OPERATOR_IMPLS.putIfAbsent(operatorSpec, operatorImpl) == null) {
         // this is the first time we've added the operatorImpl corresponding to the operatorSpec,
         // so traverse and initialize and register the rest of the DAG.
-        MessageStream<? extends MessageEnvelope> outStream = operatorSpec.getOutputStream();
+        MessageStreamImpl<? extends MessageEnvelope> outStream = operatorSpec.getOutputStream();
         Collection<OperatorSpec> registeredSpecs = ((MessageStreamImpl) outStream).getRegisteredOperatorSpecs();
         registeredSpecs.forEach(registeredSpec -> {
             OperatorImpl subImpl = createAndRegisterOperatorImpl(registeredSpec, outStream, context);

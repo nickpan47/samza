@@ -18,9 +18,9 @@
  */
 package org.apache.samza.operators.spec;
 
+import org.apache.samza.operators.MessageStreamImpl;
 import org.apache.samza.operators.data.MessageEnvelope;
 import org.apache.samza.operators.functions.SinkFunction;
-import org.apache.samza.operators.MessageStreamImpl;
 
 
 /**
@@ -54,6 +54,10 @@ public class SinkOperatorSpec<M extends MessageEnvelope> implements OperatorSpec
   @Override
   public MessageStreamImpl getOutputStream() {
     return null;
+  }
+
+  @Override public OperatorSpec getClone(MessageStreamImpl outputStream) {
+    return OperatorSpecs.createSinkOperator(this.sinkFn);
   }
 
   public SinkFunction<M> getSinkFn() {

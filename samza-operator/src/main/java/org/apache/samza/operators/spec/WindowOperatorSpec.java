@@ -18,7 +18,6 @@
  */
 package org.apache.samza.operators.spec;
 
-import org.apache.samza.operators.MessageStream;
 import org.apache.samza.operators.data.MessageEnvelope;
 import org.apache.samza.operators.MessageStreamImpl;
 import org.apache.samza.operators.windows.StoreFunctions;
@@ -44,7 +43,7 @@ public class WindowOperatorSpec<M extends MessageEnvelope, WK, WS extends Window
     OperatorSpec<WM> {
 
   /**
-   * The output {@link MessageStream}.
+   * The output {@link MessageStreamImpl}.
    */
   private final MessageStreamImpl<WM> outputStream;
 
@@ -83,6 +82,14 @@ public class WindowOperatorSpec<M extends MessageEnvelope, WK, WS extends Window
     this.operatorId = operatorId;
   }
 
+  WindowOperatorSpec(WindowOperatorSpec<M, WK, WS, WM> wndSpec, MessageStreamImpl<WM> outputStream, String operatorId) {
+    this.outputStream = outputStream;
+    this.transformFn = wndSpec.transformFn;
+    this.storeFns = wndSpec.storeFns;
+    this.trigger = wndSpec.trigger;
+    this.operatorId = operatorId;
+  }
+
   @Override
   public String toString() {
     return this.operatorId;
@@ -91,6 +98,10 @@ public class WindowOperatorSpec<M extends MessageEnvelope, WK, WS extends Window
   @Override
   public MessageStreamImpl<WM> getOutputStream() {
     return this.outputStream;
+  }
+
+  @Override public OperatorSpec<WM> getClone(MessageStreamImpl<WM> outputStream) {
+    return new WindowOperatorSpec<>(this, outputStream, OperatorSpecs.getOperatorId());
   }
 
   public StoreFunctions<M, WK, WS> getStoreFns() {
@@ -112,7 +123,7 @@ public class WindowOperatorSpec<M extends MessageEnvelope, WK, WS extends Window
    * @param inputStream the input {@link MessageStreamImpl} to this state store
    * @return   the persistent store name of the window operator
    */
-  public String getStoreName(MessageStream<M> inputStream) {
+  public String getStoreName(MessageStreamImpl<M> inputStream) {
     //TODO: need to get the persistent name of ds and the operator in a serialized form
     return String.format("input-%s-wndop-%s", inputStream.toString(), this.toString());
   }

@@ -18,12 +18,12 @@
  */
 package org.apache.samza.operators.impl;
 
-import org.apache.samza.operators.MessageStream;
+import org.apache.samza.operators.MessageStreamImpl;
 import org.apache.samza.operators.StateStoreImpl;
 import org.apache.samza.operators.data.MessageEnvelope;
 import org.apache.samza.operators.spec.WindowOperatorSpec;
-import org.apache.samza.operators.windows.WindowState;
 import org.apache.samza.operators.windows.WindowOutput;
+import org.apache.samza.operators.windows.WindowState;
 import org.apache.samza.storage.kv.Entry;
 import org.apache.samza.task.MessageCollector;
 import org.apache.samza.task.TaskContext;
@@ -49,7 +49,7 @@ class SessionWindowOperatorImpl<M extends MessageEnvelope, RK, WS extends Window
   }
 
   @Override
-  public void init(MessageStream<M> source, TaskContext context) {
+  public void init(MessageStreamImpl<M> source, TaskContext context) {
     this.stateStore = new StateStoreImpl<>(this.windowSpec.getStoreFns(), windowSpec.getStoreName(source));
     this.stateStore.init(context);
   }
