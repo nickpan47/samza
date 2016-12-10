@@ -18,9 +18,9 @@
  */
 package org.apache.samza.operators.spec;
 
+import org.apache.samza.operators.MessageStreamImpl;
 import org.apache.samza.operators.data.MessageEnvelope;
 import org.apache.samza.operators.functions.FlatMapFunction;
-import org.apache.samza.operators.MessageStreamImpl;
 
 
 /**
@@ -59,6 +59,10 @@ public class StreamOperatorSpec<M extends MessageEnvelope, OM extends MessageEnv
   @Override
   public MessageStreamImpl<OM> getOutputStream() {
     return this.outputStream;
+  }
+
+  @Override public OperatorSpec<OM> getClone(MessageStreamImpl<OM> outputStream) {
+    return new StreamOperatorSpec<>(this.transformFn, outputStream);
   }
 
   public FlatMapFunction<M, OM> getTransformFn() {

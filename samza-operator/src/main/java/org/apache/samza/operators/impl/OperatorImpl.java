@@ -18,7 +18,7 @@
  */
 package org.apache.samza.operators.impl;
 
-import org.apache.samza.operators.MessageStream;
+import org.apache.samza.operators.MessageStreamImpl;
 import org.apache.samza.operators.data.MessageEnvelope;
 import org.apache.samza.task.MessageCollector;
 import org.apache.samza.task.TaskContext;
@@ -49,7 +49,7 @@ public abstract class OperatorImpl<M extends MessageEnvelope, RM extends Message
    * @param source  the source that this {@link OperatorImpl} operator is registered with
    * @param context  the task context to initialize the operator implementation
    */
-  public void init(MessageStream<M> source, TaskContext context) {}
+  public void init(MessageStreamImpl<M> source, TaskContext context) {}
 
   /**
    * Perform the transformation required for this operator and call the downstream operators.

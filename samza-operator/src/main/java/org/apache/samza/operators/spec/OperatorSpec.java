@@ -18,13 +18,13 @@
  */
 package org.apache.samza.operators.spec;
 
-import org.apache.samza.operators.MessageStream;
+import org.apache.samza.operators.MessageStreamImpl;
 import org.apache.samza.operators.data.MessageEnvelope;
 
 
 /**
  * A stateless serializable stream operator specification that holds all the information required
- * to transform the input {@link MessageStream} and produce the output {@link MessageStream}.
+ * to transform the input {@link MessageStreamImpl} and produce the output {@link MessageStreamImpl}.
  */
 public interface OperatorSpec<OM extends MessageEnvelope> {
 
@@ -32,6 +32,8 @@ public interface OperatorSpec<OM extends MessageEnvelope> {
    * Get the output stream containing transformed {@link MessageEnvelope} produced by this operator.
    * @return  the output stream containing transformed {@link MessageEnvelope} produced by this operator.
    */
-  MessageStream<OM> getOutputStream();
+  MessageStreamImpl<OM> getOutputStream();
+
+  OperatorSpec<OM> getClone(MessageStreamImpl<OM> outputStream);
 
 }

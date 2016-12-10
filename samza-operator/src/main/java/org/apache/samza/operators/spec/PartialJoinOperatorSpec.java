@@ -18,8 +18,8 @@
  */
 package org.apache.samza.operators.spec;
 
-import org.apache.samza.operators.data.MessageEnvelope;
 import org.apache.samza.operators.MessageStreamImpl;
+import org.apache.samza.operators.data.MessageEnvelope;
 import org.apache.samza.operators.windows.StoreFunctions;
 
 import java.util.function.BiFunction;
@@ -88,6 +88,10 @@ public class PartialJoinOperatorSpec<M extends MessageEnvelope<K, ?>, K, JM exte
   @Override
   public MessageStreamImpl<RM> getOutputStream() {
     return this.joinOutput;
+  }
+
+  @Override public OperatorSpec<RM> getClone(MessageStreamImpl<RM> outputStream) {
+    return OperatorSpecs.<M, K, JM, RM>createPartialJoinOperator(this.transformFn, outputStream);
   }
 
   public StoreFunctions<JM, K, JM> getJoinStoreFns() {
