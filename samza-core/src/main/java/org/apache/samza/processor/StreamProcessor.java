@@ -48,11 +48,11 @@ import java.util.concurrent.TimeoutException;
 
 /**
  * StreamProcessor can be embedded in any application or executed in a distributed environment (aka cluster) as
- * independent processes <br />
+ * independent processes <br>
  *
  * <b>Usage Example:</b>
  * <pre>
- * StreamProcessor processor = new StreamProcessor(1, config); <br />
+ * StreamProcessor processor = new StreamProcessor(1, config); <br>
  * processor.start();
  * try {
  *  boolean status = processor.awaitStart(TIMEOUT_MS);    // Optional - blocking call
@@ -98,7 +98,7 @@ public class StreamProcessor {
    * JobCoordinator controls how the various StreamProcessor instances belonging to a job coordinate. It is also
    * responsible generating and updating JobModel.
    * When StreamProcessor starts, it starts the JobCoordinator and brings up a SamzaContainer based on the JobModel.
-   * SamzaContainer is executed using an ExecutorService. <br />
+   * SamzaContainer is executed using an ExecutorService. <br>
    *
    * <b>Note:</b> Lifecycle of the ExecutorService is fully managed by the StreamProcessor, and NOT exposed to the user
    *

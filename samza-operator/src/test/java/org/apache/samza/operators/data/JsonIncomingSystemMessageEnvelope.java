@@ -16,16 +16,45 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-
-package org.apache.samza.checkpoint;
+package org.apache.samza.operators.data;
 
 import org.apache.samza.system.SystemStreamPartition;
 
 
 /**
- * Convert the given offset to a safe one for checkpointing
- * e.g. Kafka consumer with large message support
+ * Example input {@link MessageEnvelope} w/ Json message and string as the key.
  */
-public interface CheckpointSafeOffset {
-  public String checkpointSafeOffset(SystemStreamPartition ssp, String offset);
+
+public class JsonIncomingSystemMessageEnvelope<T> implements MessageEnvelope<String, T> {
+
+  private final String key;
+  private final T data;
+  private final Offset offset;
+  private final SystemStreamPartition partition;
+
+  public JsonIncomingSystemMessageEnvelope(String key, T data, Offset offset, SystemStreamPartition partition) {
+    this.key = key;
+    this.data = data;
+    this.offset = offset;
+    this.partition = partition;
+  }
+
+  @Override
+  public T getMessage() {
+    return this.data;
+  }
+
+  @Override
+  public String getKey() {
+    return this.key;
+  }
+
+  public Offset getOffset() {
+    return this.offset;
+  }
+
+  public SystemStreamPartition getSystemStreamPartition() {
+    return this.partition;
+  }
 }
+

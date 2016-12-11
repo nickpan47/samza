@@ -19,11 +19,6 @@
 
 package org.apache.samza.container;
 
-import org.apache.samza.config.Config;
-import org.apache.samza.container.SamzaContainerContext;
-import org.apache.samza.task.TaskContext;
-
-
 /**
  * DO NOT USE! For LinkedIn Only, NOT open source.
  * A life cycle listener to the samza container
@@ -33,7 +28,7 @@ public interface SamzaContainerLifeCycleListener {
 
   /**
    * Called before starting any component of a container, including
-   * metrics, system producers/consumers, {@link org.apache.samza.task.InitableTask#init(Config, TaskContext)}, etc.
+   * metrics, system producers/consumers, {@link org.apache.samza.task.InitableTask#init(org.apache.samza.config.Config, org.apache.samza.task.TaskContext)}, etc.
    * @param context Context for the container
    */
   void beforeStart(SamzaContainerContext context);

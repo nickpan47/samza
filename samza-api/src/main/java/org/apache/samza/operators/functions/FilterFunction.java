@@ -16,16 +16,25 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+package org.apache.samza.operators.functions;
 
-package org.apache.samza.checkpoint;
-
-import org.apache.samza.system.SystemStreamPartition;
+import org.apache.samza.annotation.InterfaceStability;
+import org.apache.samza.operators.data.MessageEnvelope;
 
 
 /**
- * Convert the given offset to a safe one for checkpointing
- * e.g. Kafka consumer with large message support
+ * A function that specifies whether a {@link MessageEnvelope} should be retained for further processing or filtered out.
+ * @param <M>  type of the input {@link MessageEnvelope}
  */
-public interface CheckpointSafeOffset {
-  public String checkpointSafeOffset(SystemStreamPartition ssp, String offset);
+@InterfaceStability.Unstable
+@FunctionalInterface
+public interface FilterFunction<M extends MessageEnvelope> {
+
+  /**
+   * Returns a boolean indicating whether this {@link MessageEnvelope} should be retained or filtered out.
+   * @param message  the {@link MessageEnvelope} to be checked
+   * @return  true if {@link MessageEnvelope} should be retained
+   */
+  boolean apply(M message);
+
 }

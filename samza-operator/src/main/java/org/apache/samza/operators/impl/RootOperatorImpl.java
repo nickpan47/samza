@@ -16,16 +16,21 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+package org.apache.samza.operators.impl;
 
-package org.apache.samza.checkpoint;
-
-import org.apache.samza.system.SystemStreamPartition;
+import org.apache.samza.operators.data.MessageEnvelope;
+import org.apache.samza.task.MessageCollector;
+import org.apache.samza.task.TaskCoordinator;
 
 
 /**
- * Convert the given offset to a safe one for checkpointing
- * e.g. Kafka consumer with large message support
+ * A no-op operator implementation that forwards incoming {@link MessageEnvelope}s to all of its subscribers.
+ * @param <M>  type of incoming {@link MessageEnvelope}s
  */
-public interface CheckpointSafeOffset {
-  public String checkpointSafeOffset(SystemStreamPartition ssp, String offset);
+final class RootOperatorImpl<M extends MessageEnvelope> extends OperatorImpl<M, M> {
+
+  @Override
+  public void onNext(M message, MessageCollector collector, TaskCoordinator coordinator) {
+    this.propagateResult(message, collector, coordinator);
+  }
 }

@@ -16,16 +16,26 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+package org.apache.samza.operators.functions;
 
-package org.apache.samza.checkpoint;
-
-import org.apache.samza.system.SystemStreamPartition;
+import org.apache.samza.annotation.InterfaceStability;
+import org.apache.samza.operators.data.MessageEnvelope;
 
 
 /**
- * Convert the given offset to a safe one for checkpointing
- * e.g. Kafka consumer with large message support
+ * A function that transforms a {@link MessageEnvelope} into another {@link MessageEnvelope}, possibly of a different type.
+ * @param <M>  type of the input {@link MessageEnvelope}
+ * @param <OM>  type of the transformed {@link MessageEnvelope}
  */
-public interface CheckpointSafeOffset {
-  public String checkpointSafeOffset(SystemStreamPartition ssp, String offset);
+@InterfaceStability.Unstable
+@FunctionalInterface
+public interface MapFunction<M extends MessageEnvelope, OM extends MessageEnvelope> {
+
+  /**
+   * Transforms the provided {@link MessageEnvelope} into another {@link MessageEnvelope}
+   * @param message  the {@link MessageEnvelope} to be transformed
+   * @return  the transformed {@link MessageEnvelope}
+   */
+  OM apply(M message);
+
 }

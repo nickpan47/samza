@@ -16,16 +16,36 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+package org.apache.samza.operators.windows;
 
-package org.apache.samza.checkpoint;
-
-import org.apache.samza.system.SystemStreamPartition;
+import org.apache.samza.operators.data.MessageEnvelope;
 
 
 /**
- * Convert the given offset to a safe one for checkpointing
- * e.g. Kafka consumer with large message support
+ * The type of output {@link MessageEnvelope}s in a window operator output stream.
+ *
+ * @param <K>  the type of key in the window output
+ * @param <M>  the type of value in the window output
  */
-public interface CheckpointSafeOffset {
-  public String checkpointSafeOffset(SystemStreamPartition ssp, String offset);
+public final class WindowOutput<K, M> implements MessageEnvelope<K, M> {
+  private final K key;
+  private final M value;
+
+  WindowOutput(K key, M value) {
+    this.key = key;
+    this.value = value;
+  }
+
+  @Override public M getMessage() {
+    return this.value;
+  }
+
+  @Override public K getKey() {
+    return this.key;
+  }
+
+  static public <K, M> WindowOutput<K, M> of(K key, M result) {
+    return new WindowOutput<>(key, result);
+  }
 }
+

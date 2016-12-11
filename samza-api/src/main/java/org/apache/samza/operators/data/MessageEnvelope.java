@@ -17,15 +17,38 @@
  * under the License.
  */
 
-package org.apache.samza.checkpoint;
+package org.apache.samza.operators.data;
 
-import org.apache.samza.system.SystemStreamPartition;
+import org.apache.samza.annotation.InterfaceStability;
 
 
 /**
- * Convert the given offset to a safe one for checkpointing
- * e.g. Kafka consumer with large message support
+ * An entry in the input/output {@link org.apache.samza.operators.MessageStream}s.
  */
-public interface CheckpointSafeOffset {
-  public String checkpointSafeOffset(SystemStreamPartition ssp, String offset);
+@InterfaceStability.Unstable
+public interface MessageEnvelope<K, M> {
+
+  /**
+   * Get the key for this {@link MessageEnvelope}.
+   *
+   * @return  the key for this {@link MessageEnvelope}
+   */
+  K getKey();
+
+  /**
+   * Get the message in this {@link MessageEnvelope}.
+   *
+   * @return  the message in this {@link MessageEnvelope}
+   */
+  M getMessage();
+
+  /**
+   * Whether this {@link MessageEnvelope} indicates deletion of a previous message with this key.
+   *
+   * @return  true if the current {@link MessageEnvelope} indicates deletion of a previous message with this key
+   */
+  default boolean isDelete() {
+    return false;
+  }
+
 }

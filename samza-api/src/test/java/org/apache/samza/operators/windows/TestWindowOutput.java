@@ -16,16 +16,21 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+package org.apache.samza.operators.windows;
 
-package org.apache.samza.checkpoint;
+import org.junit.Test;
 
-import org.apache.samza.system.SystemStreamPartition;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 
 
-/**
- * Convert the given offset to a safe one for checkpointing
- * e.g. Kafka consumer with large message support
- */
-public interface CheckpointSafeOffset {
-  public String checkpointSafeOffset(SystemStreamPartition ssp, String offset);
+public class TestWindowOutput {
+
+  @Test
+  public void testConstructor() {
+    WindowOutput<String, Integer> wndOutput = WindowOutput.of("testMsg", 10);
+    assertEquals(wndOutput.getKey(), "testMsg");
+    assertEquals(wndOutput.getMessage(), Integer.valueOf(10));
+    assertFalse(wndOutput.isDelete());
+  }
 }

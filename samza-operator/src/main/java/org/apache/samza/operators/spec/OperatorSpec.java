@@ -16,16 +16,22 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+package org.apache.samza.operators.spec;
 
-package org.apache.samza.checkpoint;
-
-import org.apache.samza.system.SystemStreamPartition;
+import org.apache.samza.operators.MessageStream;
+import org.apache.samza.operators.data.MessageEnvelope;
 
 
 /**
- * Convert the given offset to a safe one for checkpointing
- * e.g. Kafka consumer with large message support
+ * A stateless serializable stream operator specification that holds all the information required
+ * to transform the input {@link MessageStream} and produce the output {@link MessageStream}.
  */
-public interface CheckpointSafeOffset {
-  public String checkpointSafeOffset(SystemStreamPartition ssp, String offset);
+public interface OperatorSpec<OM extends MessageEnvelope> {
+
+  /**
+   * Get the output stream containing transformed {@link MessageEnvelope} produced by this operator.
+   * @return  the output stream containing transformed {@link MessageEnvelope} produced by this operator.
+   */
+  MessageStream<OM> getOutputStream();
+
 }

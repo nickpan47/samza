@@ -313,7 +313,6 @@ public class AsyncRunLoop implements Runnable, Throttleable {
     private final TaskInstance task;
     private final TaskCallbackManager callbackManager;
     private volatile AsyncTaskState state;
-    private volatile boolean completed = false;
 
 
     AsyncTaskWorker(TaskInstance task) {
