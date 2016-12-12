@@ -21,6 +21,8 @@ package org.apache.samza.system;
 
 import java.util.Map;
 import java.util.Set;
+import org.apache.samza.config.Config;
+
 
 /**
  * Helper interface attached to an underlying system to fetch information about
@@ -28,6 +30,8 @@ import java.util.Set;
  * utility methods that Samza needs in order to interact with a system.
  */
 public interface SystemAdmin {
+
+  String PARTITION_COUNT = "partitions"; // TODO better place for this property name
 
   /**
    * Fetches the offsets for the messages immediately after the supplied offsets
@@ -52,7 +56,7 @@ public interface SystemAdmin {
 
   /**
    * An API to create a change log stream
-   * 
+   *
    * @param streamName
    *          The name of the stream to be created in the underlying stream
    * @param numOfPartitions
@@ -89,4 +93,30 @@ public interface SystemAdmin {
    * @return -1 if offset1 &lt; offset2; 0 if offset1 == offset2; 1 if offset1 &gt; offset2. Null if not comparable
    */
   Integer offsetComparator(String offset1, String offset2);
+
+//  /**
+//   * TODO
+//   * @param systemStream todo
+//   * @param streamConfig todo
+//   */
+//   void createStream(SystemStream systemStream, Config streamConfig); //{
+//    int numOfPartitions = streamConfig.getInt(PARTITION_COUNT, -1);
+//
+//    if (numOfPartitions >= 0) {
+//      createChangelogStream(systemStream.getStream(), numOfPartitions);
+//    }
+//  }
+
+  /**
+   * TODO
+   * @param streamName todo
+   * @param streamConfig todo
+   */
+  default void validateStream(String streamName, Config streamConfig) {
+    int numOfPartitions = streamConfig.getInt(PARTITION_COUNT, -1);
+
+    if (numOfPartitions >= 0) {
+      validateChangelogStream(streamName, numOfPartitions);
+    }
+  }
 }

@@ -16,22 +16,20 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-
-package org.apache.samza.task;
+package org.apache.samza.pipeline;
 
 import org.apache.samza.operators.MessageStreamsBuilder;
-import org.apache.samza.operators.MessageStreamsBuilderTask;
-import org.apache.samza.operators.StreamOperatorAdaptorTask;
 
 
-public class StreamOperatorTaskFactory implements StreamTaskFactory {
-  private final MessageStreamsBuilder messageStreamsBuilder;
+public class StreamOperatorProcessor extends Processor {
 
-  public StreamOperatorTaskFactory(MessageStreamsBuilder streamsBuilder) {
-    this.messageStreamsBuilder = streamsBuilder;
+  private final MessageStreamsBuilder streamsBuilder;
+
+  public StreamOperatorProcessor(String name, MessageStreamsBuilder streamsBuilder) {
+    super(name);
+    this.streamsBuilder = streamsBuilder;
   }
 
-  @Override public StreamTask createInstance() {
-    return new StreamOperatorAdaptorTask(new MessageStreamsBuilderTask(this.messageStreamsBuilder));
-  }
+  // TODO: need to work on a serialized format of {@link MessageStreamsBuilder} object s.t. the definition of {@link StreamOperatorProcessor}
+  // can be serialized to config and passed around between {@link JobRunner}, {@link JobCoordinator}, and {@link SamzaContainer}
 }

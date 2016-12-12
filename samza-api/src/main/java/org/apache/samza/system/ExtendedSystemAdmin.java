@@ -20,6 +20,8 @@ package org.apache.samza.system;
 
 import java.util.Map;
 import java.util.Set;
+import org.apache.samza.config.Config;
+
 
 /**
  * Interface extends the more generic SystemAdmin interface
@@ -30,4 +32,8 @@ public interface ExtendedSystemAdmin extends SystemAdmin {
 
   // Makes fewer offset requests than getSystemStreamMetadata
   String getNewestOffset(SystemStreamPartition ssp, Integer maxRetries);
+
+  // TODO specified here because scala overrides don't seem to work with default methots (java 8)
+  // TODO this is just for the prototype, and means the Pipeline will currently only work with Kafka
+  void createStream(SystemStream systemStream, Config streamConfig);
 }

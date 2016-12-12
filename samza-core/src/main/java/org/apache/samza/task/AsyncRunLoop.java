@@ -166,7 +166,6 @@ public class AsyncRunLoop implements Runnable, Throttleable {
         containerMetrics.blockNs().update(currentNs - blockNs);
 
         if (totalNs != 0) {
-          // totalNs is not 0 if timer metrics are enabled
           containerMetrics.utilization().set(((double) activeNs) / totalNs);
         }
       }
@@ -214,7 +213,7 @@ public class AsyncRunLoop implements Runnable, Throttleable {
   /**
    * Insert the envelope into the task pending queues and run all the tasks
    */
-  private void runTasks(IncomingMessageEnvelope envelope) {
+  public void runTasks(IncomingMessageEnvelope envelope) {
     if (envelope != null) {
       PendingEnvelope pendingEnvelope = new PendingEnvelope(envelope);
       for (AsyncTaskWorker worker : sspToTaskWorkerMapping.get(envelope.getSystemStreamPartition())) {
@@ -232,7 +231,7 @@ public class AsyncRunLoop implements Runnable, Throttleable {
    * Block the runloop thread if all tasks are busy. When a task worker finishes or window/commit completes,
    * it will resume the runloop.
    */
-  private void blockIfBusy(IncomingMessageEnvelope envelope) {
+  public void blockIfBusy(IncomingMessageEnvelope envelope) {
     synchronized (latch) {
       while (!shutdownNow && throwable == null) {
         for (AsyncTaskWorker worker : taskWorkers) {

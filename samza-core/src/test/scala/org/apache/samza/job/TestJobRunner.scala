@@ -46,7 +46,8 @@ class TestJobRunner {
       "--config-factory",
       "org.apache.samza.config.factories.PropertiesConfigFactory",
       "--config-path",
-      "file://%s/src/test/resources/test.properties" format new File(".").getCanonicalPath))
+      //"file://%s/src/test/resources/test.properties" format new File(".").getCanonicalPath))
+      "file:///home/xiliu/samza/samza-li_trunk/samza/samza-core/src/test/resources/test.properties"))
     assertEquals(1, TestJobRunner.processCount)
   }
 }

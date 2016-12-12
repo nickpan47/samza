@@ -57,7 +57,7 @@ import org.codehaus.jackson.type.TypeReference;
  * Jackson-specific code is isolated so that Samza's core data model does not
  * require a direct dependency on Jackson.
  * </p>
- * 
+ *
  * <p>
  * To use Samza's job data model, use the SamzaObjectMapper.getObjectMapper()
  * method.
@@ -84,6 +84,7 @@ public class SamzaObjectMapper {
     module.addDeserializer(SystemStreamPartition.class, new SystemStreamPartitionDeserializer());
     module.addKeyDeserializer(SystemStreamPartition.class, new SystemStreamPartitionKeyDeserializer());
     module.addDeserializer(Config.class, new ConfigDeserializer());
+    // TODO add lines for new topology classes, which will need serialization
 
     // Setup mixins for data models.
     mapper.getSerializationConfig().addMixInAnnotations(TaskModel.class, JsonTaskModelMixIn.class);

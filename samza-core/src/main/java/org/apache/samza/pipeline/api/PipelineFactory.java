@@ -16,22 +16,15 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+package org.apache.samza.pipeline.api;
 
-package org.apache.samza.task;
-
-import org.apache.samza.operators.MessageStreamsBuilder;
-import org.apache.samza.operators.MessageStreamsBuilderTask;
-import org.apache.samza.operators.StreamOperatorAdaptorTask;
+import org.apache.samza.config.Config;
 
 
-public class StreamOperatorTaskFactory implements StreamTaskFactory {
-  private final MessageStreamsBuilder messageStreamsBuilder;
-
-  public StreamOperatorTaskFactory(MessageStreamsBuilder streamsBuilder) {
-    this.messageStreamsBuilder = streamsBuilder;
-  }
-
-  @Override public StreamTask createInstance() {
-    return new StreamOperatorAdaptorTask(new MessageStreamsBuilderTask(this.messageStreamsBuilder));
-  }
+public interface PipelineFactory {
+  /**
+   * TODO
+   * @return
+   */
+  Pipeline create(Config config);
 }

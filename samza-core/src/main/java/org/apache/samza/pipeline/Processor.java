@@ -17,21 +17,49 @@
  * under the License.
  */
 
-package org.apache.samza.task;
+package org.apache.samza.pipeline;
 
-import org.apache.samza.operators.MessageStreamsBuilder;
-import org.apache.samza.operators.MessageStreamsBuilderTask;
-import org.apache.samza.operators.StreamOperatorAdaptorTask;
+import org.apache.samza.config.Config;
+import org.apache.samza.config.MapConfig;
 
 
-public class StreamOperatorTaskFactory implements StreamTaskFactory {
-  private final MessageStreamsBuilder messageStreamsBuilder;
+/**
+ * Could be renamed to ProcessorSpec
+ *
+ * This class is immutable.
+ */
+public class Processor {
+  private final String name;
 
-  public StreamOperatorTaskFactory(MessageStreamsBuilder streamsBuilder) {
-    this.messageStreamsBuilder = streamsBuilder;
+  public Processor(String name) {
+    // TODO null checks and validation
+    this.name = name;
   }
 
-  @Override public StreamTask createInstance() {
-    return new StreamOperatorAdaptorTask(new MessageStreamsBuilderTask(this.messageStreamsBuilder));
+  public Config getConfig() {
+    return new MapConfig();
+  }
+
+  public String getName() {
+    return name;
+  }
+
+  @Override
+  public int hashCode() {
+    return name.hashCode();
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    if (!(obj instanceof Processor)) {
+      return false;
+    }
+    return name.equals(((Processor) obj).name);
+  }
+
+  @Override
+  public String toString() {
+    // TODO more precise string
+    return name;
   }
 }

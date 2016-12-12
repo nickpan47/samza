@@ -17,21 +17,8 @@
  * under the License.
  */
 
-package org.apache.samza.task;
+package org.apache.samza.pipeline;
 
-import org.apache.samza.operators.MessageStreamsBuilder;
-import org.apache.samza.operators.MessageStreamsBuilderTask;
-import org.apache.samza.operators.StreamOperatorAdaptorTask;
-
-
-public class StreamOperatorTaskFactory implements StreamTaskFactory {
-  private final MessageStreamsBuilder messageStreamsBuilder;
-
-  public StreamOperatorTaskFactory(MessageStreamsBuilder streamsBuilder) {
-    this.messageStreamsBuilder = streamsBuilder;
-  }
-
-  @Override public StreamTask createInstance() {
-    return new StreamOperatorAdaptorTask(new MessageStreamsBuilderTask(this.messageStreamsBuilder));
-  }
+public class TestPipelineBuilder {
+  // Todo test with and without chaining
 }

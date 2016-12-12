@@ -24,16 +24,20 @@ import java.util.regex.Pattern
 
 import org.apache.samza.util.Util
 import org.apache.samza.util.Logging
+
 import scala.collection.JavaConversions._
 import kafka.consumer.ConsumerConfig
 import java.util.{Properties, UUID}
+
 import org.apache.kafka.clients.producer.ProducerConfig
 import org.apache.samza.SamzaException
 import java.util
+
 import scala.collection.JavaConverters._
 import org.apache.samza.system.kafka.KafkaSystemFactory
 import org.apache.samza.config.SystemConfig.Config2System
 import org.apache.kafka.common.serialization.ByteArraySerializer
+import org.apache.samza.pipeline.PipelineRunner
 
 object KafkaConfig {
   val REGEX_RESOLVED_STREAMS = "job.config.rewriter.%s.regex"
@@ -145,6 +149,13 @@ class KafkaConfig(config: Config) extends ScalaMapConfig(config) {
     kafkaChangeLogProperties
   }
 
+  def getTopicKafkaProperties(systemName: String, streamName: String) = {
+    val filteredConfigs = config.subset(PipelineRunner.CONFIG_STREAM_PREFIX format (systemName, streamName), true) // TODO: no dep on PipelineRunner
+    val topicProperties = new Properties
+    filteredConfigs.foreach{kv => topicProperties.setProperty(kv._1, kv._2)}
+    topicProperties
+  }
+
   // kafka config
   def getKafkaSystemConsumerConfig(
     systemName: String,
@@ -203,13 +214,13 @@ class KafkaProducerConfig(val systemName: String,
 
     if(producerProperties.containsKey(ProducerConfig.MAX_IN_FLIGHT_REQUESTS_PER_CONNECTION)
         && producerProperties.get(ProducerConfig.MAX_IN_FLIGHT_REQUESTS_PER_CONNECTION).asInstanceOf[String].toInt > MAX_IN_FLIGHT_REQUESTS_PER_CONNECTION_DEFAULT) {
-      warn("Setting '%s' to a value other than %d does not guarantee message ordering because new messages will be sent without waiting for previous ones to be acknowledged." 
+      warn("Setting '%s' to a value other than %d does not guarantee message ordering because new messages will be sent without waiting for previous ones to be acknowledged."
           format (ProducerConfig.MAX_IN_FLIGHT_REQUESTS_PER_CONNECTION, MAX_IN_FLIGHT_REQUESTS_PER_CONNECTION_DEFAULT))
     } else {
       producerProperties.put(ProducerConfig.MAX_IN_FLIGHT_REQUESTS_PER_CONNECTION, MAX_IN_FLIGHT_REQUESTS_PER_CONNECTION_DEFAULT)
     }
 
-    if(producerProperties.containsKey(ProducerConfig.RETRIES_CONFIG) 
+    if(producerProperties.containsKey(ProducerConfig.RETRIES_CONFIG)
         && producerProperties.get(ProducerConfig.RETRIES_CONFIG).asInstanceOf[String].toInt < RETRIES_DEFAULT) {
         warn("Samza does not provide producer failure handling. Consider setting '%s' to a large value, like Int.MAX." format ProducerConfig.RETRIES_CONFIG)
     } else {
@@ -217,7 +228,7 @@ class KafkaProducerConfig(val systemName: String,
       // for producer failure
       producerProperties.put(ProducerConfig.RETRIES_CONFIG, RETRIES_DEFAULT)
     }
-    
+
     producerProperties
   }
 
