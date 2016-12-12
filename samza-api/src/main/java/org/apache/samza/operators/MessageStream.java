@@ -83,6 +83,8 @@ public interface MessageStream<M extends MessageEnvelope> {
    */
   void sink(SinkFunction<M> sinkFn);
 
+  void sink(SystemStream outStream);
+
   /**
    * Groups the {@link MessageEnvelope}s in this {@link MessageStream} according to the provided {@link Window} semantics
    * (e.g. tumbling, sliding or session windows) and returns the transformed {@link MessageStream} of
