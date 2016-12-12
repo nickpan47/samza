@@ -37,7 +37,7 @@ public class MessageStreamsBuilderImpl implements MessageStreamsBuilder {
     return Collections.unmodifiableMap(inputStreamsMap);
   }
 
-  public MessageStreamsBuilderImpl cloneStreams() {
+  public MessageStreamsBuilderImpl cloneTaskBuilder() {
     Map<MessageStreamImpl, MessageStreamImpl> clonedStreams = new HashMap<>();
     MessageStreamsBuilderImpl clonedStreamBuilder = new MessageStreamsBuilderImpl();
     inputStreamsMap.forEach((ss, ms) -> {
@@ -49,7 +49,7 @@ public class MessageStreamsBuilderImpl implements MessageStreamsBuilder {
 
   public void swapInputStream(SystemStream ss, MessageStream<IncomingSystemMessageEnvelope> mergedStream) {
     if (!inputStreamsMap.containsKey(ss)) {
-      throw new IllegalArgumentException("Requested SystemStream is not defined as input to the MessageStreamBuilder");
+      throw new IllegalArgumentException("Requested SystemStream is not defined as input to this MessageStreamBuilder");
     }
     this.inputStreamsMap.get(ss).switchTo((MessageStreamImpl<IncomingSystemMessageEnvelope>) mergedStream);
     this.inputStreamsMap.put(ss, (MessageStreamImpl<IncomingSystemMessageEnvelope>) mergedStream);

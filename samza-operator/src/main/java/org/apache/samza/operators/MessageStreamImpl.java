@@ -144,13 +144,9 @@ public class MessageStreamImpl<M extends MessageEnvelope> implements MessageStre
     }
     MessageStreamImpl<M> dest = new MessageStreamImpl<>();
     this.registeredOperatorSpecs.forEach(opSpec -> {
-        if (opSpec.getOutputStream() != null) {
-          OperatorSpec cloneOpSpec = opSpec.getClone(opSpec.getOutputStream().getClone(clonedStreams));
-          dest.registeredOperatorSpecs.add(cloneOpSpec);
-        } else {
-          OperatorSpec cloneOpSpec = opSpec.getClone(null);
-          dest.registeredOperatorSpecs.add(cloneOpSpec);
-        }
+      OperatorSpec cloneOpSpec = opSpec.getOutputStream() != null ?
+           opSpec.getClone(opSpec.getOutputStream().getClone(clonedStreams)) : opSpec.getClone(null);
+      dest.registeredOperatorSpecs.add(cloneOpSpec);
       });
     clonedStreams.put(this, dest);
     return dest;
