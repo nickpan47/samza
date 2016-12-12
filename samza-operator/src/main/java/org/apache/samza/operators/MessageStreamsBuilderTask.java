@@ -31,7 +31,7 @@ public class MessageStreamsBuilderTask implements StreamOperatorTask {
   private final MessageStreamsBuilderImpl taskStreamBuilder;
 
   public MessageStreamsBuilderTask(MessageStreamsBuilder streamBuilder) {
-    this.taskStreamBuilder = ((MessageStreamsBuilderImpl) streamBuilder).cloneStreams();
+    this.taskStreamBuilder = ((MessageStreamsBuilderImpl) streamBuilder).cloneTaskBuilder();
   }
 
   public void transform(Map<SystemStreamPartition, MessageStream<IncomingSystemMessageEnvelope>> streams) {
@@ -41,11 +41,11 @@ public class MessageStreamsBuilderTask implements StreamOperatorTask {
         this.inputBySystemStream.get(ssp.getSystemStream()).putIfAbsent(ssp.getPartition(), mstream);
       });
     this.inputBySystemStream.forEach((ss, parMap) -> {
-        createMessageStreamClone(ss, parMap);
+        merge(ss, parMap);
       });
   }
 
-  private void createMessageStreamClone(SystemStream ss, Map<Partition, MessageStream<IncomingSystemMessageEnvelope>> parMap) {
+  private void merge(SystemStream ss, Map<Partition, MessageStream<IncomingSystemMessageEnvelope>> parMap) {
     // Here we will assume that the program is at {@link SystemStream} level. Hence, any two partitions from the same {@link SystemStream}
     // that are assigned (grouped) in the same task will be "merged" to the same operator instances that consume the {@link SystemStream}
 
