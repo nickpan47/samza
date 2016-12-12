@@ -28,7 +28,6 @@ import org.apache.samza.operators.functions.SinkFunction;
 import org.apache.samza.operators.windows.Window;
 import org.apache.samza.operators.windows.WindowOutput;
 import org.apache.samza.operators.windows.WindowState;
-import org.apache.samza.system.SystemStream;
 
 import java.util.Collection;
 
@@ -124,14 +123,5 @@ public interface MessageStream<M extends MessageEnvelope> {
    * @return  the merged {@link MessageStream}
    */
   MessageStream<M> merge(Collection<MessageStream<M>> otherStreams);
-
-  /**
-   * Create an external output stream and allow continuation of processing functions consuming the {@code systemStream}.
-   * It is a to-and-from function, marking the boundaries between two stages of jobs.
-   *
-   * @param systemStream
-   * @return  the {@link MessageStream} that takes input
-   */
-  MessageStream<M> through(SystemStream systemStream);
-
+  
 }

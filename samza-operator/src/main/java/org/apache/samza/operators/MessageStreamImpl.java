@@ -27,8 +27,6 @@ import org.apache.samza.operators.windows.Window;
 import org.apache.samza.operators.windows.WindowFn;
 import org.apache.samza.operators.windows.WindowOutput;
 import org.apache.samza.operators.windows.WindowState;
-import org.apache.samza.system.OutgoingMessageEnvelope;
-import org.apache.samza.system.SystemStream;
 
 import java.util.*;
 import java.util.function.BiFunction;
@@ -114,11 +112,6 @@ public class MessageStreamImpl<M extends MessageEnvelope> implements MessageStre
     otherStreams.forEach(other -> ((MessageStreamImpl<M>) other).registeredOperatorSpecs
         .add(OperatorSpecs.createMergeOperator(outputStream)));
     return outputStream;
-  }
-
-  @Override public MessageStream<M> through(SystemStream systemStream) {
-    this.sink((m, mc, tc) -> mc.send(new OutgoingMessageEnvelope(systemStream, m.getKey(), m.getMessage())));
-    return new MessageStreamImpl<M>();
   }
 
   /**
