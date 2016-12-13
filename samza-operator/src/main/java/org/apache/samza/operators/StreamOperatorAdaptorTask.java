@@ -18,12 +18,14 @@
  */
 package org.apache.samza.operators;
 
+import org.apache.samza.Partition;
 import org.apache.samza.config.Config;
 import org.apache.samza.operators.data.IncomingSystemMessageEnvelope;
 import org.apache.samza.operators.data.MessageEnvelope;
 import org.apache.samza.operators.impl.OperatorImpl;
 import org.apache.samza.operators.impl.OperatorImpls;
 import org.apache.samza.system.IncomingMessageEnvelope;
+import org.apache.samza.system.SystemStream;
 import org.apache.samza.system.SystemStreamPartition;
 import org.apache.samza.task.InitableTask;
 import org.apache.samza.task.MessageCollector;
@@ -32,8 +34,7 @@ import org.apache.samza.task.TaskContext;
 import org.apache.samza.task.TaskCoordinator;
 import org.apache.samza.task.WindowableTask;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 
 /**
@@ -83,11 +84,35 @@ public final class StreamOperatorAdaptorTask implements StreamTask, InitableTask
     if (this.userTask instanceof InitableTask) {
       ((InitableTask) this.userTask).init(config, context);
     }
-    Map<SystemStreamPartition, MessageStream<IncomingSystemMessageEnvelope>> messageStreams = new HashMap<>();
-    context.getSystemStreamPartitions().forEach(ssp -> messageStreams.put(ssp, new MessageStreamImpl<>()));
-    this.userTask.transform(messageStreams);
-    messageStreams.forEach((ssp, ms) ->
-        operatorChains.put(ssp, OperatorImpls.createOperatorImpls((MessageStreamImpl<IncomingSystemMessageEnvelope>) ms, context)));
+    MessageStreamsBuilderImpl mstreamsBuilder = new MessageStreamsBuilderImpl();
+    Map<SystemStream, Map<Partition, MessageStreamImpl<IncomingSystemMessageEnvelope>>> inputBySystemStream = new HashMap<>();
+    context.getSystemStreamPartitions().forEach(ssp -> {
+      if (!inputBySystemStream.containsKey(ssp.getSystemStream())) {
+        inputBySystemStream.putIfAbsent(ssp.getSystemStream(), new HashMap<>());
+      }
+      inputBySystemStream.get(ssp.getSystemStream()).put(ssp.getPartition(), new MessageStreamImpl<>(mstreamsBuilder));
+    });
+    // invoke to wire-up user-defined stream processing DAG
+    this.userTask.transform(mstreamsBuilder);
+    // replace the input stream of DAG w/ merged system stream partitions in a single task
+    inputBySystemStream.forEach((ss, parMap) -> mstreamsBuilder.swapInputStream(ss, merge(ss, parMap)));
+    context.getSystemStreamPartitions().forEach(ssp -> operatorChains.put(ssp,
+        OperatorImpls.createOperatorImpls(inputBySystemStream.get(ssp.getSystemStream()).get(ssp.getPartition()), context)));
+  }
+
+  private MessageStream<IncomingSystemMessageEnvelope> merge(SystemStream ss, Map<Partition, MessageStreamImpl<IncomingSystemMessageEnvelope>> parMap) {
+    // Here we will assume that the program is at {@link SystemStream} level. Hence, any two partitions from the same {@link SystemStream}
+    // that are assigned (grouped) in the same task will be "merged" to the same operator instances that consume the {@link SystemStream}
+
+    List<MessageStream<IncomingSystemMessageEnvelope>> moreInputs = new ArrayList<>();
+    Iterator<MessageStreamImpl<IncomingSystemMessageEnvelope>> streamIterator = parMap.values().iterator();
+    MessageStreamImpl<IncomingSystemMessageEnvelope> mergedStream = streamIterator.next();
+    streamIterator.forEachRemaining(m -> moreInputs.add((MessageStreamImpl<IncomingSystemMessageEnvelope>) m));
+    if (moreInputs.size() > 0) {
+      mergedStream = (MessageStreamImpl<IncomingSystemMessageEnvelope>) mergedStream.merge(moreInputs);
+    }
+    // Now swap the input stream in taskStreamBuilder w/ the mergedStream
+    return mergedStream;
   }
 
   @Override

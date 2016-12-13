@@ -28,7 +28,6 @@ import org.apache.samza.operators.windows.Windows;
 import org.apache.samza.system.SystemStreamPartition;
 
 import java.util.Collection;
-import java.util.Map;
 
 
 /**
@@ -56,9 +55,9 @@ public class BroadcastTask implements StreamOperatorTask {
   }
 
   @Override
-  public void transform(Map<SystemStreamPartition, MessageStream<IncomingSystemMessageEnvelope>> messageStreams) {
-    messageStreams.values().forEach(entry -> {
-        MessageStream<JsonMessageEnvelope> inputStream = entry.map(this::getInputMessage);
+  public void transform(MessageStreamsBuilder mstreamsBuilder) {
+    mstreamsBuilder.getAllInputStreams().values().forEach(entry -> {
+        MessageStream<JsonMessageEnvelope> inputStream = ((MessageStream<IncomingSystemMessageEnvelope>)entry).map(this::getInputMessage);
 
         inputStream.filter(this::myFilter1).
           window(Windows.<JsonMessageEnvelope, String>intoSessionCounter(

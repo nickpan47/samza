@@ -51,9 +51,11 @@ import static org.mockito.Mockito.when;
 
 public class TestMessageStreamImpl {
 
+  private MessageStreamsBuilderImpl mockStreamsBuilder = mock(MessageStreamsBuilderImpl.class);
+
   @Test
   public void testMap() {
-    MessageStreamImpl<TestMessageEnvelope> inputStream = new MessageStreamImpl<>();
+    MessageStreamImpl<TestMessageEnvelope> inputStream = new MessageStreamImpl<>(mockStreamsBuilder);
     MapFunction<TestMessageEnvelope, TestOutputMessageEnvelope> xMap =
         m -> new TestOutputMessageEnvelope(m.getKey(), m.getMessage().getValue().length() + 1);
     MessageStream<TestOutputMessageEnvelope> outputStream = inputStream.map(xMap);
@@ -78,7 +80,7 @@ public class TestMessageStreamImpl {
 
   @Test
   public void testFlatMap() {
-    MessageStreamImpl<TestMessageEnvelope> inputStream = new MessageStreamImpl<>();
+    MessageStreamImpl<TestMessageEnvelope> inputStream = new MessageStreamImpl<>(mockStreamsBuilder);
     Set<TestOutputMessageEnvelope> flatOuts = new HashSet<TestOutputMessageEnvelope>() { {
         this.add(mock(TestOutputMessageEnvelope.class));
         this.add(mock(TestOutputMessageEnvelope.class));
@@ -97,7 +99,7 @@ public class TestMessageStreamImpl {
 
   @Test
   public void testFilter() {
-    MessageStreamImpl<TestMessageEnvelope> inputStream = new MessageStreamImpl<>();
+    MessageStreamImpl<TestMessageEnvelope> inputStream = new MessageStreamImpl<>(mockStreamsBuilder);
     FilterFunction<TestMessageEnvelope> xFilter = m -> m.getMessage().getEventTime() > 123456L;
     MessageStream<TestMessageEnvelope> outputStream = inputStream.filter(xFilter);
     Collection<OperatorSpec> subs = inputStream.getRegisteredOperatorSpecs();
@@ -122,7 +124,7 @@ public class TestMessageStreamImpl {
 
   @Test
   public void testSink() {
-    MessageStreamImpl<TestMessageEnvelope> inputStream = new MessageStreamImpl<>();
+    MessageStreamImpl<TestMessageEnvelope> inputStream = new MessageStreamImpl<>(mockStreamsBuilder);
     SinkFunction<TestMessageEnvelope> xSink = (m, mc, tc) -> {
       mc.send(new OutgoingMessageEnvelope(new SystemStream("test-sys", "test-stream"), m.getMessage()));
       tc.commit(TaskCoordinator.RequestScope.CURRENT_TASK);
@@ -138,7 +140,7 @@ public class TestMessageStreamImpl {
 
   @Test
   public void testWindow() {
-    MessageStreamImpl<TestMessageEnvelope> inputStream = new MessageStreamImpl<>();
+    MessageStreamImpl<TestMessageEnvelope> inputStream = new MessageStreamImpl<>(mockStreamsBuilder);
     SessionWindow<TestMessageEnvelope, String, Integer> window = mock(SessionWindow.class);
     doReturn(mock(WindowFn.class)).when(window).getInternalWindowFn();
     MessageStream<WindowOutput<String, Integer>> outStream = inputStream.window(window);
@@ -151,8 +153,8 @@ public class TestMessageStreamImpl {
 
   @Test
   public void testJoin() {
-    MessageStreamImpl<TestMessageEnvelope> source1 = new MessageStreamImpl<>();
-    MessageStreamImpl<TestMessageEnvelope> source2 = new MessageStreamImpl<>();
+    MessageStreamImpl<TestMessageEnvelope> source1 = new MessageStreamImpl<>(mockStreamsBuilder);
+    MessageStreamImpl<TestMessageEnvelope> source2 = new MessageStreamImpl<>(mockStreamsBuilder);
     JoinFunction<TestMessageEnvelope, TestMessageEnvelope, TestOutputMessageEnvelope> joiner =
         (m1, m2) -> new TestOutputMessageEnvelope(m1.getKey(), m1.getMessage().getValue().length() + m2.getMessage().getValue().length());
     MessageStream<TestOutputMessageEnvelope> joinOutput = source1.join(source2, joiner);
@@ -178,10 +180,10 @@ public class TestMessageStreamImpl {
 
   @Test
   public void testMerge() {
-    MessageStream<TestMessageEnvelope> merge1 = new MessageStreamImpl<>();
+    MessageStream<TestMessageEnvelope> merge1 = new MessageStreamImpl<>(mockStreamsBuilder);
     Collection<MessageStream<TestMessageEnvelope>> others = new ArrayList<MessageStream<TestMessageEnvelope>>() { {
-        this.add(new MessageStreamImpl<>());
-        this.add(new MessageStreamImpl<>());
+        this.add(new MessageStreamImpl<>(mockStreamsBuilder));
+        this.add(new MessageStreamImpl<>(mockStreamsBuilder));
       } };
     MessageStream<TestMessageEnvelope> mergeOutput = merge1.merge(others);
     validateMergeOperator(merge1, mergeOutput);

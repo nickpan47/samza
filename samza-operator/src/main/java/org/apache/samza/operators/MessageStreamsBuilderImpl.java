@@ -29,22 +29,12 @@ public class MessageStreamsBuilderImpl implements MessageStreamsBuilder {
   private final Map<SystemStream, MessageStreamImpl> inputStreamsMap = new HashMap<>();
 
   @Override public <M extends MessageEnvelope> MessageStream<M> addInputStream(SystemStream input) {
-    inputStreamsMap.putIfAbsent(input, new MessageStreamImpl<>());
+    inputStreamsMap.putIfAbsent(input, new MessageStreamImpl<>(this));
     return inputStreamsMap.get(input);
   }
 
   @Override public Map<SystemStream, MessageStream> getAllInputStreams() {
     return Collections.unmodifiableMap(inputStreamsMap);
-  }
-
-  public MessageStreamsBuilderImpl cloneTaskBuilder() {
-    Map<MessageStreamImpl, MessageStreamImpl> clonedStreams = new HashMap<>();
-    MessageStreamsBuilderImpl clonedStreamBuilder = new MessageStreamsBuilderImpl();
-    inputStreamsMap.forEach((ss, ms) -> {
-        clonedStreamBuilder.inputStreamsMap.put(ss, clonedStreamBuilder.cloneStream(ms, clonedStreams));
-        clonedStreams.put(ms, clonedStreamBuilder.inputStreamsMap.get(ss));
-      });
-    return clonedStreamBuilder;
   }
 
   public void swapInputStream(SystemStream ss, MessageStream<IncomingSystemMessageEnvelope> mergedStream) {
@@ -60,7 +50,14 @@ public class MessageStreamsBuilderImpl implements MessageStreamsBuilder {
       // this has been cloned already
       return clonedStreams.get(source);
     }
-    return source.getClone(clonedStreams);
+    return source.getClone(this, clonedStreams);
   }
 
+  public void clone(MessageStreamsBuilderImpl source) {
+    Map<MessageStreamImpl, MessageStreamImpl> clonedStreams = new HashMap<>();
+    source.inputStreamsMap.forEach((ss, ms) -> {
+      this.inputStreamsMap.put(ss, this.cloneStream(ms, clonedStreams));
+      clonedStreams.put(ms, this.inputStreamsMap.get(ss));
+    });
+  }
 }

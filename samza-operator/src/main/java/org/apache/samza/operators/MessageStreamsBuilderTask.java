@@ -21,42 +21,21 @@ package org.apache.samza.operators;
 import org.apache.samza.Partition;
 import org.apache.samza.operators.data.IncomingSystemMessageEnvelope;
 import org.apache.samza.system.SystemStream;
-import org.apache.samza.system.SystemStreamPartition;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.Map;
 
 
 public class MessageStreamsBuilderTask implements StreamOperatorTask {
   private final Map<SystemStream, Map<Partition, MessageStream<IncomingSystemMessageEnvelope>>> inputBySystemStream = new HashMap<>();
-  private final MessageStreamsBuilderImpl taskStreamBuilder;
+  private final MessageStreamsBuilderImpl streamsBuilder;
 
   public MessageStreamsBuilderTask(MessageStreamsBuilder streamBuilder) {
-    this.taskStreamBuilder = ((MessageStreamsBuilderImpl) streamBuilder).cloneTaskBuilder();
+    this.streamsBuilder = (MessageStreamsBuilderImpl) streamBuilder;
   }
 
-  public void transform(Map<SystemStreamPartition, MessageStream<IncomingSystemMessageEnvelope>> streams) {
-    // use {@code streamBuilder} as the template to instantiate the actual program
-    streams.forEach((ssp, mstream) -> {
-        this.inputBySystemStream.putIfAbsent(ssp.getSystemStream(), new HashMap<>());
-        this.inputBySystemStream.get(ssp.getSystemStream()).putIfAbsent(ssp.getPartition(), mstream);
-      });
-    this.inputBySystemStream.forEach((ss, parMap) -> {
-        merge(ss, parMap);
-      });
-  }
-
-  private void merge(SystemStream ss, Map<Partition, MessageStream<IncomingSystemMessageEnvelope>> parMap) {
-    // Here we will assume that the program is at {@link SystemStream} level. Hence, any two partitions from the same {@link SystemStream}
-    // that are assigned (grouped) in the same task will be "merged" to the same operator instances that consume the {@link SystemStream}
-
-    List<MessageStream<IncomingSystemMessageEnvelope>> moreInputs = new ArrayList<>();
-    Iterator<MessageStream<IncomingSystemMessageEnvelope>> streamIterator = parMap.values().iterator();
-    MessageStreamImpl<IncomingSystemMessageEnvelope> mergedStream = (MessageStreamImpl<IncomingSystemMessageEnvelope>) streamIterator.next();
-    streamIterator.forEachRemaining(m -> moreInputs.add((MessageStreamImpl<IncomingSystemMessageEnvelope>) m));
-    if (moreInputs.size() > 0) {
-      mergedStream = (MessageStreamImpl<IncomingSystemMessageEnvelope>) mergedStream.merge(moreInputs);
-    }
-    // Now swap the input stream in taskStreamBuilder w/ the mergedStream
-    this.taskStreamBuilder.swapInputStream(ss, mergedStream);
+  public void transform(MessageStreamsBuilder mstreamsBuilder) {
+    // use {@code mstreamsBuilder} as the template to instantiate the actual program
+    ((MessageStreamsBuilderImpl)mstreamsBuilder).clone(this.streamsBuilder);
   }
 }

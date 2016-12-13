@@ -27,6 +27,8 @@ import org.apache.samza.operators.windows.Window;
 import org.apache.samza.operators.windows.WindowFn;
 import org.apache.samza.operators.windows.WindowOutput;
 import org.apache.samza.operators.windows.WindowState;
+import org.apache.samza.system.OutgoingMessageEnvelope;
+import org.apache.samza.system.SystemStream;
 
 import java.util.*;
 import java.util.function.BiFunction;
@@ -39,11 +41,19 @@ import java.util.function.BiFunction;
  * @param <M>  type of {@link MessageEnvelope}s in this {@link MessageStream}
  */
 public class MessageStreamImpl<M extends MessageEnvelope> implements MessageStream<M> {
+  /**
+   * The {@link MessageStreamsBuilderImpl} object that contains this {@link MessageStreamImpl} as input
+   */
+  private final MessageStreamsBuilderImpl mstreamsBuilder;
 
   /**
    * The set of operators that consume the {@link MessageEnvelope}s in this {@link MessageStream}
    */
   private final Set<OperatorSpec> registeredOperatorSpecs = new HashSet<>();
+
+  public MessageStreamImpl(MessageStreamsBuilderImpl mstreamsBuilder) {
+    this.mstreamsBuilder = mstreamsBuilder;
+  }
 
   @Override
   public <OM extends MessageEnvelope> MessageStream<OM> map(MapFunction<M, OM> mapFn) {
@@ -91,7 +101,7 @@ public class MessageStreamImpl<M extends MessageEnvelope> implements MessageStre
   @Override
   public <K, JM extends MessageEnvelope<K, ?>, RM extends MessageEnvelope> MessageStream<RM> join(
       MessageStream<JM> otherStream, JoinFunction<M, JM, RM> joinFn) {
-    MessageStreamImpl<RM> outputStream = new MessageStreamImpl<>();
+    MessageStreamImpl<RM> outputStream = new MessageStreamImpl<>(this.mstreamsBuilder);
 
     BiFunction<M, JM, RM> parJoin1 = joinFn::apply;
     BiFunction<JM, M, RM> parJoin2 = (m, t1) -> joinFn.apply(t1, m);
@@ -106,12 +116,18 @@ public class MessageStreamImpl<M extends MessageEnvelope> implements MessageStre
 
   @Override
   public MessageStream<M> merge(Collection<MessageStream<M>> otherStreams) {
-    MessageStreamImpl<M> outputStream = new MessageStreamImpl<>();
+    MessageStreamImpl<M> outputStream = new MessageStreamImpl<>(this.mstreamsBuilder);
 
     otherStreams.add(this);
     otherStreams.forEach(other -> ((MessageStreamImpl<M>) other).registeredOperatorSpecs
         .add(OperatorSpecs.createMergeOperator(outputStream)));
     return outputStream;
+  }
+
+  @Override
+  public MessageStream<M> through(SystemStream stream) {
+    this.sink((m, mc, tc) -> mc.send(new OutgoingMessageEnvelope(stream, m.getKey(), m.getMessage())));
+    return this.mstreamsBuilder.addInputStream(stream);
   }
 
   /**
@@ -130,15 +146,15 @@ public class MessageStreamImpl<M extends MessageEnvelope> implements MessageStre
     return dest;
   }
 
-  public MessageStreamImpl<M> getClone(Map<MessageStreamImpl, MessageStreamImpl> clonedStreams) {
+  public MessageStreamImpl<M> getClone(MessageStreamsBuilderImpl clonedStreamsBuilder, Map<MessageStreamImpl, MessageStreamImpl> clonedStreams) {
     if (clonedStreams.containsKey(this)) {
       // already cloned
       return clonedStreams.get(this);
     }
-    MessageStreamImpl<M> dest = new MessageStreamImpl<>();
+    MessageStreamImpl<M> dest = new MessageStreamImpl<>(clonedStreamsBuilder);
     this.registeredOperatorSpecs.forEach(opSpec -> {
       OperatorSpec cloneOpSpec = opSpec.getOutputStream() != null ?
-           opSpec.getClone(opSpec.getOutputStream().getClone(clonedStreams)) : opSpec.getClone(null);
+           opSpec.getClone(opSpec.getOutputStream().getClone(clonedStreamsBuilder, clonedStreams)) : opSpec.getClone(null);
       dest.registeredOperatorSpecs.add(cloneOpSpec);
       });
     clonedStreams.put(this, dest);
