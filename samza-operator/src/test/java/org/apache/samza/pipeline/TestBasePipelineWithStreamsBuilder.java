@@ -19,10 +19,8 @@
 
 package org.apache.samza.pipeline;
 
-import com.google.common.collect.Lists;
 import org.apache.samza.operators.MessageStreamsBuilder;
 import org.apache.samza.operators.MessageStreamsBuilderImpl;
-import org.apache.samza.operators.data.IncomingSystemMessageEnvelope;
 import org.apache.samza.operators.data.JsonIncomingSystemMessageEnvelope;
 import org.apache.samza.operators.windows.Windows;
 import org.apache.samza.pipeline.api.Pipeline;
@@ -32,33 +30,32 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 
 public class TestBasePipelineWithStreamsBuilder {
-  private Processor repartition;
   private StreamOperatorProcessor main;
-  private List<Processor> processors;
 
   private PStream inputStream1;
   private PStream inputStream2;
   private PStream intermediateStream1;
   private PStream intermediateStream2;
   private PStream outputStream1;
-  private List<PStream> streams;
 
   @Before
   public void setup() {
+    this.inputStream1 = this.createStream("kafka.InputStream1", PStream.Visibility.PUBLIC);
+    this.inputStream2 = this.createStream("kafka.InputStream2", PStream.Visibility.PUBLIC);
+    this.intermediateStream1 = this.createStream("kafka.mytopic-1", PStream.Visibility.PUBLIC);
+    this.intermediateStream2 = this.createStream("kafka.mytopic-2", PStream.Visibility.PUBLIC);
+    this.outputStream1 = this.createStream("kafka.output-1", PStream.Visibility.PUBLIC);
 
-    MessageStreamsBuilder repartitionBuilder = new MessageStreamsBuilderImpl();
-    repartitionBuilder.addInputStream(new SystemStream("kafka", "InputStream1")).sink(new SystemStream("kafka", "mytopic-1"));
-    repartitionBuilder.addInputStream(new SystemStream("kafka", "InputStream2")).sink(new SystemStream("kafka", "mytopic-2"));
-    repartition = new StreamOperatorProcessor("Repartitioner", repartitionBuilder);
-
-    MessageStreamsBuilder streamsBuilder = new MessageStreamsBuilderImpl();
-    streamsBuilder.<IncomingSystemMessageEnvelope>addInputStream(new SystemStream("kafka", "mytopic-1")).
-        join(streamsBuilder.<IncomingSystemMessageEnvelope>addInputStream(new SystemStream("kafka", "mytopic-2")),
+    // This describes a DAG w/ multiple stages
+    MessageStreamsBuilder mstreamsBuilder = new MessageStreamsBuilderImpl();
+    mstreamsBuilder.addInputStream(new SystemStream("kafka", "InputStream1")).through(
+        new SystemStream("kafka", "mytopic-1")).
+        join(mstreamsBuilder.addInputStream(new SystemStream("kafka", "InputStream2")).through(
+                new SystemStream("kafka", "mytopic-2")),
             (m1, m2) -> new JsonIncomingSystemMessageEnvelope<>(m1.getKey().toString(),
                 new HashMap<Object, Object>() {
                   {
@@ -69,22 +66,14 @@ public class TestBasePipelineWithStreamsBuilder {
         window(Windows.intoSessionCounter(m -> String.format("%s", m.getMessage().get("treeId")))).
         sink(new SystemStream("kafka", "output-1"));
 
-    main = new StreamOperatorProcessor("MyProcessor", streamsBuilder);
-    processors = Lists.newArrayList(repartition, main);
-
-    inputStream1 = createStream("InputStream1", PStream.Visibility.PUBLIC);
-    inputStream2 = createStream("InputStream2", PStream.Visibility.PUBLIC);
-    intermediateStream1 = createStream("mytopic-1", PStream.Visibility.PRIVATE);
-    intermediateStream2 = createStream("mytopic-2", PStream.Visibility.PRIVATE);
-    outputStream1 = createStream("output-1", PStream.Visibility.PUBLIC);
-    streams = Lists.newArrayList(inputStream1, inputStream2, intermediateStream1, intermediateStream2, outputStream1);
+    main = new StreamOperatorProcessor("MyProcessor", mstreamsBuilder);
   }
 
   @Test public void TestBasePipeline() {
     PipelineBuilder builder = new PipelineBuilder();
 
-    Pipeline pipeline = builder.addInputStreams(repartition, inputStream1, inputStream2)
-        .addIntermediateStreams(repartition, main, intermediateStream1, intermediateStream2)
+    // this creates an execution plan that only have one job
+    Pipeline pipeline = builder.addInputStreams(main, inputStream1, inputStream2, intermediateStream1, intermediateStream2)
         .addOutputStreams(main, outputStream1).build();
   }
 
