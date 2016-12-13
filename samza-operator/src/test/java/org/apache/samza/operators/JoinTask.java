@@ -20,13 +20,12 @@
 package org.apache.samza.operators;
 
 import org.apache.samza.operators.data.IncomingSystemMessageEnvelope;
-import org.apache.samza.operators.data.Offset;
 import org.apache.samza.operators.data.JsonIncomingSystemMessageEnvelope;
+import org.apache.samza.operators.data.Offset;
 import org.apache.samza.system.SystemStreamPartition;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 
 /**
@@ -48,15 +47,16 @@ public class JoinTask implements StreamOperatorTask {
   MessageStream<JsonMessageEnvelope> joinOutput = null;
 
   @Override
-  public void transform(Map<SystemStreamPartition, MessageStream<IncomingSystemMessageEnvelope>> messageStreams) {
-    messageStreams.values().forEach(messageStream -> {
-        MessageStream<JsonMessageEnvelope> newSource = messageStream.map(this::getInputMessage);
-        if (joinOutput == null) {
-          joinOutput = newSource;
-        } else {
-          joinOutput = joinOutput.join(newSource, (m1, m2) -> this.myJoinResult(m1, m2));
-        }
-      });
+  public void transform(MessageStreamsBuilder mstreamsBuilder) {
+    mstreamsBuilder.getAllInputStreams().values().forEach(messageStream -> {
+      MessageStream<JsonMessageEnvelope> newSource =
+          ((MessageStream<IncomingSystemMessageEnvelope>) messageStream).map(this::getInputMessage);
+      if (joinOutput == null) {
+        joinOutput = newSource;
+      } else {
+        joinOutput = joinOutput.join(newSource, (m1, m2) -> this.myJoinResult(m1, m2));
+      }
+    });
   }
 
   private JsonMessageEnvelope getInputMessage(IncomingSystemMessageEnvelope ism) {

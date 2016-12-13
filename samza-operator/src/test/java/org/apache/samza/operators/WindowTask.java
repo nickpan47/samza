@@ -27,8 +27,6 @@ import org.apache.samza.operators.windows.TriggerBuilder;
 import org.apache.samza.operators.windows.Windows;
 import org.apache.samza.system.SystemStreamPartition;
 
-import java.util.Map;
-
 
 /**
  * Example implementation of a simple user-defined tasks w/ window operators
@@ -47,9 +45,9 @@ public class WindowTask implements StreamOperatorTask {
     }
   }
 
-  @Override public void transform(Map<SystemStreamPartition, MessageStream<IncomingSystemMessageEnvelope>> messageStreams) {
-    messageStreams.values().forEach(source ->
-      source.map(m1 ->
+  @Override public void transform(MessageStreamsBuilder mstreamsBuilder) {
+    mstreamsBuilder.getAllInputStreams().values().forEach(source ->
+        ((MessageStream<IncomingSystemMessageEnvelope>)source).map(m1 ->
         new JsonMessageEnvelope(
           this.myMessageKeyFunction(m1),
           (MessageType) m1.getMessage(),

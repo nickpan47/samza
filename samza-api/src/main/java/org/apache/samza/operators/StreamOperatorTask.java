@@ -22,8 +22,6 @@ import org.apache.samza.annotation.InterfaceStability;
 import org.apache.samza.operators.data.IncomingSystemMessageEnvelope;
 import org.apache.samza.system.SystemStreamPartition;
 
-import java.util.Map;
-
 
 /**
  * A {@link StreamOperatorTask} is the basic interface to implement for processing {@link MessageStream}s.
@@ -43,9 +41,9 @@ public interface StreamOperatorTask {
    * {@link MessageStream} APIs. Each {@link MessageStream} corresponds to one {@link SystemStreamPartition}
    * in the input system.
    *
-   * @param messageStreams the {@link MessageStream}s that receive {@link IncomingSystemMessageEnvelope}s
+   * @param streamsBuilder the {@link MessageStream}s that receive {@link IncomingSystemMessageEnvelope}s
    *                       from their corresponding {@link org.apache.samza.system.SystemStreamPartition}
    */
-  void transform(Map<SystemStreamPartition, MessageStream<IncomingSystemMessageEnvelope>> messageStreams);
+  void transform(MessageStreamsBuilder streamsBuilder);
 
 }

@@ -74,7 +74,7 @@ public class TestFluentStreamAdaptorTask {
       } };
     when(mockContext.getSystemStreamPartitions()).thenReturn(testInputs);
     adaptorTask.init(mockConfig, mockContext);
-    verify(userTask, times(1)).transform(Mockito.anyMap());
+    verify(userTask, times(1)).transform(Mockito.any(MessageStreamsBuilder.class));
     Map<SystemStreamPartition, OperatorImpl> chainsMap = (Map<SystemStreamPartition, OperatorImpl>) operatorChainsField.get(adaptorTask);
     assertTrue(chainsMap.size() == 2);
     assertTrue(chainsMap.containsKey(testInputs.toArray()[0]));
