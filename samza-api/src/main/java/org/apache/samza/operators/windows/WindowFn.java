@@ -18,6 +18,7 @@
  */
 package org.apache.samza.operators.windows;
 
+import org.apache.samza.annotation.InterfaceStability;
 import org.apache.samza.operators.data.MessageEnvelope;
 import org.apache.samza.storage.kv.Entry;
 
@@ -32,6 +33,7 @@ import java.util.function.BiFunction;
  * @param <WS>  type of the {@link WindowState} in the state store
  * @param <WM>  type of the {@link MessageEnvelope} in the output stream
  */
+@InterfaceStability.Unstable
 public interface WindowFn<M extends MessageEnvelope, WK, WS extends WindowState, WM extends WindowOutput<WK, ?>> {
 
   /**

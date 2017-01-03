@@ -23,7 +23,6 @@ import org.apache.samza.operators.data.MessageEnvelope;
 import org.apache.samza.operators.functions.*;
 import org.apache.samza.operators.windows.Window;
 import org.apache.samza.operators.windows.WindowOutput;
-import org.apache.samza.system.SystemStream;
 
 import java.util.Collection;
 
@@ -73,7 +72,7 @@ public interface MessageStream<M extends MessageEnvelope> {
   /**
    * Allows sending {@link MessageEnvelope}s in this {@link MessageStream} to an output using the provided {@link SinkFunction}.
    *
-   * NOTE: the output may not be a {@link SystemStream}. It can be an external database, etc.
+   * NOTE: the output may not be a {@link org.apache.samza.system.SystemStream}. It can be an external database, etc.
    *
    * @param sinkFn  the function to send {@link MessageEnvelope}s in this stream to output
    */
@@ -83,7 +82,7 @@ public interface MessageStream<M extends MessageEnvelope> {
    * Allows sending {@link MessageEnvelope}s in this {@link MessageStream} to an output {@link org.apache.samza.system.SystemStream}
    * defined by {@link StreamSpec}
    *
-   * @param streamSpec  stream specification that defines a physical {@link SystemStream}
+   * @param streamSpec  stream specification that defines a physical {@link org.apache.samza.system.SystemStream}
    */
   void sink(StreamSpec streamSpec);
 
@@ -97,6 +96,7 @@ public interface MessageStream<M extends MessageEnvelope> {
    * @param window  the {@link Window} to group and process {@link MessageEnvelope}s from this {@link MessageStream}
    * @param <WK>  the type of key in the {@link WindowOutput} from the {@link Window}
    * @param <WV>  the type of value in the {@link WindowOutput} from the {@link Window}
+   * @param <WM>  the type of {@link WindowOutput} in the transformed {@link MessageStream}
    * @return  the transformed {@link MessageStream}
    */
   <WK, WV, WM extends WindowOutput<WK, WV>> MessageStream<WM> window(
@@ -128,7 +128,7 @@ public interface MessageStream<M extends MessageEnvelope> {
   MessageStream<M> merge(Collection<MessageStream<M>> otherStreams);
 
   /**
-   * Send the input message to an output {@link SystemStream} and consume it as input {@link MessageStream} again.
+   * Send the input message to an output {@link org.apache.samza.system.SystemStream} and consume it as input {@link MessageStream} again.
    *
    * @param streamSpec  the output {@link org.apache.samza.system.SystemStream} defined by {@link StreamSpec}
    * @return  a {@link MessageStream} object that consume from {@code intStream}

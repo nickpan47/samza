@@ -18,12 +18,14 @@
  */
 package org.apache.samza.system;
 
+import org.apache.samza.annotation.InterfaceStability;
 import org.apache.samza.operators.MessageStreamGraph;
 
 
 /**
  * Interface to be implemented by physical execution engine to deploy the config and jobs to run the {@link MessageStreamGraph}
  */
+@InterfaceStability.Unstable
 public interface ExecutionEnvironment {
 
   /**

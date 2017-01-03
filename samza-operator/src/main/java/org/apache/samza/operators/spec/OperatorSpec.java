@@ -18,6 +18,7 @@
  */
 package org.apache.samza.operators.spec;
 
+import org.apache.samza.annotation.InterfaceStability;
 import org.apache.samza.operators.MessageStreamImpl;
 import org.apache.samza.operators.data.MessageEnvelope;
 
@@ -26,6 +27,7 @@ import org.apache.samza.operators.data.MessageEnvelope;
  * A stateless serializable stream operator specification that holds all the information required
  * to transform the input {@link MessageStreamImpl} and produce the output {@link MessageStreamImpl}.
  */
+@InterfaceStability.Unstable
 public interface OperatorSpec<OM extends MessageEnvelope> {
 
   /**

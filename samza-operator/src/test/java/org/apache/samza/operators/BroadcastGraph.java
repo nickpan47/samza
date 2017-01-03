@@ -59,31 +59,29 @@ public class BroadcastGraph {
     MessageStreamGraphImpl graph = new MessageStreamGraphImpl(runtimeEnv);
 
     inputs.forEach(ssp -> {
-      MessageStream<JsonMessageEnvelope> inputStream = graph.<IncomingSystemMessageEnvelope>addInStream(() -> ssp.getSystemStream())
-          .map(this::getInputMessage);
+        MessageStream<JsonMessageEnvelope> inputStream = graph.<IncomingSystemMessageEnvelope>addInStream(() -> ssp.getSystemStream()).
+          map(this::getInputMessage);
 
-      inputStream.filter(this::myFilter1).
+        inputStream.filter(this::myFilter1).
           window(Windows.<JsonMessageEnvelope, String>intoSessionCounter(
               m -> String.format("%s-%s", m.getMessage().field1, m.getMessage().field2)).
               setTriggers(TriggerBuilder.<JsonMessageEnvelope, Integer>earlyTriggerWhenExceedWndLen(100).
                   addLateTriggerOnSizeLimit(10).
                   addTimeoutSinceLastMessage(30000)));
 
-      inputStream.filter(this::myFilter2).
+        inputStream.filter(this::myFilter2).
           window(Windows.<JsonMessageEnvelope, String>intoSessions(
               m -> String.format("%s-%s", m.getMessage().field3, m.getMessage().field4)).
-              setTriggers(
-                  TriggerBuilder.<JsonMessageEnvelope, Collection<JsonMessageEnvelope>>earlyTriggerWhenExceedWndLen(100)
-                      .
-                          addTimeoutSinceLastMessage(30000)));
+              setTriggers(TriggerBuilder.<JsonMessageEnvelope, Collection<JsonMessageEnvelope>>earlyTriggerWhenExceedWndLen(100).
+                  addTimeoutSinceLastMessage(30000)));
 
-      inputStream.filter(this::myFilter3).
+        inputStream.filter(this::myFilter3).
           window(Windows.<JsonMessageEnvelope, String, MessageType>intoSessions(
               m -> String.format("%s-%s", m.getMessage().field3, m.getMessage().field4), m -> m.getMessage()).
               setTriggers(TriggerBuilder.<JsonMessageEnvelope, Collection<MessageType>>earlyTriggerOnEventTime(
                   m -> m.getMessage().getTimestamp(), 30000).
                   addTimeoutSinceFirstMessage(60000)));
-    });
+      });
     return graph;
   }
 

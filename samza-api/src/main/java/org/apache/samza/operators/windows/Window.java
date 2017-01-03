@@ -18,6 +18,7 @@
  */
 package org.apache.samza.operators.windows;
 
+import org.apache.samza.annotation.InterfaceStability;
 import org.apache.samza.operators.data.MessageEnvelope;
 
 /**
@@ -28,6 +29,7 @@ import org.apache.samza.operators.data.MessageEnvelope;
  * @param <WV>  the type of output value in the {@link WindowOutput}
  * @param <WM>  the type of {@link MessageEnvelope} in the window output stream
  */
+@InterfaceStability.Unstable
 public interface Window<M extends MessageEnvelope, WK, WV, WM extends WindowOutput<WK, WV>> {
 
   /**

@@ -48,6 +48,7 @@ public class OperatorSpecs {
    * Creates a {@link StreamOperatorSpec}.
    *
    * @param transformFn  the transformation function
+   * @param output  the output {@link MessageStreamImpl} object
    * @param <M>  type of input {@link MessageEnvelope}
    * @param <OM>  type of output {@link MessageEnvelope}
    * @return  the {@link StreamOperatorSpec}
@@ -72,6 +73,7 @@ public class OperatorSpecs {
    * Creates a {@link WindowOperatorSpec}.
    *
    * @param windowFn  the {@link WindowFn} function
+   * @param wndOutput  the output {@link MessageStreamImpl} object
    * @param <M>  type of input {@link MessageEnvelope}
    * @param <WK>  type of window key
    * @param <WS>  type of {@link WindowState}

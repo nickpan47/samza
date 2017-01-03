@@ -18,6 +18,7 @@
  */
 package org.apache.samza.operators;
 
+import org.apache.samza.annotation.InterfaceStability;
 import org.apache.samza.operators.data.MessageEnvelope;
 
 import java.util.Collection;
@@ -26,6 +27,7 @@ import java.util.Collection;
 /**
  * Job-level programming interface to create an operator DAG and run in various different runtime environments.
  */
+@InterfaceStability.Unstable
 public interface MessageStreamGraph {
 
   <M extends MessageEnvelope> MessageStream<M> addInStream(StreamSpec streamSpec);

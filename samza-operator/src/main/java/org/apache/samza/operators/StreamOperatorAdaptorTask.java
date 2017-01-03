@@ -25,7 +25,6 @@ import org.apache.samza.operators.impl.OperatorImpl;
 import org.apache.samza.operators.impl.OperatorImpls;
 import org.apache.samza.system.IncomingMessageEnvelope;
 import org.apache.samza.system.SystemStream;
-import org.apache.samza.system.SystemStreamPartition;
 import org.apache.samza.task.InitableTask;
 import org.apache.samza.task.MessageCollector;
 import org.apache.samza.task.StreamTask;
@@ -46,23 +45,23 @@ import java.util.*;
  * <p>
  * It accepts an instance of the user implemented DAG {@link MessageStreamGraphImpl} as input parameter of the constructor.
  * When its own {@link #init(Config, TaskContext)} method is called during startup, it creates a {@link MessageStreamImpl}
- * corresponding to each of its input {@link SystemStreamPartition}s. Each input {@link MessageStreamImpl} will be corresponding
- * to either an input stream or intermediate stream in {@link MessageStreamGraphImpl}.
+ * corresponding to each of its input {@link org.apache.samza.system.SystemStreamPartition}s. Each input {@link MessageStreamImpl}
+ * will be corresponding to either an input stream or intermediate stream in {@link MessageStreamGraphImpl}.
  * <p>
  * Then, this task calls {@link OperatorImpls#createOperatorImpls(MessageStreamImpl, TaskContext)} for each of the input
  * {@link MessageStreamImpl}. This instantiates the {@link org.apache.samza.operators.impl.OperatorImpl} DAG
  * corresponding to the aforementioned {@link org.apache.samza.operators.spec.OperatorSpec} DAG and returns the
  * root node of the DAG, which this class saves.
  * <p>
- * Now that it has the root for the DAG corresponding to each {@link SystemStreamPartition}, it can pass the message
- * envelopes received in {@link StreamTask#process(IncomingMessageEnvelope, MessageCollector, TaskCoordinator)} along
- * to the appropriate root nodes. From then on, each {@link org.apache.samza.operators.impl.OperatorImpl} propagates
+ * Now that it has the root for the DAG corresponding to each {@link org.apache.samza.system.SystemStreamPartition}, it
+ * can pass the message envelopes received in {@link StreamTask#process(IncomingMessageEnvelope, MessageCollector, TaskCoordinator)}
+ * along to the appropriate root nodes. From then on, each {@link org.apache.samza.operators.impl.OperatorImpl} propagates
  * its transformed output to the next set of {@link org.apache.samza.operators.impl.OperatorImpl}s.
  */
 public final class StreamOperatorAdaptorTask implements StreamTask, InitableTask, WindowableTask {
 
   /**
-   * A mapping from each {@link SystemStreamPartition} to the root node of its operator chain DAG.
+   * A mapping from each {@link SystemStream} to the root node of its operator chain DAG.
    */
   private final Map<SystemStream, OperatorImpl<IncomingSystemMessageEnvelope, ? extends MessageEnvelope>> operatorGraph = new HashMap<>();
 
@@ -78,10 +77,10 @@ public final class StreamOperatorAdaptorTask implements StreamTask, InitableTask
     // Alternative: insert a merge stage that add one merge operator per SSP
     Map<SystemStream, MessageStreamImpl> inputBySystemStream = new HashMap<>();
     context.getSystemStreamPartitions().forEach(ssp -> {
-      if (!inputBySystemStream.containsKey(ssp.getSystemStream())) {
-        inputBySystemStream.putIfAbsent(ssp.getSystemStream(), this.streamGraph.getStreamByName(ssp.getSystemStream()));
-      }
-    });
+        if (!inputBySystemStream.containsKey(ssp.getSystemStream())) {
+          inputBySystemStream.putIfAbsent(ssp.getSystemStream(), this.streamGraph.getStreamByName(ssp.getSystemStream()));
+        }
+      });
     context.getSystemStreamPartitions().forEach(ssp -> operatorGraph.put(ssp,
         OperatorImpls.createOperatorImpls(inputBySystemStream.get(ssp.getSystemStream()), context)));
   }
