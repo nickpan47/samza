@@ -31,19 +31,9 @@ import org.apache.samza.operators.functions.FlatMapFunction;
  */
 public class StreamOperatorSpec<M extends MessageEnvelope, OM extends MessageEnvelope> implements OperatorSpec<OM> {
 
-  private final MessageStreamImpl<OM> outputStream;
+  private final MessageStreamImpl outputStream;
 
   private final FlatMapFunction<M, OM> transformFn;
-
-  /**
-   * Default constructor for a {@link StreamOperatorSpec}.
-   *
-   * @param transformFn  the transformation function that transforms each input {@link MessageEnvelope} into a collection
-   *                     of output {@link MessageEnvelope}s
-   */
-  StreamOperatorSpec(FlatMapFunction<M, OM> transformFn) {
-    this(transformFn, new MessageStreamImpl<>());
-  }
 
   /**
    * Constructor for a {@link StreamOperatorSpec} that accepts an output {@link MessageStreamImpl}.
@@ -51,18 +41,14 @@ public class StreamOperatorSpec<M extends MessageEnvelope, OM extends MessageEnv
    * @param transformFn  the transformation function
    * @param outputStream  the output {@link MessageStreamImpl}
    */
-  StreamOperatorSpec(FlatMapFunction<M, OM> transformFn, MessageStreamImpl<OM> outputStream) {
+  StreamOperatorSpec(FlatMapFunction<M, OM> transformFn, MessageStreamImpl outputStream) {
     this.outputStream = outputStream;
     this.transformFn = transformFn;
   }
 
   @Override
-  public MessageStreamImpl<OM> getOutputStream() {
+  public MessageStreamImpl getOutputStream() {
     return this.outputStream;
-  }
-
-  @Override public OperatorSpec<OM> getClone(MessageStreamImpl<OM> outputStream) {
-    return new StreamOperatorSpec<>(this.transformFn, outputStream);
   }
 
   public FlatMapFunction<M, OM> getTransformFn() {

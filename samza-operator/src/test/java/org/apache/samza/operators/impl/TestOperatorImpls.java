@@ -18,6 +18,7 @@
  */
 package org.apache.samza.operators.impl;
 
+import org.apache.samza.operators.MessageStreamGraphImpl;
 import org.apache.samza.operators.MessageStreamImpl;
 import org.apache.samza.operators.TestMessageEnvelope;
 import org.apache.samza.operators.TestOutputMessageEnvelope;
@@ -39,9 +40,7 @@ import java.util.Iterator;
 import java.util.Set;
 import java.util.function.BiFunction;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotSame;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -98,7 +97,7 @@ public class TestOperatorImpls {
   @Test
   public void testEmptyChain() {
     // test creation of empty chain
-    MessageStreamImpl<TestMessageEnvelope> testStream = new MessageStreamImpl<>();
+    MessageStreamImpl<TestMessageEnvelope> testStream = mock(MessageStreamImpl.class);
     TaskContext mockContext = mock(TaskContext.class);
     RootOperatorImpl operatorChain = OperatorImpls.createOperatorImpls(testStream, mockContext);
     assertTrue(operatorChain != null);
@@ -107,7 +106,8 @@ public class TestOperatorImpls {
   @Test
   public void testLinearChain() throws IllegalAccessException {
     // test creation of linear chain
-    MessageStreamImpl<TestMessageEnvelope> testInput = new MessageStreamImpl<>();
+    MessageStreamGraphImpl mockGraph = mock(MessageStreamGraphImpl.class);
+    MessageStreamImpl<TestMessageEnvelope> testInput = new MessageStreamImpl<>(mockGraph);
     TaskContext mockContext = mock(TaskContext.class);
     testInput.map(m -> m).window(Windows.intoSessionCounter(TestMessageEnvelope::getKey));
     RootOperatorImpl operatorChain = OperatorImpls.createOperatorImpls(testInput, mockContext);
@@ -124,7 +124,8 @@ public class TestOperatorImpls {
   @Test
   public void testBroadcastChain() throws IllegalAccessException {
     // test creation of broadcast chain
-    MessageStreamImpl<TestMessageEnvelope> testInput = new MessageStreamImpl<>();
+    MessageStreamGraphImpl mockGraph = mock(MessageStreamGraphImpl.class);
+    MessageStreamImpl<TestMessageEnvelope> testInput = new MessageStreamImpl<>(mockGraph);
     TaskContext mockContext = mock(TaskContext.class);
     testInput.filter(m -> m.getMessage().getEventTime() > 123456L).flatMap(m -> new ArrayList() { { this.add(m); this.add(m); } });
     testInput.filter(m -> m.getMessage().getEventTime() < 123456L).map(m -> m);
@@ -151,8 +152,9 @@ public class TestOperatorImpls {
   @Test
   public void testJoinChain() throws IllegalAccessException {
     // test creation of join chain
-    MessageStreamImpl<TestMessageEnvelope> input1 = new MessageStreamImpl<>();
-    MessageStreamImpl<TestMessageEnvelope> input2 = new MessageStreamImpl<>();
+    MessageStreamGraphImpl mockGraph = mock(MessageStreamGraphImpl.class);
+    MessageStreamImpl<TestMessageEnvelope> input1 = new MessageStreamImpl<>(mockGraph);
+    MessageStreamImpl<TestMessageEnvelope> input2 = new MessageStreamImpl<>(mockGraph);
     TaskContext mockContext = mock(TaskContext.class);
     input1
         .join(input2, (m1, m2) ->

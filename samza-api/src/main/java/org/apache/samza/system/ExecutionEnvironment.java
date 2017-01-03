@@ -16,22 +16,20 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.samza.operators.spec;
+package org.apache.samza.system;
 
-import org.apache.samza.operators.MessageStreamImpl;
-import org.apache.samza.operators.data.MessageEnvelope;
+import org.apache.samza.operators.MessageStreamGraph;
 
 
 /**
- * A stateless serializable stream operator specification that holds all the information required
- * to transform the input {@link MessageStreamImpl} and produce the output {@link MessageStreamImpl}.
+ * Interface to be implemented by physical execution engine to deploy the config and jobs to run the {@link MessageStreamGraph}
  */
-public interface OperatorSpec<OM extends MessageEnvelope> {
+public interface ExecutionEnvironment {
 
   /**
-   * Get the output stream containing transformed {@link MessageEnvelope} produced by this operator.
-   * @return  the output stream containing transformed {@link MessageEnvelope} produced by this operator.
+   * Method to be invoked to deploy and run the actual Samza jobs to execute {@link MessageStreamGraph}
+   *
+   * @param graph  the user-defined operator DAG
    */
-  MessageStreamImpl<OM> getOutputStream();
-
+  void run(MessageStreamGraph graph);
 }

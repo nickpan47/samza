@@ -53,8 +53,8 @@ public class OperatorSpecs {
    * @return  the {@link StreamOperatorSpec}
    */
   public static <M extends MessageEnvelope, OM extends MessageEnvelope> StreamOperatorSpec<M, OM> createStreamOperator(
-      FlatMapFunction<M, OM> transformFn) {
-    return new StreamOperatorSpec<>(transformFn);
+      FlatMapFunction<M, OM> transformFn, MessageStreamImpl<OM> output) {
+    return new StreamOperatorSpec<>(transformFn, output);
   }
 
   /**
@@ -79,8 +79,8 @@ public class OperatorSpecs {
    * @return  the {@link WindowOperatorSpec}
    */
   public static <M extends MessageEnvelope, WK, WS extends WindowState, WM extends WindowOutput<WK, ?>> WindowOperatorSpec<M, WK, WS, WM> createWindowOperator(
-      WindowFn<M, WK, WS, WM> windowFn) {
-    return new WindowOperatorSpec<>(windowFn, OperatorSpecs.getOperatorId());
+      WindowFn<M, WK, WS, WM> windowFn, MessageStreamImpl<WM> wndOutput) {
+    return new WindowOperatorSpec<>(windowFn, wndOutput, OperatorSpecs.getOperatorId());
   }
 
   /**
@@ -95,7 +95,7 @@ public class OperatorSpecs {
    * @return  the {@link PartialJoinOperatorSpec}
    */
   public static <M extends MessageEnvelope<K, ?>, K, JM extends MessageEnvelope<K, ?>, OM extends MessageEnvelope> PartialJoinOperatorSpec<M, K, JM, OM> createPartialJoinOperator(
-      BiFunction<M, JM, OM> partialJoinFn, MessageStreamImpl<OM> joinOutput) {
+      BiFunction<M, JM, OM> partialJoinFn, MessageStreamImpl joinOutput) {
     return new PartialJoinOperatorSpec<M, K, JM, OM>(partialJoinFn, joinOutput, OperatorSpecs.getOperatorId());
   }
 

@@ -49,7 +49,7 @@ class SessionWindowOperatorImpl<M extends MessageEnvelope, RK, WS extends Window
   }
 
   @Override
-  public void init(MessageStreamImpl<M> source, TaskContext context) {
+  public void init(MessageStreamImpl source, TaskContext context) {
     this.stateStore = new StateStoreImpl<>(this.windowSpec.getStoreFns(), windowSpec.getStoreName(source));
     this.stateStore.init(context);
   }

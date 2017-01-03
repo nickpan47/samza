@@ -49,7 +49,7 @@ public abstract class OperatorImpl<M extends MessageEnvelope, RM extends Message
    * @param source  the source that this {@link OperatorImpl} operator is registered with
    * @param context  the task context to initialize the operator implementation
    */
-  public void init(MessageStreamImpl<M> source, TaskContext context) {}
+  public void init(MessageStreamImpl source, TaskContext context) {}
 
   /**
    * Perform the transformation required for this operator and call the downstream operators.

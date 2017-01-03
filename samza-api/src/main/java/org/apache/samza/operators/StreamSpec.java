@@ -18,24 +18,18 @@
  */
 package org.apache.samza.operators;
 
-import org.apache.samza.Partition;
-import org.apache.samza.operators.data.IncomingSystemMessageEnvelope;
 import org.apache.samza.system.SystemStream;
 
-import java.util.HashMap;
-import java.util.Map;
 
-
-public class MessageStreamsBuilderTask implements StreamOperatorTask {
-  private final Map<SystemStream, Map<Partition, MessageStream<IncomingSystemMessageEnvelope>>> inputBySystemStream = new HashMap<>();
-  private final MessageStreamsBuilderImpl streamsBuilder;
-
-  public MessageStreamsBuilderTask(MessageStreamsBuilder streamBuilder) {
-    this.streamsBuilder = (MessageStreamsBuilderImpl) streamBuilder;
-  }
-
-  public void transform(MessageStreamsBuilder mstreamsBuilder) {
-    // use {@code mstreamsBuilder} as the template to instantiate the actual program
-    ((MessageStreamsBuilderImpl)mstreamsBuilder).clone(this.streamsBuilder);
-  }
+/**
+ * This interface defines the specification of a {@link SystemStream}. It will be used by the {@link org.apache.samza.system.SystemAdmin}
+ * to create a {@link SystemStream}
+ */
+public interface StreamSpec {
+  /**
+   * Get the system stream
+   *
+   * @return  {@link SystemStream} object
+   */
+  SystemStream getSystemStream();
 }

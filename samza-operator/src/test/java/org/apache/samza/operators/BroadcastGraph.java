@@ -19,22 +19,23 @@
 
 package org.apache.samza.operators;
 
-
 import org.apache.samza.operators.data.IncomingSystemMessageEnvelope;
 import org.apache.samza.operators.data.JsonIncomingSystemMessageEnvelope;
 import org.apache.samza.operators.data.Offset;
 import org.apache.samza.operators.windows.TriggerBuilder;
 import org.apache.samza.operators.windows.Windows;
+import org.apache.samza.system.ExecutionEnvironment;
 import org.apache.samza.system.SystemStreamPartition;
 
 import java.util.Collection;
+import java.util.Set;
 
 
 /**
  * Example implementation of split stream tasks
  *
  */
-public class BroadcastTask implements StreamOperatorTask {
+public class BroadcastGraph {
   class MessageType {
     String field1;
     String field2;
@@ -54,30 +55,36 @@ public class BroadcastTask implements StreamOperatorTask {
     }
   }
 
-  @Override
-  public void transform(MessageStreamsBuilder mstreamsBuilder) {
-    mstreamsBuilder.getAllInputStreams().values().forEach(entry -> {
-        MessageStream<JsonMessageEnvelope> inputStream = ((MessageStream<IncomingSystemMessageEnvelope>)entry).map(this::getInputMessage);
+  public MessageStreamGraphImpl createStreamGraph(ExecutionEnvironment runtimeEnv, Set<SystemStreamPartition> inputs) {
+    MessageStreamGraphImpl graph = new MessageStreamGraphImpl(runtimeEnv);
 
-        inputStream.filter(this::myFilter1).
+    inputs.forEach(ssp -> {
+      MessageStream<JsonMessageEnvelope> inputStream = graph.<IncomingSystemMessageEnvelope>addInStream(() -> ssp.getSystemStream())
+          .map(this::getInputMessage);
+
+      inputStream.filter(this::myFilter1).
           window(Windows.<JsonMessageEnvelope, String>intoSessionCounter(
               m -> String.format("%s-%s", m.getMessage().field1, m.getMessage().field2)).
-            setTriggers(TriggerBuilder.<JsonMessageEnvelope, Integer>earlyTriggerWhenExceedWndLen(100).
-              addLateTriggerOnSizeLimit(10).
-              addTimeoutSinceLastMessage(30000)));
+              setTriggers(TriggerBuilder.<JsonMessageEnvelope, Integer>earlyTriggerWhenExceedWndLen(100).
+                  addLateTriggerOnSizeLimit(10).
+                  addTimeoutSinceLastMessage(30000)));
 
-        inputStream.filter(this::myFilter2).
+      inputStream.filter(this::myFilter2).
           window(Windows.<JsonMessageEnvelope, String>intoSessions(
               m -> String.format("%s-%s", m.getMessage().field3, m.getMessage().field4)).
-            setTriggers(TriggerBuilder.<JsonMessageEnvelope, Collection<JsonMessageEnvelope>>earlyTriggerWhenExceedWndLen(100).
-              addTimeoutSinceLastMessage(30000)));
+              setTriggers(
+                  TriggerBuilder.<JsonMessageEnvelope, Collection<JsonMessageEnvelope>>earlyTriggerWhenExceedWndLen(100)
+                      .
+                          addTimeoutSinceLastMessage(30000)));
 
-        inputStream.filter(this::myFilter3).
+      inputStream.filter(this::myFilter3).
           window(Windows.<JsonMessageEnvelope, String, MessageType>intoSessions(
               m -> String.format("%s-%s", m.getMessage().field3, m.getMessage().field4), m -> m.getMessage()).
-            setTriggers(TriggerBuilder.<JsonMessageEnvelope, Collection<MessageType>>earlyTriggerOnEventTime(m -> m.getMessage().getTimestamp(), 30000).
-              addTimeoutSinceFirstMessage(60000)));
-      });
+              setTriggers(TriggerBuilder.<JsonMessageEnvelope, Collection<MessageType>>earlyTriggerOnEventTime(
+                  m -> m.getMessage().getTimestamp(), 30000).
+                  addTimeoutSinceFirstMessage(60000)));
+    });
+    return graph;
   }
 
   JsonMessageEnvelope getInputMessage(IncomingSystemMessageEnvelope m1) {

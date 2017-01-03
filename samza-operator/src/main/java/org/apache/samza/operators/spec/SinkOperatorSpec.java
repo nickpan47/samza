@@ -56,10 +56,6 @@ public class SinkOperatorSpec<M extends MessageEnvelope> implements OperatorSpec
     return null;
   }
 
-  @Override public OperatorSpec getClone(MessageStreamImpl outputStream) {
-    return OperatorSpecs.createSinkOperator(this.sinkFn);
-  }
-
   public SinkFunction<M> getSinkFn() {
     return this.sinkFn;
   }

@@ -45,7 +45,7 @@ public class WindowOperatorSpec<M extends MessageEnvelope, WK, WS extends Window
   /**
    * The output {@link MessageStreamImpl}.
    */
-  private final MessageStreamImpl<WM> outputStream;
+  private final MessageStreamImpl outputStream;
 
   /**
    * The window transformation function that takes {@link MessageEnvelope}s from one input stream, aggregates with the window
@@ -74,19 +74,11 @@ public class WindowOperatorSpec<M extends MessageEnvelope, WK, WS extends Window
    * @param windowFn  the window function
    * @param operatorId  auto-generated unique ID of this operator
    */
-  WindowOperatorSpec(WindowFn<M, WK, WS, WM> windowFn, String operatorId) {
-    this.outputStream = new MessageStreamImpl<>();
+  WindowOperatorSpec(WindowFn<M, WK, WS, WM> windowFn, MessageStreamImpl outputStream, String operatorId) {
+    this.outputStream = outputStream;
     this.transformFn = windowFn.getTransformFn();
     this.storeFns = windowFn.getStoreFns();
     this.trigger = windowFn.getTrigger();
-    this.operatorId = operatorId;
-  }
-
-  WindowOperatorSpec(WindowOperatorSpec<M, WK, WS, WM> wndSpec, MessageStreamImpl<WM> outputStream, String operatorId) {
-    this.outputStream = outputStream;
-    this.transformFn = wndSpec.transformFn;
-    this.storeFns = wndSpec.storeFns;
-    this.trigger = wndSpec.trigger;
     this.operatorId = operatorId;
   }
 
@@ -96,12 +88,8 @@ public class WindowOperatorSpec<M extends MessageEnvelope, WK, WS extends Window
   }
 
   @Override
-  public MessageStreamImpl<WM> getOutputStream() {
+  public MessageStreamImpl getOutputStream() {
     return this.outputStream;
-  }
-
-  @Override public OperatorSpec<WM> getClone(MessageStreamImpl<WM> outputStream) {
-    return new WindowOperatorSpec<>(this, outputStream, OperatorSpecs.getOperatorId());
   }
 
   public StoreFunctions<M, WK, WS> getStoreFns() {
@@ -123,7 +111,7 @@ public class WindowOperatorSpec<M extends MessageEnvelope, WK, WS extends Window
    * @param inputStream the input {@link MessageStreamImpl} to this state store
    * @return   the persistent store name of the window operator
    */
-  public String getStoreName(MessageStreamImpl<M> inputStream) {
+  public String getStoreName(MessageStreamImpl inputStream) {
     //TODO: need to get the persistent name of ds and the operator in a serialized form
     return String.format("input-%s-wndop-%s", inputStream.toString(), this.toString());
   }

@@ -25,14 +25,17 @@ import org.apache.samza.operators.data.MessageEnvelope;
 import org.apache.samza.operators.data.Offset;
 import org.apache.samza.operators.windows.TriggerBuilder;
 import org.apache.samza.operators.windows.Windows;
+import org.apache.samza.system.ExecutionEnvironment;
 import org.apache.samza.system.SystemStreamPartition;
+
+import java.util.Set;
 
 
 /**
  * Example implementation of a simple user-defined tasks w/ window operators
  *
  */
-public class WindowTask implements StreamOperatorTask {
+public class WindowGraph {
   class MessageType {
     String field1;
     String field2;
@@ -45,20 +48,18 @@ public class WindowTask implements StreamOperatorTask {
     }
   }
 
-  @Override public void transform(MessageStreamsBuilder mstreamsBuilder) {
-    mstreamsBuilder.getAllInputStreams().values().forEach(source ->
-        ((MessageStream<IncomingSystemMessageEnvelope>)source).map(m1 ->
-        new JsonMessageEnvelope(
-          this.myMessageKeyFunction(m1),
-          (MessageType) m1.getMessage(),
-          m1.getOffset(),
-          m1.getSystemStreamPartition())).
-        window(
-          Windows.<JsonMessageEnvelope, String>intoSessionCounter(
-              m -> String.format("%s-%s", m.getMessage().field1, m.getMessage().field2)).
-            setTriggers(TriggerBuilder.<JsonMessageEnvelope, Integer>earlyTriggerWhenExceedWndLen(100).
-              addTimeoutSinceLastMessage(30000)))
-    );
+  public MessageStreamGraphImpl createStreamGraph(ExecutionEnvironment runtimeEnv, Set<SystemStreamPartition> inputs) {
+    MessageStreamGraphImpl graph = new MessageStreamGraphImpl(runtimeEnv);
+
+    inputs.forEach(input -> graph.<IncomingSystemMessageEnvelope>addInStream(() -> input.getSystemStream()).
+            map(m1 -> new JsonMessageEnvelope(this.myMessageKeyFunction(m1), (MessageType) m1.getMessage(),
+                m1.getOffset(), m1.getSystemStreamPartition())).
+            window(Windows.<JsonMessageEnvelope, String>intoSessionCounter(
+                m -> String.format("%s-%s", m.getMessage().field1, m.getMessage().field2)).
+                setTriggers(TriggerBuilder.<JsonMessageEnvelope, Integer>earlyTriggerWhenExceedWndLen(100).
+                    addTimeoutSinceLastMessage(30000))));
+
+    return graph;
   }
 
   String myMessageKeyFunction(MessageEnvelope<Object, Object> m) {

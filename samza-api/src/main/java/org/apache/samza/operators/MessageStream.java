@@ -20,14 +20,9 @@ package org.apache.samza.operators;
 
 import org.apache.samza.annotation.InterfaceStability;
 import org.apache.samza.operators.data.MessageEnvelope;
-import org.apache.samza.operators.functions.FilterFunction;
-import org.apache.samza.operators.functions.FlatMapFunction;
-import org.apache.samza.operators.functions.JoinFunction;
-import org.apache.samza.operators.functions.MapFunction;
-import org.apache.samza.operators.functions.SinkFunction;
+import org.apache.samza.operators.functions.*;
 import org.apache.samza.operators.windows.Window;
 import org.apache.samza.operators.windows.WindowOutput;
-import org.apache.samza.operators.windows.WindowState;
 import org.apache.samza.system.SystemStream;
 
 import java.util.Collection;
@@ -76,12 +71,21 @@ public interface MessageStream<M extends MessageEnvelope> {
   MessageStream<M> filter(FilterFunction<M> filterFn);
 
   /**
-   * Allows sending {@link MessageEnvelope}s in this {@link MessageStream} to an output
-   * {@link org.apache.samza.system.SystemStream} using the provided {@link SinkFunction}.
+   * Allows sending {@link MessageEnvelope}s in this {@link MessageStream} to an output using the provided {@link SinkFunction}.
    *
-   * @param sinkFn  the function to send {@link MessageEnvelope}s in this stream to output systems
+   * NOTE: the output may not be a {@link SystemStream}. It can be an external database, etc.
+   *
+   * @param sinkFn  the function to send {@link MessageEnvelope}s in this stream to output
    */
   void sink(SinkFunction<M> sinkFn);
+
+  /**
+   * Allows sending {@link MessageEnvelope}s in this {@link MessageStream} to an output {@link org.apache.samza.system.SystemStream}
+   * defined by {@link StreamSpec}
+   *
+   * @param streamSpec  stream specification that defines a physical {@link SystemStream}
+   */
+  void sink(StreamSpec streamSpec);
 
   /**
    * Groups the {@link MessageEnvelope}s in this {@link MessageStream} according to the provided {@link Window} semantics
@@ -93,11 +97,9 @@ public interface MessageStream<M extends MessageEnvelope> {
    * @param window  the {@link Window} to group and process {@link MessageEnvelope}s from this {@link MessageStream}
    * @param <WK>  the type of key in the {@link WindowOutput} from the {@link Window}
    * @param <WV>  the type of value in the {@link WindowOutput} from the {@link Window}
-   * @param <WS>  the type of window state kept in the {@link Window}
-   * @param <WM>  the type of {@link WindowOutput} in the transformed {@link MessageStream}
    * @return  the transformed {@link MessageStream}
    */
-  <WK, WV, WS extends WindowState<WV>, WM extends WindowOutput<WK, WV>> MessageStream<WM> window(
+  <WK, WV, WM extends WindowOutput<WK, WV>> MessageStream<WM> window(
       Window<M, WK, WV, WM> window);
 
   /**
@@ -107,9 +109,9 @@ public interface MessageStream<M extends MessageEnvelope> {
    *
    * @param otherStream  the other {@link MessageStream} to be joined with
    * @param joinFn  the function to join {@link MessageEnvelope}s from this and the other {@link MessageStream}
-   * @param <K>  the type of join key
-   * @param <OM>  the type of {@link MessageEnvelope}s in the other stream
-   * @param <RM>  the type of {@link MessageEnvelope}s resulting from the {@code joinFn}
+   * @param <K>  the type of key in {@link MessageEnvelope}s in the join {@link MessageStream}
+   * @param <OM>  the type of {@link MessageEnvelope}s in the joint {@link MessageStream}
+   * @param <RM>  the type of {@link MessageEnvelope}s in the transformed {@link MessageStream}
    * @return  the joined {@link MessageStream}
    */
   <K, OM extends MessageEnvelope<K, ?>, RM extends MessageEnvelope> MessageStream<RM> join(MessageStream<OM> otherStream,
@@ -128,8 +130,8 @@ public interface MessageStream<M extends MessageEnvelope> {
   /**
    * Send the input message to an output {@link SystemStream} and consume it as input {@link MessageStream} again.
    *
-   * @param stream  the output {@link SystemStream} object
-   * @return  a {@link MessageStream} object that consume from {@code stream}
+   * @param streamSpec  the output {@link org.apache.samza.system.SystemStream} defined by {@link StreamSpec}
+   * @return  a {@link MessageStream} object that consume from {@code intStream}
    */
-  MessageStream<M> through(SystemStream stream);
+  MessageStream<M> through(StreamSpec streamSpec);
 }

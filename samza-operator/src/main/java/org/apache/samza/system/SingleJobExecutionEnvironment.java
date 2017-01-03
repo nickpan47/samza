@@ -16,18 +16,15 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.samza.operators;
+package org.apache.samza.system;
 
-import org.apache.samza.operators.data.MessageEnvelope;
-import org.apache.samza.system.SystemStream;
+import org.apache.samza.operators.MessageStreamGraph;
 
-import java.util.Map;
-
-
-public interface MessageStreamsBuilder {
-
-  <M extends MessageEnvelope> MessageStream<M> addInputStream(SystemStream input);
-
-  Map<SystemStream, MessageStream> getAllInputStreams();
-
+public class SingleJobExecutionEnvironment implements ExecutionEnvironment {
+  @Override public void run(MessageStreamGraph graph) {
+    // TODO: actually instantiate the tasks and run the job, i.e.
+    // 1. create all input/output/intermediate topics
+    // 2. create the single job configuration
+    // 3. execute JobRunner to submit the single job for the whole graph
+  }
 }

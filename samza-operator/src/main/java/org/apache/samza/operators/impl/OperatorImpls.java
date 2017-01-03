@@ -54,7 +54,7 @@ public class OperatorImpls {
    * @param context  the {@link TaskContext} required to instantiate operators
    * @return  root node for the {@link OperatorImpl} DAG
    */
-  public static <M extends MessageEnvelope> RootOperatorImpl createOperatorImpls(MessageStreamImpl<M> source, TaskContext context) {
+  public static <M extends MessageEnvelope> RootOperatorImpl createOperatorImpls(MessageStreamImpl source, TaskContext context) {
     // since the source message stream might have multiple operator specs registered on it,
     // create a new root node as a single point of entry for the DAG.
     RootOperatorImpl<M> rootOperator = new RootOperatorImpl<>();
@@ -62,7 +62,7 @@ public class OperatorImpls {
     source.getRegisteredOperatorSpecs().forEach(registeredOperator -> {
         // pass in the source and context s.t. stateful stream operators can initialize their stores
         OperatorImpl<M, ? extends MessageEnvelope> operatorImpl =
-            createAndRegisterOperatorImpl(registeredOperator, source, context);
+            createAndRegisterOperatorImpl((OperatorSpec) registeredOperator, source, context);
         rootOperator.registerNextOperator(operatorImpl);
       });
     return rootOperator;
@@ -84,8 +84,8 @@ public class OperatorImpls {
       if (OPERATOR_IMPLS.putIfAbsent(operatorSpec, operatorImpl) == null) {
         // this is the first time we've added the operatorImpl corresponding to the operatorSpec,
         // so traverse and initialize and register the rest of the DAG.
-        MessageStreamImpl<? extends MessageEnvelope> outStream = operatorSpec.getOutputStream();
-        Collection<OperatorSpec> registeredSpecs = ((MessageStreamImpl) outStream).getRegisteredOperatorSpecs();
+        MessageStreamImpl outStream = operatorSpec.getOutputStream();
+        Collection<OperatorSpec> registeredSpecs = outStream.getRegisteredOperatorSpecs();
         registeredSpecs.forEach(registeredSpec -> {
             OperatorImpl subImpl = createAndRegisterOperatorImpl(registeredSpec, outStream, context);
             operatorImpl.registerNextOperator(subImpl);

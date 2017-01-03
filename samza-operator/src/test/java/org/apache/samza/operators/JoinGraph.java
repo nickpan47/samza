@@ -22,17 +22,19 @@ package org.apache.samza.operators;
 import org.apache.samza.operators.data.IncomingSystemMessageEnvelope;
 import org.apache.samza.operators.data.JsonIncomingSystemMessageEnvelope;
 import org.apache.samza.operators.data.Offset;
+import org.apache.samza.system.ExecutionEnvironment;
 import org.apache.samza.system.SystemStreamPartition;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 
 /**
  * Example implementation of unique key-based stream-stream join tasks
  *
  */
-public class JoinTask implements StreamOperatorTask {
+public class JoinGraph {
   class MessageType {
     String joinKey;
     List<String> joinFields = new ArrayList<>();
@@ -46,17 +48,19 @@ public class JoinTask implements StreamOperatorTask {
 
   MessageStream<JsonMessageEnvelope> joinOutput = null;
 
-  @Override
-  public void transform(MessageStreamsBuilder mstreamsBuilder) {
-    mstreamsBuilder.getAllInputStreams().values().forEach(messageStream -> {
-      MessageStream<JsonMessageEnvelope> newSource =
-          ((MessageStream<IncomingSystemMessageEnvelope>) messageStream).map(this::getInputMessage);
+  public MessageStreamGraphImpl createStreamGraph(ExecutionEnvironment runtimeEnv, Set<SystemStreamPartition> inputs) {
+    MessageStreamGraphImpl graph = new MessageStreamGraphImpl(runtimeEnv);
+
+    for (SystemStreamPartition input : inputs) {
+      MessageStream<JsonMessageEnvelope> newSource = graph.<IncomingSystemMessageEnvelope>addInStream(()->input.getSystemStream()).map(this::getInputMessage);
       if (joinOutput == null) {
         joinOutput = newSource;
       } else {
         joinOutput = joinOutput.join(newSource, (m1, m2) -> this.myJoinResult(m1, m2));
       }
-    });
+    }
+
+    return graph;
   }
 
   private JsonMessageEnvelope getInputMessage(IncomingSystemMessageEnvelope ism) {

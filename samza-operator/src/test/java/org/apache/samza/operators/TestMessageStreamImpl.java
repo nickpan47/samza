@@ -18,16 +18,8 @@
  */
 package org.apache.samza.operators;
 
-import org.apache.samza.operators.functions.FilterFunction;
-import org.apache.samza.operators.functions.FlatMapFunction;
-import org.apache.samza.operators.functions.JoinFunction;
-import org.apache.samza.operators.functions.MapFunction;
-import org.apache.samza.operators.functions.SinkFunction;
-import org.apache.samza.operators.spec.OperatorSpec;
-import org.apache.samza.operators.spec.PartialJoinOperatorSpec;
-import org.apache.samza.operators.spec.SinkOperatorSpec;
-import org.apache.samza.operators.spec.StreamOperatorSpec;
-import org.apache.samza.operators.spec.WindowOperatorSpec;
+import org.apache.samza.operators.functions.*;
+import org.apache.samza.operators.spec.*;
 import org.apache.samza.operators.windows.SessionWindow;
 import org.apache.samza.operators.windows.WindowFn;
 import org.apache.samza.operators.windows.WindowOutput;
@@ -41,17 +33,13 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import static org.junit.Assert.*;
+import static org.mockito.Mockito.*;
 
 
 public class TestMessageStreamImpl {
 
-  private MessageStreamsBuilderImpl mockStreamsBuilder = mock(MessageStreamsBuilderImpl.class);
+  private MessageStreamGraphImpl mockStreamsBuilder = mock(MessageStreamGraphImpl.class);
 
   @Test
   public void testMap() {

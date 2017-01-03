@@ -37,7 +37,7 @@ import java.util.function.BiFunction;
 public class PartialJoinOperatorSpec<M extends MessageEnvelope<K, ?>, K, JM extends MessageEnvelope<K, ?>, RM extends MessageEnvelope>
     implements OperatorSpec<RM> {
 
-  private final MessageStreamImpl<RM> joinOutput;
+  private final MessageStreamImpl joinOutput;
 
   /**
    * The transformation function of {@link PartialJoinOperatorSpec} that takes an input {@link MessageEnvelope} of
@@ -70,7 +70,7 @@ public class PartialJoinOperatorSpec<M extends MessageEnvelope<K, ?>, K, JM exte
    *                       w/ type {@code JM} of buffered {@link MessageEnvelope} from another stream
    * @param joinOutput  the output {@link MessageStreamImpl} of the join results
    */
-  PartialJoinOperatorSpec(BiFunction<M, JM, RM> partialJoinFn, MessageStreamImpl<RM> joinOutput, String operatorId) {
+  PartialJoinOperatorSpec(BiFunction<M, JM, RM> partialJoinFn, MessageStreamImpl joinOutput, String operatorId) {
     this.joinOutput = joinOutput;
     this.transformFn = partialJoinFn;
     // Read-only join store, no creator/updater functions required.
@@ -86,12 +86,8 @@ public class PartialJoinOperatorSpec<M extends MessageEnvelope<K, ?>, K, JM exte
   }
 
   @Override
-  public MessageStreamImpl<RM> getOutputStream() {
+  public MessageStreamImpl getOutputStream() {
     return this.joinOutput;
-  }
-
-  @Override public OperatorSpec<RM> getClone(MessageStreamImpl<RM> outputStream) {
-    return OperatorSpecs.<M, K, JM, RM>createPartialJoinOperator(this.transformFn, outputStream);
   }
 
   public StoreFunctions<JM, K, JM> getJoinStoreFns() {

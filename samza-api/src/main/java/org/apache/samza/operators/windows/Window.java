@@ -45,5 +45,5 @@ public interface Window<M extends MessageEnvelope, WK, WV, WM extends WindowOutp
    *
    * @return the functions associated with this Window.
    */
-  WindowFn<M, WK, WindowState<WV>, WindowOutput<WK, WV>> getInternalWindowFn();
+  WindowFn<M, WK, WindowState<WV>, WM> getInternalWindowFn();
 }
