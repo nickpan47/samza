@@ -19,6 +19,7 @@
 package org.apache.samza.operators;
 
 import org.apache.samza.operators.data.MessageEnvelope;
+import org.apache.samza.serializers.Serde;
 import org.apache.samza.storage.kv.Entry;
 import org.apache.samza.system.ExecutionEnvironment;
 import org.apache.samza.system.SystemStream;
@@ -44,7 +45,7 @@ public class MessageStreamGraphImpl implements MessageStreamGraph {
    *
    * @param runner  the {@link ExecutionEnvironment} to run the {@link org.apache.samza.operators.MessageStreamGraphImpl}
    */
-  MessageStreamGraphImpl(ExecutionEnvironment runner) {
+  public MessageStreamGraphImpl(ExecutionEnvironment runner) {
     this.runner = runner;
   }
 
@@ -54,29 +55,29 @@ public class MessageStreamGraphImpl implements MessageStreamGraph {
    * @param map  raw maps to be converted
    * @return  a map keyed by {@link StreamSpec}
    */
-  private Set<StreamSpec> getStreamSpecMap(Map<SystemStream, Entry<StreamSpec, MessageStreamImpl>> map) {
+  private Map<StreamSpec, MessageStream> getStreamSpecMap(Map<SystemStream, Entry<StreamSpec, MessageStreamImpl>> map) {
     Map<StreamSpec, MessageStream> streamSpecMap = new HashMap<>();
     map.forEach((ss, entry) -> streamSpecMap.put(entry.getKey(), entry.getValue()));
-    return Collections.unmodifiableSet(streamSpecMap.keySet());
+    return Collections.unmodifiableMap(streamSpecMap);
   }
 
   @Override
-  public <M extends MessageEnvelope> MessageStream<M> addInStream(StreamSpec streamSpec) {
+  public <K, V, M extends MessageEnvelope<K, V>> MessageStream<M> addInStream(StreamSpec streamSpec, Serde<K> keySerdeClazz, Serde<V> msgSerdeClazz) {
     if (!this.inStreams.containsKey(streamSpec.getSystemStream())) {
-      this.inStreams.putIfAbsent(streamSpec.getSystemStream(), new Entry<>(streamSpec, new MessageStreamImpl<M>(this)));
+      this.inStreams.putIfAbsent(streamSpec.getSystemStream(), new Entry<>(streamSpec, new MessageStreamImpl<M>(this, keySerdeClazz, msgSerdeClazz)));
     }
     return (MessageStream<M>) this.inStreams.get(streamSpec.getSystemStream()).getValue();
   }
 
-  @Override public Collection<StreamSpec> getInStreams() {
+  @Override public Map<StreamSpec, MessageStream> getInStreams() {
     return this.getStreamSpecMap(this.inStreams);
   }
 
-  @Override public Collection<StreamSpec> getOutStreams() {
+  @Override public Map<StreamSpec, MessageStream> getOutStreams() {
     return this.getStreamSpecMap(this.outStreams);
   }
 
-  @Override public Collection<StreamSpec> getIntStreams() {
+  @Override public Map<StreamSpec, MessageStream> getIntStreams() {
     return this.getStreamSpecMap(this.intStreams);
   }
 
@@ -107,9 +108,9 @@ public class MessageStreamGraphImpl implements MessageStreamGraph {
    * @param <M>  the type of {@link MessageEnvelope}s in the output {@link SystemStream}
    * @return  the {@link MessageStreamImpl} object
    */
-  <M extends MessageEnvelope> MessageStreamImpl<M> addOutStream(StreamSpec streamSpec) {
+  <K, V, M extends MessageEnvelope<K, V>> MessageStreamImpl<M> addOutStream(StreamSpec streamSpec, Serde<K> keySerde, Serde<V> msgSerde) {
     if (!this.outStreams.containsKey(streamSpec.getSystemStream())) {
-      this.outStreams.putIfAbsent(streamSpec.getSystemStream(), new Entry<>(streamSpec, new MessageStreamImpl<>(this)));
+      this.outStreams.putIfAbsent(streamSpec.getSystemStream(), new Entry<>(streamSpec, new MessageStreamImpl<M>(this, keySerde, msgSerde)));
     }
     return (MessageStreamImpl<M>) this.outStreams.get(streamSpec.getSystemStream()).getValue();
   }
@@ -121,10 +122,10 @@ public class MessageStreamGraphImpl implements MessageStreamGraph {
    * @param <M>  the type of {@link MessageEnvelope}s in the output {@link SystemStream}
    * @return  the {@link MessageStreamImpl} object
    */
-  <M extends MessageEnvelope> MessageStreamImpl<M> addIntStream(StreamSpec streamSpec) {
+  <K, V, M extends MessageEnvelope<K, V>> MessageStreamImpl<M> addIntStream(StreamSpec streamSpec, Serde<K> keySerde, Serde<V> msgSerde) {
     if (!this.intStreams.containsKey(streamSpec.getSystemStream())) {
-      this.intStreams.putIfAbsent(streamSpec.getSystemStream(), new Entry<>(streamSpec, new MessageStreamImpl<>(this)));
+      this.intStreams.putIfAbsent(streamSpec.getSystemStream(), new Entry<>(streamSpec, new MessageStreamImpl<M>(this, keySerde, msgSerde)));
     }
-    return this.intStreams.get(streamSpec.getSystemStream()).getValue();
+    return (MessageStreamImpl<M>) this.intStreams.get(streamSpec.getSystemStream()).getValue();
   }
 }

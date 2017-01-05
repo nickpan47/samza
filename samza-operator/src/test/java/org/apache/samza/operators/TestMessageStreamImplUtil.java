@@ -18,27 +18,16 @@
  */
 package org.apache.samza.operators;
 
-import org.apache.samza.annotation.InterfaceStability;
 import org.apache.samza.operators.data.MessageEnvelope;
 import org.apache.samza.serializers.Serde;
 
-import java.util.Map;
 
+public class TestMessageStreamImplUtil {
+  public static <M extends MessageEnvelope> MessageStreamImpl<M> getMessageStreamImpl(MessageStreamGraphImpl graph) {
+    return new MessageStreamImpl<M>(graph);
+  }
 
-/**
- * Job-level programming interface to create an operator DAG and run in various different runtime environments.
- */
-@InterfaceStability.Unstable
-public interface MessageStreamGraph {
-
-  <K, V, M extends MessageEnvelope<K ,V>> MessageStream<M> addInStream(StreamSpec streamSpec, Serde<K> keySerdeClazz, Serde<V> msgSerdeClazz);
-
-  Map<StreamSpec, MessageStream> getInStreams();
-
-  Map<StreamSpec, MessageStream> getOutStreams();
-
-  Map<StreamSpec, MessageStream> getIntStreams();
-
-  void run();
-
+  public static <K, V, M extends MessageEnvelope<K, V>> MessageStreamImpl<M> getTypedMessageStreamImpl(MessageStreamGraphImpl graph, Serde<K> keySerde, Serde<V> msgSerde) {
+    return new MessageStreamImpl<M>(graph, keySerde, msgSerde);
+  }
 }

@@ -25,9 +25,12 @@ import org.apache.samza.operators.data.MessageEnvelope;
 import org.apache.samza.operators.data.Offset;
 import org.apache.samza.operators.windows.TriggerBuilder;
 import org.apache.samza.operators.windows.Windows;
+import org.apache.samza.serializers.JsonSerde;
 import org.apache.samza.system.ExecutionEnvironment;
+import org.apache.samza.system.SystemStream;
 import org.apache.samza.system.SystemStreamPartition;
 
+import java.util.Properties;
 import java.util.Set;
 
 
@@ -51,13 +54,30 @@ public class WindowGraph {
   public MessageStreamGraphImpl createStreamGraph(ExecutionEnvironment runtimeEnv, Set<SystemStreamPartition> inputs) {
     MessageStreamGraphImpl graph = new MessageStreamGraphImpl(runtimeEnv);
 
-    inputs.forEach(input -> graph.<IncomingSystemMessageEnvelope>addInStream(() -> input.getSystemStream()).
+    inputs.forEach(input -> graph.<Object, Object, IncomingSystemMessageEnvelope>addInStream(new StreamSpec() {
+        @Override public SystemStream getSystemStream() {
+          return input.getSystemStream();
+        }
+
+        @Override public Properties getProperties() {
+          return null;
+        }
+      }, null, null).
             map(m1 -> new JsonMessageEnvelope(this.myMessageKeyFunction(m1), (MessageType) m1.getMessage(),
                 m1.getOffset(), m1.getSystemStreamPartition())).
             window(Windows.<JsonMessageEnvelope, String>intoSessionCounter(
                 m -> String.format("%s-%s", m.getMessage().field1, m.getMessage().field2)).
                 setTriggers(TriggerBuilder.<JsonMessageEnvelope, Integer>earlyTriggerWhenExceedWndLen(100).
-                    addTimeoutSinceLastMessage(30000))));
+                    addTimeoutSinceLastMessage(30000))).
+        through(new StreamSpec() {
+          @Override public SystemStream getSystemStream() {
+            return null;
+          }
+
+          @Override public Properties getProperties() {
+            return null;
+          }
+        }, new JsonSerde<MessageType>(), new JsonSerde<String>()));
 
     return graph;
   }

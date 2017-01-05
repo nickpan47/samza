@@ -21,6 +21,7 @@ package org.apache.samza.operators.spec;
 import org.apache.samza.operators.MessageStreamGraphImpl;
 import org.apache.samza.operators.MessageStreamImpl;
 import org.apache.samza.operators.TestMessageEnvelope;
+import org.apache.samza.operators.TestMessageStreamImplUtil;
 import org.apache.samza.operators.data.MessageEnvelope;
 import org.apache.samza.operators.functions.FlatMapFunction;
 import org.apache.samza.operators.functions.SinkFunction;
@@ -84,7 +85,8 @@ public class TestOperatorSpecs {
     BiFunction<MessageEnvelope<Object, ?>, MessageEnvelope<Object, ?>, TestMessageEnvelope> merger =
         (m1, m2) -> new TestMessageEnvelope(m1.getKey().toString(), m2.getMessage().toString(), System.nanoTime());
     MessageStreamGraphImpl mockGraph = mock(MessageStreamGraphImpl.class);
-    MessageStreamImpl<TestMessageEnvelope> joinOutput = new MessageStreamImpl<>(mockGraph);
+    MessageStreamImpl<TestMessageEnvelope> joinOutput = TestMessageStreamImplUtil
+        .<TestMessageEnvelope>getMessageStreamImpl(mockGraph);
     PartialJoinOperatorSpec<MessageEnvelope<Object, ?>, Object, MessageEnvelope<Object, ?>, TestMessageEnvelope> partialJoin =
         OperatorSpecs.createPartialJoinOperator(merger, joinOutput);
 
@@ -101,7 +103,7 @@ public class TestOperatorSpecs {
   @Test
   public void testGetMergeOperator() {
     MessageStreamGraphImpl mockGraph = mock(MessageStreamGraphImpl.class);
-    MessageStreamImpl<TestMessageEnvelope> output = new MessageStreamImpl<>(mockGraph);
+    MessageStreamImpl<TestMessageEnvelope> output = TestMessageStreamImplUtil.<TestMessageEnvelope>getMessageStreamImpl(mockGraph);
     StreamOperatorSpec<TestMessageEnvelope, TestMessageEnvelope> mergeOp = OperatorSpecs.createMergeOperator(output);
     Function<TestMessageEnvelope, Collection<TestMessageEnvelope>> mergeFn = t -> new ArrayList<TestMessageEnvelope>() { {
         this.add(t);

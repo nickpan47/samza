@@ -18,10 +18,7 @@
  */
 package org.apache.samza.operators.impl;
 
-import org.apache.samza.operators.MessageStreamGraphImpl;
-import org.apache.samza.operators.MessageStreamImpl;
-import org.apache.samza.operators.TestMessageEnvelope;
-import org.apache.samza.operators.TestOutputMessageEnvelope;
+import org.apache.samza.operators.*;
 import org.apache.samza.operators.data.MessageEnvelope;
 import org.apache.samza.operators.functions.FlatMapFunction;
 import org.apache.samza.operators.functions.SinkFunction;
@@ -107,7 +104,7 @@ public class TestOperatorImpls {
   public void testLinearChain() throws IllegalAccessException {
     // test creation of linear chain
     MessageStreamGraphImpl mockGraph = mock(MessageStreamGraphImpl.class);
-    MessageStreamImpl<TestMessageEnvelope> testInput = new MessageStreamImpl<>(mockGraph);
+    MessageStreamImpl<TestMessageEnvelope> testInput = TestMessageStreamImplUtil.<TestMessageEnvelope>getMessageStreamImpl(mockGraph);
     TaskContext mockContext = mock(TaskContext.class);
     testInput.map(m -> m).window(Windows.intoSessionCounter(TestMessageEnvelope::getKey));
     RootOperatorImpl operatorChain = OperatorImpls.createOperatorImpls(testInput, mockContext);
@@ -125,7 +122,7 @@ public class TestOperatorImpls {
   public void testBroadcastChain() throws IllegalAccessException {
     // test creation of broadcast chain
     MessageStreamGraphImpl mockGraph = mock(MessageStreamGraphImpl.class);
-    MessageStreamImpl<TestMessageEnvelope> testInput = new MessageStreamImpl<>(mockGraph);
+    MessageStreamImpl<TestMessageEnvelope> testInput = TestMessageStreamImplUtil.<TestMessageEnvelope>getMessageStreamImpl(mockGraph);
     TaskContext mockContext = mock(TaskContext.class);
     testInput.filter(m -> m.getMessage().getEventTime() > 123456L).flatMap(m -> new ArrayList() { { this.add(m); this.add(m); } });
     testInput.filter(m -> m.getMessage().getEventTime() < 123456L).map(m -> m);
@@ -153,8 +150,8 @@ public class TestOperatorImpls {
   public void testJoinChain() throws IllegalAccessException {
     // test creation of join chain
     MessageStreamGraphImpl mockGraph = mock(MessageStreamGraphImpl.class);
-    MessageStreamImpl<TestMessageEnvelope> input1 = new MessageStreamImpl<>(mockGraph);
-    MessageStreamImpl<TestMessageEnvelope> input2 = new MessageStreamImpl<>(mockGraph);
+    MessageStreamImpl<TestMessageEnvelope> input1 = TestMessageStreamImplUtil.<TestMessageEnvelope>getMessageStreamImpl(mockGraph);
+    MessageStreamImpl<TestMessageEnvelope> input2 = TestMessageStreamImplUtil.<TestMessageEnvelope>getMessageStreamImpl(mockGraph);
     TaskContext mockContext = mock(TaskContext.class);
     input1
         .join(input2, (m1, m2) ->

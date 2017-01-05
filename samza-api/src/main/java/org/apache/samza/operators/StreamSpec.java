@@ -21,6 +21,8 @@ package org.apache.samza.operators;
 import org.apache.samza.annotation.InterfaceStability;
 import org.apache.samza.system.SystemStream;
 
+import java.util.Properties;
+
 
 /**
  * This interface defines the specification of a {@link SystemStream}. It will be used by the {@link org.apache.samza.system.SystemAdmin}
@@ -29,9 +31,14 @@ import org.apache.samza.system.SystemStream;
 @InterfaceStability.Unstable
 public interface StreamSpec {
   /**
-   * Get the system stream
+   * Get the {@link SystemStream}
    *
    * @return  {@link SystemStream} object
    */
   SystemStream getSystemStream();
+
+  /**
+   * Get the physical properties of the {@link SystemStream}
+   */
+  Properties getProperties();
 }

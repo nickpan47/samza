@@ -25,9 +25,11 @@ import org.apache.samza.operators.data.Offset;
 import org.apache.samza.operators.windows.TriggerBuilder;
 import org.apache.samza.operators.windows.Windows;
 import org.apache.samza.system.ExecutionEnvironment;
+import org.apache.samza.system.SystemStream;
 import org.apache.samza.system.SystemStreamPartition;
 
 import java.util.Collection;
+import java.util.Properties;
 import java.util.Set;
 
 
@@ -59,7 +61,16 @@ public class BroadcastGraph {
     MessageStreamGraphImpl graph = new MessageStreamGraphImpl(runtimeEnv);
 
     inputs.forEach(ssp -> {
-        MessageStream<JsonMessageEnvelope> inputStream = graph.<IncomingSystemMessageEnvelope>addInStream(() -> ssp.getSystemStream()).
+        MessageStream<JsonMessageEnvelope> inputStream = graph.<Object, Object, IncomingSystemMessageEnvelope>addInStream(
+            new StreamSpec() {
+              @Override public SystemStream getSystemStream() {
+                return ssp.getSystemStream();
+              }
+
+              @Override public Properties getProperties() {
+                return null;
+              }
+            }, null, null).
           map(this::getInputMessage);
 
         inputStream.filter(this::myFilter1).
@@ -102,4 +113,5 @@ public class BroadcastGraph {
   boolean myFilter3(JsonMessageEnvelope m1) {
     return m1.getMessage().parKey.equals("key3");
   }
+
 }

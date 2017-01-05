@@ -18,9 +18,17 @@
  */
 package org.apache.samza.system;
 
+import org.apache.samza.config.Config;
 import org.apache.samza.operators.MessageStreamGraph;
+import org.apache.samza.operators.MessageStreamGraphImpl;
+
 
 public class SingleJobExecutionEnvironment implements ExecutionEnvironment {
+
+  @Override public MessageStreamGraph getGraph(Config config) {
+    return new MessageStreamGraphImpl(this);
+  }
+
   @Override public void run(MessageStreamGraph graph) {
     // TODO: actually instantiate the tasks and run the job, i.e.
     // 1. create all input/output/intermediate topics

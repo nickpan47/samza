@@ -26,6 +26,7 @@ import org.apache.samza.operators.spec.OperatorSpecs;
 import org.apache.samza.operators.windows.Window;
 import org.apache.samza.operators.windows.WindowOutput;
 import org.apache.samza.operators.windows.WindowState;
+import org.apache.samza.serializers.Serde;
 import org.apache.samza.system.OutgoingMessageEnvelope;
 
 import java.util.*;
@@ -49,13 +50,25 @@ public class MessageStreamImpl<M extends MessageEnvelope> implements MessageStre
    */
   private final Set<OperatorSpec> registeredOperatorSpecs = new HashSet<>();
 
+  private final Class keySerde;
+
+  private final Class msgSerde;
+
   /**
    * Default constructor
    *
    * @param graph the {@link MessageStreamGraphImpl} object that this stream belongs to
    */
-  public MessageStreamImpl(MessageStreamGraphImpl graph) {
+  MessageStreamImpl(MessageStreamGraphImpl graph) {
     this.graph = graph;
+    this.keySerde = null;
+    this.msgSerde = null;
+  }
+
+  <K, V> MessageStreamImpl(MessageStreamGraphImpl graph, Serde<K> keySerde, Serde<V> msgSerde) {
+    this.graph = graph;
+    this.keySerde = keySerde != null ? keySerde.getClass() : null;
+    this.msgSerde = msgSerde != null ? msgSerde.getClass() : null;
   }
 
   @Override
@@ -99,9 +112,9 @@ public class MessageStreamImpl<M extends MessageEnvelope> implements MessageStre
     this.registeredOperatorSpecs.add(OperatorSpecs.createSinkOperator(sinkFn));
   }
 
-  @Override public void sink(StreamSpec streamSpec) {
+  @Override public <K, V> void sink(StreamSpec streamSpec, Serde<K> keySerdeClazz, Serde<V> msgSerdeClazz) {
     this.sink((m, mc, tc) -> mc.send(new OutgoingMessageEnvelope(streamSpec.getSystemStream(), m.getKey(), m.getMessage())));
-    this.graph.addOutStream(streamSpec);
+    this.graph.<K, V, M>addOutStream(streamSpec, keySerdeClazz, msgSerdeClazz);
   }
 
   @Override
@@ -139,9 +152,9 @@ public class MessageStreamImpl<M extends MessageEnvelope> implements MessageStre
     return outputStream;
   }
 
-  @Override public MessageStream<M> through(StreamSpec intStream) {
+  @Override public <K, V> MessageStream<M> through(StreamSpec intStream, Serde<K> keySerdeClazz, Serde<V> msgSerdeClazz) {
     this.sink((m, mc, tc) -> mc.send(new OutgoingMessageEnvelope(intStream.getSystemStream(), m.getKey(), m.getMessage())));
-    return this.graph.addIntStream(intStream);
+    return this.graph.<K, V, M>addIntStream(intStream, keySerdeClazz, msgSerdeClazz);
   }
 
   /**
@@ -154,4 +167,11 @@ public class MessageStreamImpl<M extends MessageEnvelope> implements MessageStre
     return Collections.unmodifiableSet(this.registeredOperatorSpecs);
   }
 
+  public Class<Serde<?>> getKeySerde() {
+    return (Class<Serde<?>>) this.keySerde;
+  }
+
+  public Class<Serde<?>> getMsgSerde() {
+    return (Class<Serde<?>>) this.msgSerde;
+  }
 }

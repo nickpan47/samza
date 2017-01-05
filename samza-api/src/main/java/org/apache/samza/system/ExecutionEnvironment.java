@@ -19,6 +19,7 @@
 package org.apache.samza.system;
 
 import org.apache.samza.annotation.InterfaceStability;
+import org.apache.samza.config.Config;
 import org.apache.samza.operators.MessageStreamGraph;
 
 
@@ -27,6 +28,8 @@ import org.apache.samza.operators.MessageStreamGraph;
  */
 @InterfaceStability.Unstable
 public interface ExecutionEnvironment {
+
+  MessageStreamGraph getGraph(Config config);
 
   /**
    * Method to be invoked to deploy and run the actual Samza jobs to execute {@link MessageStreamGraph}

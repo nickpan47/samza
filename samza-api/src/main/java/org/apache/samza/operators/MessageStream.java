@@ -23,6 +23,7 @@ import org.apache.samza.operators.data.MessageEnvelope;
 import org.apache.samza.operators.functions.*;
 import org.apache.samza.operators.windows.Window;
 import org.apache.samza.operators.windows.WindowOutput;
+import org.apache.samza.serializers.Serde;
 
 import java.util.Collection;
 
@@ -84,7 +85,7 @@ public interface MessageStream<M extends MessageEnvelope> {
    *
    * @param streamSpec  stream specification that defines a physical {@link org.apache.samza.system.SystemStream}
    */
-  void sink(StreamSpec streamSpec);
+  <K, V> void sink(StreamSpec streamSpec, Serde<K> keySerde, Serde<V> msgSerde);
 
   /**
    * Groups the {@link MessageEnvelope}s in this {@link MessageStream} according to the provided {@link Window} semantics
@@ -99,8 +100,7 @@ public interface MessageStream<M extends MessageEnvelope> {
    * @param <WM>  the type of {@link WindowOutput} in the transformed {@link MessageStream}
    * @return  the transformed {@link MessageStream}
    */
-  <WK, WV, WM extends WindowOutput<WK, WV>> MessageStream<WM> window(
-      Window<M, WK, WV, WM> window);
+  <WK, WV, WM extends WindowOutput<WK, WV>> MessageStream<WM> window(Window<M, WK, WV, WM> window);
 
   /**
    * Joins this {@link MessageStream} with another {@link MessageStream} using the provided pairwise {@link JoinFunction}.
@@ -133,5 +133,5 @@ public interface MessageStream<M extends MessageEnvelope> {
    * @param streamSpec  the output {@link org.apache.samza.system.SystemStream} defined by {@link StreamSpec}
    * @return  a {@link MessageStream} object that consume from {@code intStream}
    */
-  MessageStream<M> through(StreamSpec streamSpec);
+  <K, V> MessageStream<M> through(StreamSpec streamSpec, Serde<K> keySerdeClazz, Serde<V> msgSerdeClazz);
 }
