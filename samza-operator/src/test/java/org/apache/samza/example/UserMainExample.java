@@ -2,10 +2,7 @@ package org.apache.samza.example;
 
 import org.apache.samza.config.Config;
 import org.apache.samza.config.MapConfig;
-import org.apache.samza.operators.MessageStream;
-import org.apache.samza.operators.MessageStreamGraph;
-import org.apache.samza.operators.MessageStreamGraphFactory;
-import org.apache.samza.operators.StreamSpec;
+import org.apache.samza.operators.*;
 import org.apache.samza.operators.data.IncomingSystemMessageEnvelope;
 import org.apache.samza.operators.data.JsonIncomingSystemMessageEnvelope;
 import org.apache.samza.operators.data.Offset;
@@ -80,8 +77,7 @@ public class UserMainExample implements MessageStreamGraphFactory {
 
   @Override public MessageStreamGraph apply(Config config) {
     try {
-      ExecutionEnvironment env = (ExecutionEnvironment) Class.forName(config.get("execution.environment.class")).newInstance();
-      MessageStreamGraph graph = env.getGraph(config);
+      MessageStreamGraph graph = MessageStreamGraphBuilder.fromConfig(config);
 
       MessageStream<JsonMessageEnvelope> newSource = graph.<Object, Object, IncomingSystemMessageEnvelope>addInStream(input1, null, null).map(this::getInputMessage);
       newSource.join(graph.<Object, Object, IncomingSystemMessageEnvelope>addInStream(input2, null, null).map(m -> this.getInputMessage(m)),
@@ -97,7 +93,7 @@ public class UserMainExample implements MessageStreamGraphFactory {
   public void main(String args[]) throws Exception {
     Config processConfig = new MapConfig();
     MessageStreamGraph graph = apply(processConfig);
-    graph.run();
+    graph.run(ExecutionEnvironment.RuntimeEnvironment.STANDALONE);
   }
 
 }

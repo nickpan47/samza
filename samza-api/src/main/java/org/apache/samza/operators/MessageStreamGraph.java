@@ -21,6 +21,7 @@ package org.apache.samza.operators;
 import org.apache.samza.annotation.InterfaceStability;
 import org.apache.samza.operators.data.MessageEnvelope;
 import org.apache.samza.serializers.Serde;
+import org.apache.samza.system.ExecutionEnvironment;
 
 import java.util.Map;
 
@@ -39,6 +40,6 @@ public interface MessageStreamGraph {
 
   Map<StreamSpec, MessageStream> getIntStreams();
 
-  void run();
+  void run(ExecutionEnvironment.RuntimeEnvironment envType);
 
 }
