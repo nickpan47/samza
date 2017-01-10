@@ -21,10 +21,11 @@ package org.apache.samza.operators;
 import org.apache.samza.operators.data.MessageEnvelope;
 import org.apache.samza.serializers.Serde;
 import org.apache.samza.storage.kv.Entry;
-import org.apache.samza.system.ExecutionEnvironment;
 import org.apache.samza.system.SystemStream;
 
-import java.util.*;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 
 
 public class MessageStreamGraphImpl implements MessageStreamGraph {
@@ -34,20 +35,6 @@ public class MessageStreamGraphImpl implements MessageStreamGraph {
   private final Map<SystemStream, Entry<StreamSpec, MessageStreamImpl>> inStreams = new HashMap<>();
   private final Map<SystemStream, Entry<StreamSpec, MessageStreamImpl>> outStreams = new HashMap<>();
   private final Map<SystemStream, Entry<StreamSpec, MessageStreamImpl>> intStreams = new HashMap<>();
-
-  /**
-   * {@link ExecutionEnvironment} is the actual deployment of physical processes running the job
-   */
-  private final ExecutionEnvironment runner;
-
-  /**
-   * Default constructor
-   *
-   * @param runner  the {@link ExecutionEnvironment} to run the {@link org.apache.samza.operators.MessageStreamGraphImpl}
-   */
-  public MessageStreamGraphImpl(ExecutionEnvironment runner) {
-    this.runner = runner;
-  }
 
   /**
    * Helper function to convert the map to a map of {@link StreamSpec} to {@link MessageStream} that
@@ -79,10 +66,6 @@ public class MessageStreamGraphImpl implements MessageStreamGraph {
 
   @Override public Map<StreamSpec, MessageStream> getIntStreams() {
     return this.getStreamSpecMap(this.intStreams);
-  }
-
-  @Override public void run() {
-    this.runner.run(this);
   }
 
   /**

@@ -29,10 +29,11 @@ import org.apache.samza.operators.MessageStreamGraph;
 @InterfaceStability.Unstable
 public interface ExecutionEnvironment {
 
-  enum RuntimeEnvironment {
-    STANDALONE,
-    YARN
+  static ExecutionEnvironment getLocalEnvironment(Config config) {
+    return null;
   }
+
+  static ExecutionEnvironment getRemoteEnvironment(Config config) { return null; }
 
   MessageStreamGraph initGraph(Config config);
 

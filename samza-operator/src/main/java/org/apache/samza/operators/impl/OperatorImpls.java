@@ -18,13 +18,10 @@
  */
 package org.apache.samza.operators.impl;
 
+import org.apache.samza.config.Config;
 import org.apache.samza.operators.MessageStreamImpl;
 import org.apache.samza.operators.data.MessageEnvelope;
-import org.apache.samza.operators.spec.OperatorSpec;
-import org.apache.samza.operators.spec.PartialJoinOperatorSpec;
-import org.apache.samza.operators.spec.SinkOperatorSpec;
-import org.apache.samza.operators.spec.StreamOperatorSpec;
-import org.apache.samza.operators.spec.WindowOperatorSpec;
+import org.apache.samza.operators.spec.*;
 import org.apache.samza.operators.windows.WindowOutput;
 import org.apache.samza.operators.windows.WindowState;
 import org.apache.samza.task.TaskContext;
@@ -54,7 +51,7 @@ public class OperatorImpls {
    * @param context  the {@link TaskContext} required to instantiate operators
    * @return  root node for the {@link OperatorImpl} DAG
    */
-  public static <M extends MessageEnvelope> RootOperatorImpl createOperatorImpls(MessageStreamImpl source, TaskContext context) {
+  public static <M extends MessageEnvelope> RootOperatorImpl createOperatorImpls(MessageStreamImpl source, Config config, TaskContext context) {
     // since the source message stream might have multiple operator specs registered on it,
     // create a new root node as a single point of entry for the DAG.
     RootOperatorImpl<M> rootOperator = new RootOperatorImpl<>();
@@ -62,7 +59,7 @@ public class OperatorImpls {
     source.getRegisteredOperatorSpecs().forEach(registeredOperator -> {
         // pass in the source and context s.t. stateful stream operators can initialize their stores
         OperatorImpl<M, ? extends MessageEnvelope> operatorImpl =
-            createAndRegisterOperatorImpl((OperatorSpec) registeredOperator, source, context);
+            createAndRegisterOperatorImpl((OperatorSpec) registeredOperator, source, config, context);
         rootOperator.registerNextOperator(operatorImpl);
       });
     return rootOperator;
@@ -78,19 +75,18 @@ public class OperatorImpls {
    * @return  the operator implementation for the operatorSpec
    */
   private static <M extends MessageEnvelope> OperatorImpl<M, ? extends MessageEnvelope> createAndRegisterOperatorImpl(OperatorSpec operatorSpec,
-      MessageStreamImpl source, TaskContext context) {
+      MessageStreamImpl source, Config config, TaskContext context) {
     if (!OPERATOR_IMPLS.containsKey(operatorSpec)) {
-      OperatorImpl<M, ? extends MessageEnvelope> operatorImpl = createOperatorImpl(operatorSpec);
+      OperatorImpl<M, ? extends MessageEnvelope> operatorImpl = createOperatorImpl(source, operatorSpec, config, context);
       if (OPERATOR_IMPLS.putIfAbsent(operatorSpec, operatorImpl) == null) {
         // this is the first time we've added the operatorImpl corresponding to the operatorSpec,
         // so traverse and initialize and register the rest of the DAG.
         MessageStreamImpl outStream = operatorSpec.getOutputStream();
         Collection<OperatorSpec> registeredSpecs = outStream.getRegisteredOperatorSpecs();
         registeredSpecs.forEach(registeredSpec -> {
-            OperatorImpl subImpl = createAndRegisterOperatorImpl(registeredSpec, outStream, context);
-            operatorImpl.registerNextOperator(subImpl);
-          });
-        operatorImpl.init(source, context);
+          OperatorImpl subImpl = createAndRegisterOperatorImpl(registeredSpec, outStream, config, context);
+          operatorImpl.registerNextOperator(subImpl);
+        });
         return operatorImpl;
       }
     }
@@ -107,9 +103,9 @@ public class OperatorImpls {
    * @param <M>  type of input {@link MessageEnvelope}
    * @return  the {@link OperatorImpl} implementation instance
    */
-  protected static <M extends MessageEnvelope> OperatorImpl<M, ? extends MessageEnvelope> createOperatorImpl(OperatorSpec operatorSpec) {
+  protected static <M extends MessageEnvelope> OperatorImpl<M, ? extends MessageEnvelope> createOperatorImpl(MessageStreamImpl<M> source, OperatorSpec operatorSpec, Config config, TaskContext context) {
     if (operatorSpec instanceof StreamOperatorSpec) {
-      return new StreamOperatorImpl<>((StreamOperatorSpec<M, ? extends MessageEnvelope>) operatorSpec);
+      return new StreamOperatorImpl<>((StreamOperatorSpec<M, ? extends MessageEnvelope>) operatorSpec, source, operatorSpec.getContextInitializer().init(config, context));
     } else if (operatorSpec instanceof SinkOperatorSpec) {
       return new SinkOperatorImpl<>((SinkOperatorSpec<M>) operatorSpec);
     } else if (operatorSpec instanceof WindowOperatorSpec) {

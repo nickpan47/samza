@@ -48,6 +48,8 @@ public interface MessageStream<M extends MessageEnvelope> {
    */
   <TM extends MessageEnvelope> MessageStream<TM> map(MapFunction<M, TM> mapFn);
 
+  <TM extends MessageEnvelope> MessageStream<TM> map(MapFunctionWithContext<M, TM> mapWithContext, StreamContextInitializer contextInit);
+
   /**
    * Applies the provided 1:n {@link FlatMapFunction} to transform a {@link MessageEnvelope} in this {@link MessageStream}
    * to n {@link MessageEnvelope}s in the transformed {@link MessageStream}
@@ -57,6 +59,8 @@ public interface MessageStream<M extends MessageEnvelope> {
    * @return the transformed {@link MessageStream}
    */
   <TM extends MessageEnvelope> MessageStream<TM> flatMap(FlatMapFunction<M, TM> flatMapFn);
+
+  <TM extends MessageEnvelope> MessageStream<TM> flatMap(FlatMapFunctionWithContext<M, TM> flatMapWithContext, StreamContextInitializer contextInit);
 
   /**
    * Applies the provided {@link FilterFunction} to {@link MessageEnvelope}s in this {@link MessageStream} and returns the
@@ -70,6 +74,8 @@ public interface MessageStream<M extends MessageEnvelope> {
    */
   MessageStream<M> filter(FilterFunction<M> filterFn);
 
+  MessageStream<M> filter(FilterFunctionWithContext<M> filterWithContext, StreamContextInitializer contextInit);
+
   /**
    * Allows sending {@link MessageEnvelope}s in this {@link MessageStream} to an output using the provided {@link SinkFunction}.
    *
@@ -78,14 +84,6 @@ public interface MessageStream<M extends MessageEnvelope> {
    * @param sinkFn  the function to send {@link MessageEnvelope}s in this stream to output
    */
   void sink(SinkFunction<M> sinkFn);
-
-  /**
-   * Allows sending {@link MessageEnvelope}s in this {@link MessageStream} to an output {@link org.apache.samza.system.SystemStream}
-   * defined by {@link StreamSpec}
-   *
-   * @param streamSpec  stream specification that defines a physical {@link org.apache.samza.system.SystemStream}
-   */
-  <K, V> void sink(StreamSpec streamSpec, Serde<K> keySerde, Serde<V> msgSerde);
 
   /**
    * Groups the {@link MessageEnvelope}s in this {@link MessageStream} according to the provided {@link Window} semantics
@@ -117,6 +115,9 @@ public interface MessageStream<M extends MessageEnvelope> {
   <K, OM extends MessageEnvelope<K, ?>, RM extends MessageEnvelope> MessageStream<RM> join(MessageStream<OM> otherStream,
       JoinFunction<M, OM, RM> joinFn);
 
+  <K, OM extends MessageEnvelope<K, ?>, RM extends MessageEnvelope> MessageStream<RM> join(MessageStream<OM> otherStream,
+      JoinFunctionWithContext<M, OM, RM> joinWithContext, StreamContextInitializer contextInit);
+
   /**
    * Merge all {@code otherStreams} with this {@link MessageStream}.
    * <p>
@@ -126,6 +127,14 @@ public interface MessageStream<M extends MessageEnvelope> {
    * @return  the merged {@link MessageStream}
    */
   MessageStream<M> merge(Collection<MessageStream<M>> otherStreams);
+
+  /**
+   * Allows sending {@link MessageEnvelope}s in this {@link MessageStream} to an output {@link org.apache.samza.system.SystemStream}
+   * defined by {@link StreamSpec}
+   *
+   * @param streamSpec  stream specification that defines a physical {@link org.apache.samza.system.SystemStream}
+   */
+  <K, V> void sink(StreamSpec streamSpec, Serde<K> keySerde, Serde<V> msgSerde);
 
   /**
    * Send the input message to an output {@link org.apache.samza.system.SystemStream} and consume it as input {@link MessageStream} again.

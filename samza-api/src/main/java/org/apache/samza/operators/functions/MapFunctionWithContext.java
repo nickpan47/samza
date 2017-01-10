@@ -16,27 +16,27 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.samza.operators.spec;
+package org.apache.samza.operators.functions;
 
 import org.apache.samza.annotation.InterfaceStability;
-import org.apache.samza.operators.MessageStreamImpl;
-import org.apache.samza.operators.StreamContextInitializer;
+import org.apache.samza.operators.StreamContext;
 import org.apache.samza.operators.data.MessageEnvelope;
 
 
 /**
- * A stateless serializable stream operator specification that holds all the information required
- * to transform the input {@link MessageStreamImpl} and produce the output {@link MessageStreamImpl}.
+ * A function that transforms a {@link org.apache.samza.operators.data.MessageEnvelope} into another {@link org.apache.samza.operators.data.MessageEnvelope}, possibly of a different type.
+ * @param <M>  type of the input {@link org.apache.samza.operators.data.MessageEnvelope}
+ * @param <OM>  type of the transformed {@link org.apache.samza.operators.data.MessageEnvelope}
  */
 @InterfaceStability.Unstable
-public interface OperatorSpec<OM extends MessageEnvelope> {
+@FunctionalInterface
+public interface MapFunctionWithContext<M extends MessageEnvelope, OM extends MessageEnvelope> {
 
   /**
-   * Get the output stream containing transformed {@link MessageEnvelope} produced by this operator.
-   * @return  the output stream containing transformed {@link MessageEnvelope} produced by this operator.
+   * Transforms the provided {@link org.apache.samza.operators.data.MessageEnvelope} into another {@link org.apache.samza.operators.data.MessageEnvelope}
+   * @param message  the {@link org.apache.samza.operators.data.MessageEnvelope} to be transformed
+   * @return  the transformed {@link org.apache.samza.operators.data.MessageEnvelope}
    */
-  MessageStreamImpl<OM> getOutputStream();
-
-  StreamContextInitializer getContextInitializer();
+  OM apply(M message, StreamContext context);
 
 }

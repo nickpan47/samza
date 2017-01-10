@@ -19,8 +19,9 @@
 package org.apache.samza.operators.spec;
 
 import org.apache.samza.operators.MessageStreamImpl;
+import org.apache.samza.operators.StreamContextInitializer;
 import org.apache.samza.operators.data.MessageEnvelope;
-import org.apache.samza.operators.functions.FlatMapFunction;
+import org.apache.samza.operators.functions.FlatMapFunctionWithContext;
 
 
 /**
@@ -33,7 +34,9 @@ public class StreamOperatorSpec<M extends MessageEnvelope, OM extends MessageEnv
 
   private final MessageStreamImpl outputStream;
 
-  private final FlatMapFunction<M, OM> transformFn;
+  private final FlatMapFunctionWithContext<M, OM> transformFn;
+
+  private final StreamContextInitializer contextInit;
 
   /**
    * Constructor for a {@link StreamOperatorSpec} that accepts an output {@link MessageStreamImpl}.
@@ -41,9 +44,10 @@ public class StreamOperatorSpec<M extends MessageEnvelope, OM extends MessageEnv
    * @param transformFn  the transformation function
    * @param outputStream  the output {@link MessageStreamImpl}
    */
-  StreamOperatorSpec(FlatMapFunction<M, OM> transformFn, MessageStreamImpl outputStream) {
+  StreamOperatorSpec(FlatMapFunctionWithContext<M, OM> transformFn, MessageStreamImpl outputStream, StreamContextInitializer contextInit) {
     this.outputStream = outputStream;
     this.transformFn = transformFn;
+    this.contextInit = contextInit;
   }
 
   @Override
@@ -51,7 +55,11 @@ public class StreamOperatorSpec<M extends MessageEnvelope, OM extends MessageEnv
     return this.outputStream;
   }
 
-  public FlatMapFunction<M, OM> getTransformFn() {
+  @Override public StreamContextInitializer getContextInitializer() {
+    return this.contextInit;
+  }
+
+  public FlatMapFunctionWithContext<M, OM> getTransformFn() {
     return this.transformFn;
   }
 }

@@ -11,7 +11,7 @@ import org.apache.samza.operators.MessageStreamGraphImpl;
 public class StandaloneExecutionEnvironment implements ExecutionEnvironment {
 
   @Override public MessageStreamGraph initGraph(Config config) {
-    return new MessageStreamGraphImpl(this);
+    return new MessageStreamGraphImpl();
   }
 
   @Override public void run(MessageStreamGraph graph) {

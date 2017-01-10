@@ -16,26 +16,26 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.samza.operators;
+package org.apache.samza.operators.functions;
 
 import org.apache.samza.annotation.InterfaceStability;
+import org.apache.samza.operators.StreamContext;
 import org.apache.samza.operators.data.MessageEnvelope;
-import org.apache.samza.serializers.Serde;
-
-import java.util.Map;
 
 
 /**
- * Job-level programming interface to create an operator DAG and run in various different runtime environments.
+ * A function that specifies whether a {@link org.apache.samza.operators.data.MessageEnvelope} should be retained for further processing or filtered out.
+ * @param <M>  type of the input {@link org.apache.samza.operators.data.MessageEnvelope}
  */
 @InterfaceStability.Unstable
-public interface MessageStreamGraph {
+@FunctionalInterface
+public interface FilterFunctionWithContext<M extends MessageEnvelope> {
 
-  <K, V, M extends MessageEnvelope<K ,V>> MessageStream<M> addInStream(StreamSpec streamSpec, Serde<K> keySerdeClazz, Serde<V> msgSerdeClazz);
+  /**
+   * Returns a boolean indicating whether this {@link org.apache.samza.operators.data.MessageEnvelope} should be retained or filtered out.
+   * @param message  the {@link org.apache.samza.operators.data.MessageEnvelope} to be checked
+   * @return  true if {@link org.apache.samza.operators.data.MessageEnvelope} should be retained
+   */
+  boolean apply(M message, StreamContext context);
 
-  Map<StreamSpec, MessageStream> getInStreams();
-
-  Map<StreamSpec, MessageStream> getOutStreams();
-
-  Map<StreamSpec, MessageStream> getIntStreams();
 }
