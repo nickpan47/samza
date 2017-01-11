@@ -25,11 +25,12 @@ import org.apache.samza.operators.MessageStreamGraphImpl;
 
 public class SingleJobExecutionEnvironment implements ExecutionEnvironment {
 
-  @Override public MessageStreamGraph initGraph(Config config) {
+  @Override public MessageStreamGraph createGraph(Config config) {
     return new MessageStreamGraphImpl();
   }
 
   @Override public void run(MessageStreamGraph graph) {
+    // TODO: add description of ProcessContext that is going to create a sub-DAG of the {@code graph}
     // TODO: actually instantiate the tasks and run the job, i.e.
     // 1. create all input/output/intermediate topics
     // 2. create the single job configuration

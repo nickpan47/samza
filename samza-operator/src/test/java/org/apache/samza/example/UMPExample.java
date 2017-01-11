@@ -1,10 +1,7 @@
 package org.apache.samza.example;
 
 import org.apache.samza.config.Config;
-import org.apache.samza.operators.MessageStream;
-import org.apache.samza.operators.MessageStreamApplication;
-import org.apache.samza.operators.MessageStreamGraph;
-import org.apache.samza.operators.StreamSpec;
+import org.apache.samza.operators.*;
 import org.apache.samza.operators.data.IncomingSystemMessageEnvelope;
 import org.apache.samza.operators.data.JsonIncomingSystemMessageEnvelope;
 import org.apache.samza.operators.data.Offset;
@@ -19,7 +16,7 @@ import java.util.List;
 import java.util.Properties;
 
 
-public class UMPExample implements MessageStreamApplication {
+public class UMPExample extends MessageStreamApplication {
 
   StreamSpec input1 = new StreamSpec() {
     @Override public SystemStream getSystemStream() {
@@ -91,19 +88,10 @@ public class UMPExample implements MessageStreamApplication {
    *   }
    *
    */
-  @Override public void run(ExecutionEnvironment env, Config config) {
-    try {
-      MessageStreamGraph graph = env.initGraph(config);
-
-      MessageStream<JsonMessageEnvelope> newSource = graph.<Object, Object, IncomingSystemMessageEnvelope>addInStream(input1, null, null).map(this::getInputMessage);
-      newSource.join(graph.<Object, Object, IncomingSystemMessageEnvelope>addInStream(input2, null, null).map(this::getInputMessage),
-          (m1, m2) -> this.myJoinResult(m1, m2)).
-          sink(output, new StringSerde("UTF-8"), new StringSerde("UTF-8"));
-
-      env.run(graph);
-    } catch (Throwable t) {
-      throw new RuntimeException(t);
-    }
+  @Override public void initGraph(MessageStreamGraph graph, Config config) {
+    MessageStream<JsonMessageEnvelope> newSource = graph.<Object, Object, IncomingSystemMessageEnvelope>addInStream(input1, null, null).map(this::getInputMessage);
+    newSource.join(graph.<Object, Object, IncomingSystemMessageEnvelope>addInStream(input2, null, null).map(this::getInputMessage), this::myJoinResult).
+        sink(output, new StringSerde("UTF-8"), new StringSerde("UTF-8"));
   }
 
   // standalone local program model

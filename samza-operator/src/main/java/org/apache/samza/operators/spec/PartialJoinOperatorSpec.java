@@ -19,7 +19,6 @@
 package org.apache.samza.operators.spec;
 
 import org.apache.samza.operators.MessageStreamImpl;
-import org.apache.samza.operators.StreamContextInitializer;
 import org.apache.samza.operators.data.MessageEnvelope;
 import org.apache.samza.operators.functions.PartialJoinFunctionWithContext;
 import org.apache.samza.operators.windows.StoreFunctions;
@@ -63,8 +62,6 @@ public class PartialJoinOperatorSpec<M extends MessageEnvelope<K, ?>, K, JM exte
    */
   private final String operatorId;
 
-  private final StreamContextInitializer contextInit;
-
   /**
    * Default constructor for a {@link PartialJoinOperatorSpec}.
    *
@@ -72,7 +69,7 @@ public class PartialJoinOperatorSpec<M extends MessageEnvelope<K, ?>, K, JM exte
    *                       w/ type {@code JM} of buffered {@link MessageEnvelope} from another stream
    * @param joinOutput  the output {@link MessageStreamImpl} of the join results
    */
-  PartialJoinOperatorSpec(PartialJoinFunctionWithContext<M, JM, RM> partialJoinFn, MessageStreamImpl joinOutput, String operatorId, StreamContextInitializer contextInit) {
+  PartialJoinOperatorSpec(PartialJoinFunctionWithContext<M, JM, RM> partialJoinFn, MessageStreamImpl joinOutput, String operatorId) {
     this.joinOutput = joinOutput;
     this.transformFn = partialJoinFn;
     // Read-only join store, no creator/updater functions required.
@@ -80,7 +77,6 @@ public class PartialJoinOperatorSpec<M extends MessageEnvelope<K, ?>, K, JM exte
     // Buffered message envelope store for this input stream.
     this.selfStoreFns = new StoreFunctions<>(m -> m.getKey(), (m, s1) -> m);
     this.operatorId = operatorId;
-    this.contextInit = contextInit;
   }
 
   @Override
@@ -91,10 +87,6 @@ public class PartialJoinOperatorSpec<M extends MessageEnvelope<K, ?>, K, JM exte
   @Override
   public MessageStreamImpl getOutputStream() {
     return this.joinOutput;
-  }
-
-  @Override public StreamContextInitializer getContextInitializer() {
-    return this.contextInit;
   }
 
   public StoreFunctions<JM, K, JM> getJoinStoreFns() {

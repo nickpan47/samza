@@ -82,7 +82,7 @@ public final class StreamOperatorAdaptorTask implements StreamTask, InitableTask
         }
       });
     context.getSystemStreamPartitions().forEach(ssp -> operatorGraph.put(ssp,
-        OperatorImpls.createOperatorImpls(inputBySystemStream.get(ssp.getSystemStream()), context)));
+        OperatorImpls.createOperatorImpls(inputBySystemStream.get(ssp.getSystemStream()), config, context)));
   }
 
   @Override

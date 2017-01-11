@@ -26,6 +26,8 @@ import org.apache.samza.operators.windows.WindowOutput;
 import org.apache.samza.serializers.Serde;
 
 import java.util.Collection;
+import java.util.function.BiFunction;
+import java.util.function.Function;
 
 
 /**
@@ -39,42 +41,42 @@ import java.util.Collection;
 public interface MessageStream<M extends MessageEnvelope> {
 
   /**
-   * Applies the provided 1:1 {@link MapFunction} to {@link MessageEnvelope}s in this {@link MessageStream} and returns the
+   * Applies the provided 1:1 {@link Function} to {@link MessageEnvelope}s in this {@link MessageStream} and returns the
    * transformed {@link MessageStream}.
    *
    * @param mapFn  the function to transform a {@link MessageEnvelope} to another {@link MessageEnvelope}
    * @param <TM>  the type of {@link MessageEnvelope}s in the transformed {@link MessageStream}
    * @return the transformed {@link MessageStream}
    */
-  <TM extends MessageEnvelope> MessageStream<TM> map(MapFunction<M, TM> mapFn);
+  <TM extends MessageEnvelope> MessageStream<TM> map(Function<M, TM> mapFn);
 
-  <TM extends MessageEnvelope> MessageStream<TM> map(MapFunctionWithContext<M, TM> mapWithContext, StreamContextInitializer contextInit);
+  <TM extends MessageEnvelope> MessageStream<TM> map(MapFunctionWithContext<M, TM> mapWithContext);
 
   /**
-   * Applies the provided 1:n {@link FlatMapFunction} to transform a {@link MessageEnvelope} in this {@link MessageStream}
+   * Applies the provided 1:n {@link Function} to transform a {@link MessageEnvelope} in this {@link MessageStream}
    * to n {@link MessageEnvelope}s in the transformed {@link MessageStream}
    *
    * @param flatMapFn  the function to transform a {@link MessageEnvelope} to zero or more {@link MessageEnvelope}s
    * @param <TM>  the type of {@link MessageEnvelope}s in the transformed {@link MessageStream}
    * @return the transformed {@link MessageStream}
    */
-  <TM extends MessageEnvelope> MessageStream<TM> flatMap(FlatMapFunction<M, TM> flatMapFn);
+  <TM extends MessageEnvelope> MessageStream<TM> flatMap(Function<M, Collection<TM>> flatMapFn);
 
-  <TM extends MessageEnvelope> MessageStream<TM> flatMap(FlatMapFunctionWithContext<M, TM> flatMapWithContext, StreamContextInitializer contextInit);
+  <TM extends MessageEnvelope> MessageStream<TM> flatMap(FlatMapFunctionWithContext<M, TM> flatMapWithContext);
 
   /**
-   * Applies the provided {@link FilterFunction} to {@link MessageEnvelope}s in this {@link MessageStream} and returns the
+   * Applies the provided {@link Function} to {@link MessageEnvelope}s in this {@link MessageStream} and returns the
    * transformed {@link MessageStream}.
    * <p>
-   * The {@link FilterFunction} is a predicate which determines whether a {@link MessageEnvelope} in this {@link MessageStream}
+   * The {@link Function} is a predicate which determines whether a {@link MessageEnvelope} in this {@link MessageStream}
    * should be retained in the transformed {@link MessageStream}.
    *
    * @param filterFn  the predicate to filter {@link MessageEnvelope}s from this {@link MessageStream}
    * @return the transformed {@link MessageStream}
    */
-  MessageStream<M> filter(FilterFunction<M> filterFn);
+  MessageStream<M> filter(Function<M, Boolean> filterFn);
 
-  MessageStream<M> filter(FilterFunctionWithContext<M> filterWithContext, StreamContextInitializer contextInit);
+  MessageStream<M> filter(FilterFunctionWithContext<M> filterWithContext);
 
   /**
    * Allows sending {@link MessageEnvelope}s in this {@link MessageStream} to an output using the provided {@link SinkFunction}.
@@ -101,7 +103,7 @@ public interface MessageStream<M extends MessageEnvelope> {
   <WK, WV, WM extends WindowOutput<WK, WV>> MessageStream<WM> window(Window<M, WK, WV, WM> window);
 
   /**
-   * Joins this {@link MessageStream} with another {@link MessageStream} using the provided pairwise {@link JoinFunction}.
+   * Joins this {@link MessageStream} with another {@link MessageStream} using the provided pairwise {@link BiFunction}.
    * <p>
    * We currently only support 2-way joins.
    *
@@ -113,10 +115,10 @@ public interface MessageStream<M extends MessageEnvelope> {
    * @return  the joined {@link MessageStream}
    */
   <K, OM extends MessageEnvelope<K, ?>, RM extends MessageEnvelope> MessageStream<RM> join(MessageStream<OM> otherStream,
-      JoinFunction<M, OM, RM> joinFn);
+      BiFunction<M, OM, RM> joinFn);
 
   <K, OM extends MessageEnvelope<K, ?>, RM extends MessageEnvelope> MessageStream<RM> join(MessageStream<OM> otherStream,
-      JoinFunctionWithContext<M, OM, RM> joinWithContext, StreamContextInitializer contextInit);
+      JoinFunctionWithContext<M, OM, RM> joinWithContext);
 
   /**
    * Merge all {@code otherStreams} with this {@link MessageStream}.

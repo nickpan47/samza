@@ -16,7 +16,7 @@ import java.util.List;
 import java.util.Properties;
 
 
-public class NoContextStreamExample implements MessageStreamApplication {
+public class NoContextStreamExample extends MessageStreamApplication {
 
   StreamSpec input1 = new StreamSpec() {
     @Override public SystemStream getSystemStream() {
@@ -82,25 +82,16 @@ public class NoContextStreamExample implements MessageStreamApplication {
    *   public static void main(String args[]) throws Exception {
    *     CommandLine cmdLine = new CommandLine();
    *     Config config = cmdLine.loadConfig(cmdLine.parser().parse(args));
-   *     ExecutionEnvironment remoteEnv = ExecutionEnvironment.getRemoteEnvironment(config);
-   *     UserMainExample runnableApp = new UserMainExample();
+   *     ExecutionEnvironment remoteEnv = ExecutionEnvironment.getRemoteEnvironment(config);  //TODO: Example config vars to indicate YARN
+   *     UserMainExample runnableApp = MessageStreamApplication.fromConfig(config);
    *     runnableApp.run(remoteEnv, config);
    *   }
    *
    */
-  @Override public void run(ExecutionEnvironment env, Config config) {
-    try {
-      MessageStreamGraph graph = env.initGraph(config);
-
-      MessageStream<JsonMessageEnvelope> newSource = graph.<Object, Object, IncomingSystemMessageEnvelope>addInStream(input1, null, null).map(this::getInputMessage);
-      newSource.join(graph.<Object, Object, IncomingSystemMessageEnvelope>addInStream(input2, null, null).map(this::getInputMessage),
-          (m1, m2) -> this.myJoinResult(m1, m2)).
-          sink(output, new StringSerde("UTF-8"), new StringSerde("UTF-8"));
-
-      env.run(graph);
-    } catch (Throwable t) {
-      throw new RuntimeException(t);
-    }
+  @Override public void initGraph(MessageStreamGraph graph, Config config) {
+    MessageStream<JsonMessageEnvelope> newSource = graph.<Object, Object, IncomingSystemMessageEnvelope>addInStream(input1, null, null).map(this::getInputMessage);
+    newSource.join(graph.<Object, Object, IncomingSystemMessageEnvelope>addInStream(input2, null, null).map(this::getInputMessage), this::myJoinResult).
+        sink(output, new StringSerde("UTF-8"), new StringSerde("UTF-8"));
   }
 
   // standalone local program model

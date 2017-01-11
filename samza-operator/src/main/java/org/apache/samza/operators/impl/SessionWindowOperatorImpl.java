@@ -18,6 +18,7 @@
  */
 package org.apache.samza.operators.impl;
 
+import org.apache.samza.config.Config;
 import org.apache.samza.operators.MessageStreamImpl;
 import org.apache.samza.operators.StateStoreImpl;
 import org.apache.samza.operators.data.MessageEnvelope;
@@ -44,14 +45,8 @@ class SessionWindowOperatorImpl<M extends MessageEnvelope, RK, WS extends Window
   private final WindowOperatorSpec<M, RK, WS, RM> windowSpec;
   private StateStoreImpl<M, RK, WS> stateStore = null;
 
-  SessionWindowOperatorImpl(WindowOperatorSpec<M, RK, WS, RM> windowSpec) {
+  SessionWindowOperatorImpl(WindowOperatorSpec<M, RK, WS, RM> windowSpec, MessageStreamImpl<M> source, Config config, TaskContext context) {
     this.windowSpec = windowSpec;
-  }
-
-  @Override
-  public void init(MessageStreamImpl source, TaskContext context) {
-    this.stateStore = new StateStoreImpl<>(this.windowSpec.getStoreFns(), windowSpec.getStoreName(source));
-    this.stateStore.init(context);
   }
 
   @Override

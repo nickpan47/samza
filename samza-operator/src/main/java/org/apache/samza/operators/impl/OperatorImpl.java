@@ -18,8 +18,6 @@
  */
 package org.apache.samza.operators.impl;
 
-import org.apache.samza.operators.MessageStreamImpl;
-import org.apache.samza.operators.StreamContext;
 import org.apache.samza.operators.data.MessageEnvelope;
 import org.apache.samza.task.MessageCollector;
 import org.apache.samza.task.TaskCoordinator;
@@ -34,16 +32,6 @@ import java.util.Set;
 public abstract class OperatorImpl<M extends MessageEnvelope, RM extends MessageEnvelope> {
 
   private final Set<OperatorImpl<RM, ? extends MessageEnvelope>> nextOperators = new HashSet<>();
-
-  private final StreamContext opContext;
-
-  OperatorImpl(MessageStreamImpl<M> source, StreamContext opContext) {
-    this.opContext = opContext;
-  }
-
-  OperatorImpl(MessageStreamImpl<M> source) {
-    this(source, null);
-  }
 
   /**
    * Register the next operator in the chain that this operator should propagate its output to.
@@ -77,7 +65,4 @@ public abstract class OperatorImpl<M extends MessageEnvelope, RM extends Message
     nextOperators.forEach(sub -> sub.onNext(outputMessage, collector, coordinator));
   }
 
-  protected StreamContext getContext() {
-    return this.opContext;
-  }
 }

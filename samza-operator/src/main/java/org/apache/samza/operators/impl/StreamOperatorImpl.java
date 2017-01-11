@@ -18,12 +18,13 @@
  */
 package org.apache.samza.operators.impl;
 
+import org.apache.samza.config.Config;
 import org.apache.samza.operators.MessageStreamImpl;
-import org.apache.samza.operators.StreamContext;
 import org.apache.samza.operators.data.MessageEnvelope;
 import org.apache.samza.operators.functions.FlatMapFunctionWithContext;
 import org.apache.samza.operators.spec.StreamOperatorSpec;
 import org.apache.samza.task.MessageCollector;
+import org.apache.samza.task.TaskContext;
 import org.apache.samza.task.TaskCoordinator;
 
 
@@ -37,14 +38,14 @@ class StreamOperatorImpl<M extends MessageEnvelope, RM extends MessageEnvelope> 
 
   private final FlatMapFunctionWithContext<M, RM> transformFn;
 
-  StreamOperatorImpl(StreamOperatorSpec<M, RM> streamOperatorSpec, MessageStreamImpl<M> source, StreamContext opContext) {
-    super(source, opContext);
+  StreamOperatorImpl(StreamOperatorSpec<M, RM> streamOperatorSpec, MessageStreamImpl<M> source, Config config, TaskContext context) {
     this.transformFn = streamOperatorSpec.getTransformFn();
+    this.transformFn.init(config, context);
   }
 
   @Override
   public void onNext(M message, MessageCollector collector, TaskCoordinator coordinator) {
     // call the transform function and then for each output call propagateResult()
-    this.transformFn.apply(message, this.getContext()).forEach(r -> this.propagateResult(r, collector, coordinator));
+    this.transformFn.apply(message).forEach(r -> this.propagateResult(r, collector, coordinator));
   }
 }

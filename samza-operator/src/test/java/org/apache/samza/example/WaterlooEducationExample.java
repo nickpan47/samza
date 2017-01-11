@@ -3,10 +3,13 @@ package org.apache.samza.example;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.specific.SpecificRecord;
 import org.apache.samza.config.Config;
-import org.apache.samza.operators.*;
+import org.apache.samza.operators.MessageStream;
+import org.apache.samza.operators.MessageStreamApplication;
+import org.apache.samza.operators.MessageStreamGraph;
+import org.apache.samza.operators.StreamSpec;
 import org.apache.samza.operators.data.MessageEnvelope;
+import org.apache.samza.operators.functions.MapFunctionWithContext;
 import org.apache.samza.serializers.StringSerde;
-import org.apache.samza.storage.kv.KeyValueStore;
 import org.apache.samza.system.ExecutionEnvironment;
 import org.apache.samza.system.OutgoingMessageEnvelope;
 import org.apache.samza.system.SystemStream;
@@ -16,7 +19,7 @@ import org.apache.samza.util.CommandLine;
 import java.util.*;
 
 
-public class WaterlooEducationExample implements MessageStreamApplication {
+public class WaterlooEducationExample extends MessageStreamApplication {
 
   StreamSpec input1 = new StreamSpec() {
     @Override public SystemStream getSystemStream() {
@@ -107,44 +110,7 @@ public class WaterlooEducationExample implements MessageStreamApplication {
     return profile;
   }
 
-  class StandardizeContext implements StreamContext {
 
-    @Override public <K, V> KeyValueStore<K, V> getStore(String store) {
-      return null;
-    }
-
-    @Override public <C> C getUserContext() {
-      return null;
-    }
-
-    @Override public TaskContext getTaskContext() {
-      return null;
-    }
-
-    StandardizeContext(Config config, TaskContext context) {
-
-    }
-
-    private Integer readVoldemortSchoolTable(int profileId, Education education, Locale defaultLocale) {
-      return 0;
-    }
-
-    Integer standardizeSchool(int profileId, Education education, Locale defaultLocale) {
-      return readVoldemortSchoolTable(profileId, education, defaultLocale);
-    }
-
-    StandardizedDegree standardizeDegree(Education education, Locale defaultLocale) {
-      return new StandardizedDegree();
-    }
-
-    List<StandardizedFieldOfStudy> standardizeFieldOfStudy(Education education, Locale defaultLocale) {
-      return new ArrayList<>();
-    }
-
-    public Locale defaultLocale = new Locale();
-
-    public TaskMetrics _metrics;
-  }
 
   class TaskMetrics {
     public void incNumEducationsProcessed() {
@@ -168,21 +134,7 @@ public class WaterlooEducationExample implements MessageStreamApplication {
     return education;
   }
 
-  class SerializeContext implements StreamContext {
-    SerializeContext(Config config, TaskContext context) {
-    }
-
-    @Override public <K, V> KeyValueStore<K, V> getStore(String store) {
-      return null;
-    }
-
-    @Override public <C> C getUserContext() {
-      return null;
-    }
-
-    @Override public TaskContext getTaskContext() {
-      return null;
-    }
+  class SerializedMap implements MapFunctionWithContext<Profile, MessageEnvelope<String, OutgoingMessageEnvelope>> {
 
     MessageEnvelope<String, OutgoingMessageEnvelope> getOutgoingMessage(int profileId, StandardizedEducation stdEducation) {
       return new MessageEnvelope<String, OutgoingMessageEnvelope>() {
@@ -194,6 +146,56 @@ public class WaterlooEducationExample implements MessageStreamApplication {
           return null;
         }
       };
+    }
+
+    @Override public MessageEnvelope<String, OutgoingMessageEnvelope> apply(Profile p) {
+      return this.getOutgoingMessage(p.id, p.memberStandardizedEducation);
+    }
+
+    @Override public void init(Config config, TaskContext context) {
+      // potential initialization of context, like Voldemort client
+    }
+  }
+
+  class StandardizeEducationMap implements MapFunctionWithContext<Profile, Profile> {
+
+    private Integer readVoldemortSchoolTable(int profileId, Education education, Locale defaultLocale) {
+      return 0;
+    }
+
+    Integer standardizeSchool(int profileId, Education education, Locale defaultLocale) {
+      return readVoldemortSchoolTable(profileId, education, defaultLocale);
+    }
+
+    StandardizedDegree standardizeDegree(Education education, Locale defaultLocale) {
+      return new StandardizedDegree();
+    }
+
+    List<StandardizedFieldOfStudy> standardizeFieldOfStudy(Education education, Locale defaultLocale) {
+      return new ArrayList<>();
+    }
+
+    public Locale defaultLocale = new Locale();
+
+    public TaskMetrics _metrics;
+
+    @Override public Profile apply(Profile p) {
+      for (Map.Entry<CharSequence, Education> educationEntry : p.educations.entrySet()) {
+        Education education = educationEntry.getValue();
+        Integer schoolId = this.standardizeSchool(p.id, education, this.defaultLocale);
+        StandardizedDegree stdDegree = this.standardizeDegree(education, this.defaultLocale);
+        List<StandardizedFieldOfStudy> stdFieldsOfStudy =
+            this.standardizeFieldOfStudy(education, this.defaultLocale);
+
+        p.memberStandardizedEducation.educations
+            .add(toMemberEducationStandardizedValues(education, schoolId, stdDegree, stdFieldsOfStudy));
+        this._metrics.incNumEducationsProcessed();
+      }
+      return p;
+    }
+
+    @Override public void init(Config config, TaskContext context) {
+      // potential initialization of defaultLocale, Voldemort client etc.
     }
   }
 
@@ -210,40 +212,13 @@ public class WaterlooEducationExample implements MessageStreamApplication {
    *   }
    *
    */
-  @Override public void run(ExecutionEnvironment env, Config config) {
-    try {
-      MessageStreamGraph graph = env.initGraph(config);
-
-      MessageStream<IncomingAvroMessageEnvelope> stream = graph.addInStream(input1, new StringSerde("UTF-8"), null);
-      stream.map(m -> this.genericRecordToSpecificRecord(new Profile(), m.getMessage())).
-          filter(p -> !(p.educations == null || p.educations.isEmpty())).
-          map((p, c) -> {
-              StandardizeContext sc = (StandardizeContext) c;
-              for (Map.Entry<CharSequence, Education> educationEntry : p.educations.entrySet()) {
-                Education education = educationEntry.getValue();
-                Integer schoolId = sc.standardizeSchool( p.id, education, sc.defaultLocale);
-                StandardizedDegree stdDegree = sc.standardizeDegree(education, sc.defaultLocale);
-                List<StandardizedFieldOfStudy> stdFieldsOfStudy =
-                    sc.standardizeFieldOfStudy(education, sc.defaultLocale);
-
-                p.memberStandardizedEducation.educations
-                    .add(toMemberEducationStandardizedValues(education, schoolId, stdDegree, stdFieldsOfStudy));
-                sc._metrics.incNumEducationsProcessed();
-              }
-              return p;
-            },
-            (conf, context) -> new StandardizeContext(conf, context) {}).
-          map((p, c) -> {
-                SerializeContext serC = (SerializeContext) c;
-                return serC.getOutgoingMessage(p.id, p.memberStandardizedEducation);
-              },
-              (conf, context) -> new SerializeContext(conf, context) {}).
-          sink((p, mc, t) -> mc.send(p.getMessage()));
-
-      env.run(graph);
-    } catch (Throwable t) {
-      throw new RuntimeException(t);
-    }
+  @Override public void initGraph(MessageStreamGraph graph, Config config) {
+    MessageStream<IncomingAvroMessageEnvelope> stream = graph.addInStream(input1, new StringSerde("UTF-8"), null);
+    stream.map(m -> this.genericRecordToSpecificRecord(new Profile(), m.getMessage())).
+        filter(p -> !(p.educations == null || p.educations.isEmpty())).
+        map(new StandardizeEducationMap()).
+        map(new SerializedMap()).
+        sink((p, mc, t) -> mc.send(p.getMessage()));
   }
 
   // standalone local program model

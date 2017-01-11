@@ -19,6 +19,7 @@
 
 package org.apache.samza.operators;
 
+import org.apache.samza.config.Config;
 import org.apache.samza.operators.data.MessageEnvelope;
 import org.apache.samza.operators.functions.*;
 import org.apache.samza.operators.spec.OperatorSpec;
@@ -28,6 +29,7 @@ import org.apache.samza.operators.windows.WindowOutput;
 import org.apache.samza.operators.windows.WindowState;
 import org.apache.samza.serializers.Serde;
 import org.apache.samza.system.OutgoingMessageEnvelope;
+import org.apache.samza.task.TaskContext;
 
 import java.util.*;
 
@@ -70,55 +72,102 @@ public class MessageStreamImpl<M extends MessageEnvelope> implements MessageStre
 
   @Override
   public <TM extends MessageEnvelope> MessageStream<TM> map(MapFunction<M, TM> mapFn) {
-    return this.map((m, c) -> mapFn.apply(m), null);
+    return this.map(new MapFunctionWithContext<M, TM>() {
+      @Override public TM apply(M message) {
+        return mapFn.apply(message);
+      }
+
+      @Override public void init(Config config, TaskContext context) {
+
+      }
+    });
   }
 
   @Override
   public <TM extends MessageEnvelope> MessageStream<TM> flatMap(FlatMapFunction<M, TM> flatMapFn) {
-    return this.flatMap((m, c) -> flatMapFn.apply(m), null);
+    return this.flatMap(new FlatMapFunctionWithContext<M, TM>() {
+      @Override public Collection<TM> apply(M message) {
+        return flatMapFn.apply(message);
+      }
+
+      @Override public void init(Config config, TaskContext context) {
+
+      }
+    });
   }
 
   @Override
   public <K, OM extends MessageEnvelope<K, ?>, RM extends MessageEnvelope> MessageStream<RM> join(MessageStream<OM> otherStream,
       JoinFunction<M, OM, RM> joinFn) {
-    return this.join(otherStream, (m1, m2, c) -> joinFn.apply(m1, m2), null);
+    return this.join(otherStream, new JoinFunctionWithContext<M, OM, RM>() {
+      @Override public RM apply(M message, OM otherMessage) {
+        return joinFn.apply(message, otherMessage);
+      }
+
+      @Override public void init(Config config, TaskContext context) {
+
+      }
+    });
   }
 
   @Override
   public MessageStream<M> filter(FilterFunction<M> filterFn) {
-    return this.filter((t, c) -> filterFn.apply(t), null);
+    return this.filter(new FilterFunctionWithContext<M>() {
+      @Override public boolean apply(M message) {
+        return filterFn.apply(message);
+      }
+
+      @Override public void init(Config config, TaskContext context) {
+
+      }
+    });
   }
 
-  @Override public <TM extends MessageEnvelope> MessageStream<TM> map(MapFunctionWithContext<M, TM> mapWithContext, StreamContextInitializer contextInit) {
+  @Override public <TM extends MessageEnvelope> MessageStream<TM> map(MapFunctionWithContext<M, TM> mapWithContext) {
     OperatorSpec<TM> op = OperatorSpecs.<M, TM>createStreamOperator(
-        (m, c) -> new ArrayList<TM>() {
-          {
-            TM r = mapWithContext.apply(m, c);
-            if (r != null) {
-              this.add(r);
+        new FlatMapFunctionWithContext<M, TM>() {
+            @Override public Collection<TM> apply(M message) {
+              return new ArrayList<TM>() {
+                {
+                  TM r = mapWithContext.apply(message);
+                  if (r != null) {
+                    this.add(r);
+                  }
+                }
+              };
             }
-          }
-        }, new MessageStreamImpl<>(this.graph), contextInit);
+
+            @Override public void init(Config config, TaskContext context) {
+              mapWithContext.init(config, context);
+            }
+        }, new MessageStreamImpl<>(this.graph));
     this.registeredOperatorSpecs.add(op);
     return op.getOutputStream();
   }
 
   @Override
-  public <TM extends MessageEnvelope> MessageStream<TM> flatMap(FlatMapFunctionWithContext<M, TM> flatMapWithContext, StreamContextInitializer contextInit) {
-    OperatorSpec<TM> op = OperatorSpecs.<M, TM>createStreamOperator(flatMapWithContext, new MessageStreamImpl<>(this.graph), contextInit);
+  public <TM extends MessageEnvelope> MessageStream<TM> flatMap(FlatMapFunctionWithContext<M, TM> flatMapWithContext) {
+    OperatorSpec<TM> op = OperatorSpecs.<M, TM>createStreamOperator(flatMapWithContext, new MessageStreamImpl<>(this.graph));
     this.registeredOperatorSpecs.add(op);
     return op.getOutputStream();
   }
 
-  @Override public MessageStream<M> filter(FilterFunctionWithContext<M> filterWithContext, StreamContextInitializer contextInit) {
-    OperatorSpec<M> op = OperatorSpecs.<M, M>createStreamOperator(
-        (t, c) -> new ArrayList<M>() {
+  @Override public MessageStream<M> filter(FilterFunctionWithContext<M> filterWithContext) {
+    OperatorSpec<M> op = OperatorSpecs.<M, M>createStreamOperator(new FlatMapFunctionWithContext<M, M>() {
+      @Override public Collection<M> apply(M message) {
+        return new ArrayList<M>() {
           {
-            if (filterWithContext.apply(t, c)) {
-              this.add(t);
+            if (filterWithContext.apply(message)) {
+              this.add(message);
             }
           }
-        }, new MessageStreamImpl<>(this.graph), contextInit);
+        };
+      }
+
+      @Override public void init(Config config, TaskContext context) {
+        filterWithContext.init(config, context);
+      }
+    }, new MessageStreamImpl<>(this.graph));
     this.registeredOperatorSpecs.add(op);
     return op.getOutputStream();
   }
@@ -143,17 +192,33 @@ public class MessageStreamImpl<M extends MessageEnvelope> implements MessageStre
   }
 
   @Override public <K, OM extends MessageEnvelope<K, ?>, RM extends MessageEnvelope> MessageStream<RM> join(
-      MessageStream<OM> otherStream, JoinFunctionWithContext<M, OM, RM> joinWithContext, StreamContextInitializer contextInit) {
+      MessageStream<OM> otherStream, JoinFunctionWithContext<M, OM, RM> joinWithContext) {
     MessageStreamImpl<RM> outputStream = new MessageStreamImpl<>(this.graph);
 
-    PartialJoinFunctionWithContext<M, OM, RM> parJoin1 = joinWithContext::apply;
-    PartialJoinFunctionWithContext<OM, M, RM> parJoin2 = (m, t1, c) -> joinWithContext.apply(t1, m, c);
+    PartialJoinFunctionWithContext<M, OM, RM> parJoin1 = new PartialJoinFunctionWithContext<M, OM, RM>() {
+      @Override public RM apply(M m1, OM om) {
+        return joinWithContext.apply(m1, om);
+      }
+
+      @Override public void init(Config config, TaskContext context) {
+        joinWithContext.init(config, context);
+      }
+    };
+    PartialJoinFunctionWithContext<OM, M, RM> parJoin2 = new PartialJoinFunctionWithContext<OM, M, RM>() {
+      @Override public RM apply(OM m1, M m) {
+        return joinWithContext.apply(m, m1);
+      }
+
+      @Override public void init(Config config, TaskContext context) {
+        joinWithContext.init(config, context);
+      }
+    };
 
     // TODO: need to add default store functions for the two partial join functions
 
     ((MessageStreamImpl<OM>) otherStream).registeredOperatorSpecs.add(
-        OperatorSpecs.<OM, K, M, RM>createPartialJoinOperator(parJoin2, outputStream, contextInit));
-    this.registeredOperatorSpecs.add(OperatorSpecs.<M, K, OM, RM>createPartialJoinOperator(parJoin1, outputStream, contextInit));
+        OperatorSpecs.<OM, K, M, RM>createPartialJoinOperator(parJoin2, outputStream));
+    this.registeredOperatorSpecs.add(OperatorSpecs.<M, K, OM, RM>createPartialJoinOperator(parJoin1, outputStream));
     return outputStream;
   }
 

@@ -20,7 +20,6 @@ package org.apache.samza.operators.spec;
 
 import org.apache.samza.annotation.InterfaceStability;
 import org.apache.samza.operators.MessageStreamImpl;
-import org.apache.samza.operators.StreamContextInitializer;
 import org.apache.samza.operators.data.MessageEnvelope;
 
 
@@ -36,7 +35,5 @@ public interface OperatorSpec<OM extends MessageEnvelope> {
    * @return  the output stream containing transformed {@link MessageEnvelope} produced by this operator.
    */
   MessageStreamImpl<OM> getOutputStream();
-
-  StreamContextInitializer getContextInitializer();
 
 }

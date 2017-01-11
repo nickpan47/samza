@@ -19,8 +19,9 @@
 package org.apache.samza.operators.functions;
 
 import org.apache.samza.annotation.InterfaceStability;
-import org.apache.samza.operators.StreamContext;
+import org.apache.samza.config.Config;
 import org.apache.samza.operators.data.MessageEnvelope;
+import org.apache.samza.task.TaskContext;
 
 
 /**
@@ -28,7 +29,6 @@ import org.apache.samza.operators.data.MessageEnvelope;
  * @param <M>  type of the input {@link org.apache.samza.operators.data.MessageEnvelope}
  */
 @InterfaceStability.Unstable
-@FunctionalInterface
 public interface FilterFunctionWithContext<M extends MessageEnvelope> {
 
   /**
@@ -36,6 +36,8 @@ public interface FilterFunctionWithContext<M extends MessageEnvelope> {
    * @param message  the {@link org.apache.samza.operators.data.MessageEnvelope} to be checked
    * @return  true if {@link org.apache.samza.operators.data.MessageEnvelope} should be retained
    */
-  boolean apply(M message, StreamContext context);
+  boolean apply(M message);
+
+  void init(Config config, TaskContext context);
 
 }

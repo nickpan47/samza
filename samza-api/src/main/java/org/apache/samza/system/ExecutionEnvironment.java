@@ -35,7 +35,7 @@ public interface ExecutionEnvironment {
 
   static ExecutionEnvironment getRemoteEnvironment(Config config) { return null; }
 
-  MessageStreamGraph initGraph(Config config);
+  MessageStreamGraph createGraph(Config config);
 
   /**
    * Method to be invoked to deploy and run the actual Samza jobs to execute {@link MessageStreamGraph}

@@ -19,8 +19,9 @@
 package org.apache.samza.operators.functions;
 
 import org.apache.samza.annotation.InterfaceStability;
-import org.apache.samza.operators.StreamContext;
+import org.apache.samza.config.Config;
 import org.apache.samza.operators.data.MessageEnvelope;
+import org.apache.samza.task.TaskContext;
 
 
 /**
@@ -29,7 +30,6 @@ import org.apache.samza.operators.data.MessageEnvelope;
  * @param <OM>  type of the transformed {@link org.apache.samza.operators.data.MessageEnvelope}
  */
 @InterfaceStability.Unstable
-@FunctionalInterface
 public interface MapFunctionWithContext<M extends MessageEnvelope, OM extends MessageEnvelope> {
 
   /**
@@ -37,6 +37,8 @@ public interface MapFunctionWithContext<M extends MessageEnvelope, OM extends Me
    * @param message  the {@link org.apache.samza.operators.data.MessageEnvelope} to be transformed
    * @return  the transformed {@link org.apache.samza.operators.data.MessageEnvelope}
    */
-  OM apply(M message, StreamContext context);
+  OM apply(M message);
+
+  void init(Config config, TaskContext context);
 
 }

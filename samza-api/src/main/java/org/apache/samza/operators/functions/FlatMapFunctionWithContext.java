@@ -19,8 +19,9 @@
 package org.apache.samza.operators.functions;
 
 import org.apache.samza.annotation.InterfaceStability;
-import org.apache.samza.operators.StreamContext;
+import org.apache.samza.config.Config;
 import org.apache.samza.operators.data.MessageEnvelope;
+import org.apache.samza.task.TaskContext;
 
 import java.util.Collection;
 
@@ -32,7 +33,6 @@ import java.util.Collection;
  * @param <OM>  type of the transformed {@link org.apache.samza.operators.data.MessageEnvelope}s
  */
 @InterfaceStability.Unstable
-@FunctionalInterface
 public interface FlatMapFunctionWithContext<M extends MessageEnvelope, OM extends MessageEnvelope> {
 
   /**
@@ -40,6 +40,8 @@ public interface FlatMapFunctionWithContext<M extends MessageEnvelope, OM extend
    * @param message  the {@link org.apache.samza.operators.data.MessageEnvelope} to be transformed
    * @return  a collection of 0 or more transformed {@link org.apache.samza.operators.data.MessageEnvelope}s
    */
-  Collection<OM> apply(M message, StreamContext context);
+  Collection<OM> apply(M message);
+
+  void init(Config config, TaskContext context);
 
 }
