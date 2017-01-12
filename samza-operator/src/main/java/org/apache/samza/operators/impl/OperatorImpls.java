@@ -24,6 +24,7 @@ import org.apache.samza.operators.data.MessageEnvelope;
 import org.apache.samza.operators.spec.*;
 import org.apache.samza.operators.windows.WindowOutput;
 import org.apache.samza.operators.windows.WindowState;
+import org.apache.samza.system.OutgoingMessageEnvelope;
 import org.apache.samza.task.TaskContext;
 
 import java.util.Collection;
@@ -108,11 +109,19 @@ public class OperatorImpls {
       StreamOperatorSpec<M, ? extends  MessageEnvelope> streamOpSpec = (StreamOperatorSpec<M, ? extends MessageEnvelope>) operatorSpec;
       return new StreamOperatorImpl<>(streamOpSpec, source, config, context);
     } else if (operatorSpec instanceof SinkOperatorSpec) {
-      return new SinkOperatorImpl<>((SinkOperatorSpec<M>) operatorSpec);
+      return new SinkOperatorImpl<>((SinkOperatorSpec<M>) operatorSpec, config, context);
     } else if (operatorSpec instanceof WindowOperatorSpec) {
       return new SessionWindowOperatorImpl<>((WindowOperatorSpec<M, ?, ? extends WindowState, ? extends WindowOutput>) operatorSpec, source, config, context);
     } else if (operatorSpec instanceof PartialJoinOperatorSpec) {
       return new PartialJoinOperatorImpl<>((PartialJoinOperatorSpec) operatorSpec, source, config, context);
+    } else if (operatorSpec instanceof PartitionOperatorSpec) {
+      PartitionOperatorSpec parSpec = (PartitionOperatorSpec<?, M>) operatorSpec;
+      if (parSpec.isPassThrough()) {
+        return StreamOperatorImpl.<M>getPassThroughOp();
+      }
+      return new SinkOperatorImpl<>(OperatorSpecs.createSinkOperator(
+          (m, mc, tc) -> mc.send(new OutgoingMessageEnvelope(parSpec.getStreamSpec().getSystemStream(), parSpec.getParKeyFunction().apply(m), m.getKey(), m.getMessage()))),
+          config, context);
     }
     throw new IllegalArgumentException(
         String.format("Unsupported OperatorSpec: %s", operatorSpec.getClass().getName()));

@@ -33,9 +33,10 @@ public interface MessageStreamGraph {
 
   <K, V, M extends MessageEnvelope<K ,V>> MessageStream<M> addInStream(StreamSpec streamSpec, Serde<K> keySerdeClazz, Serde<V> msgSerdeClazz);
 
-  Map<StreamSpec, MessageStream> getInStreams();
-
-  Map<StreamSpec, MessageStream> getOutStreams();
-
-  Map<StreamSpec, MessageStream> getIntStreams();
+  /**
+   * Place holders for possible access methods needed to get the streams defined in the {@link MessageStreamGraph}
+   */
+   Map<StreamSpec, MessageStream> getInStreams();
+   Map<StreamSpec, MessageStream> getOutStreams();
+   Map<StreamSpec, MessageStream> getIntStreams();
 }

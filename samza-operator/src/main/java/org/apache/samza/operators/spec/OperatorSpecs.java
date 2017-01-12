@@ -22,8 +22,8 @@ package org.apache.samza.operators.spec;
 import org.apache.samza.config.Config;
 import org.apache.samza.operators.MessageStreamImpl;
 import org.apache.samza.operators.data.MessageEnvelope;
-import org.apache.samza.operators.functions.FlatMapFunctionWithContext;
-import org.apache.samza.operators.functions.PartialJoinFunctionWithContext;
+import org.apache.samza.operators.functions.FlatMapFunction;
+import org.apache.samza.operators.functions.PartialJoinFunction;
 import org.apache.samza.operators.functions.SinkFunction;
 import org.apache.samza.operators.windows.WindowFn;
 import org.apache.samza.operators.windows.WindowOutput;
@@ -33,6 +33,7 @@ import org.apache.samza.task.TaskContext;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.UUID;
+import java.util.function.Function;
 
 
 /**
@@ -57,7 +58,7 @@ public class OperatorSpecs {
    * @return  the {@link StreamOperatorSpec}
    */
   public static <M extends MessageEnvelope, OM extends MessageEnvelope> StreamOperatorSpec<M, OM> createStreamOperator(
-      FlatMapFunctionWithContext<M, OM> transformFn, MessageStreamImpl<OM> output) {
+      FlatMapFunction<M, OM> transformFn, MessageStreamImpl<OM> output) {
     return new StreamOperatorSpec<>(transformFn, output);
   }
 
@@ -100,7 +101,7 @@ public class OperatorSpecs {
    * @return  the {@link PartialJoinOperatorSpec}
    */
   public static <M extends MessageEnvelope<K, ?>, K, JM extends MessageEnvelope<K, ?>, OM extends MessageEnvelope> PartialJoinOperatorSpec<M, K, JM, OM> createPartialJoinOperator(
-      PartialJoinFunctionWithContext<M, JM, OM> partialJoinFn, MessageStreamImpl joinOutput) {
+      PartialJoinFunction<M, JM, OM> partialJoinFn, MessageStreamImpl joinOutput) {
     return new PartialJoinOperatorSpec<M, K, JM, OM>(partialJoinFn, joinOutput, OperatorSpecs.getOperatorId());
   }
 
@@ -112,7 +113,11 @@ public class OperatorSpecs {
    * @return  the {@link StreamOperatorSpec} for the merge
    */
   public static <M extends MessageEnvelope> StreamOperatorSpec<M, M> createMergeOperator(MessageStreamImpl<M> mergeOutput) {
-    return new StreamOperatorSpec<M, M>(new FlatMapFunctionWithContext<M, M>() {
+    return new StreamOperatorSpec<M, M>(new FlatMapFunction<M, M>() {
+      @Override public void init(Config config, TaskContext context) {
+
+      }
+
       @Override public Collection<M> apply(M message) {
         return new ArrayList<M>() {
           {
@@ -120,10 +125,13 @@ public class OperatorSpecs {
           }
         };
       }
+   }, mergeOutput);
+  }
 
-      @Override public void init(Config config, TaskContext context) {
-
-      }
-    }, mergeOutput);
+  /**
+   * Creates a {@link PartitionOperatorSpec} with a key extractor function.
+   */
+  public static <K, M extends MessageEnvelope> PartitionOperatorSpec<K, M> createPartitionOperator(Function<M, K> parKeyExtractor, MessageStreamImpl<M> output) {
+    return new PartitionOperatorSpec<K, M>(parKeyExtractor, output);
   }
 }

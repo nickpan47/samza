@@ -50,7 +50,7 @@ public interface MessageStream<M extends MessageEnvelope> {
    */
   <TM extends MessageEnvelope> MessageStream<TM> map(Function<M, TM> mapFn);
 
-  <TM extends MessageEnvelope> MessageStream<TM> map(MapFunctionWithContext<M, TM> mapWithContext);
+  <TM extends MessageEnvelope> MessageStream<TM> map(MapFunction<M, TM> mapFn);
 
   /**
    * Applies the provided 1:n {@link Function} to transform a {@link MessageEnvelope} in this {@link MessageStream}
@@ -62,7 +62,7 @@ public interface MessageStream<M extends MessageEnvelope> {
    */
   <TM extends MessageEnvelope> MessageStream<TM> flatMap(Function<M, Collection<TM>> flatMapFn);
 
-  <TM extends MessageEnvelope> MessageStream<TM> flatMap(FlatMapFunctionWithContext<M, TM> flatMapWithContext);
+  <TM extends MessageEnvelope> MessageStream<TM> flatMap(FlatMapFunction<M, TM> flatMapFn);
 
   /**
    * Applies the provided {@link Function} to {@link MessageEnvelope}s in this {@link MessageStream} and returns the
@@ -76,7 +76,7 @@ public interface MessageStream<M extends MessageEnvelope> {
    */
   MessageStream<M> filter(Function<M, Boolean> filterFn);
 
-  MessageStream<M> filter(FilterFunctionWithContext<M> filterWithContext);
+  MessageStream<M> filter(FilterFunction<M> filterFn);
 
   /**
    * Allows sending {@link MessageEnvelope}s in this {@link MessageStream} to an output using the provided {@link SinkFunction}.
@@ -86,6 +86,14 @@ public interface MessageStream<M extends MessageEnvelope> {
    * @param sinkFn  the function to send {@link MessageEnvelope}s in this stream to output
    */
   void sink(SinkFunction<M> sinkFn);
+
+  /**
+   * Allows sending {@link MessageEnvelope}s in this {@link MessageStream} to an output {@link org.apache.samza.system.SystemStream}
+   * defined by {@link StreamSpec}
+   *
+   * @param streamSpec  stream specification that defines a physical {@link org.apache.samza.system.SystemStream}
+   */
+  <K, V> void sink(StreamSpec streamSpec, Serde<K> keySerde, Serde<V> msgSerde);
 
   /**
    * Groups the {@link MessageEnvelope}s in this {@link MessageStream} according to the provided {@link Window} semantics
@@ -118,7 +126,7 @@ public interface MessageStream<M extends MessageEnvelope> {
       BiFunction<M, OM, RM> joinFn);
 
   <K, OM extends MessageEnvelope<K, ?>, RM extends MessageEnvelope> MessageStream<RM> join(MessageStream<OM> otherStream,
-      JoinFunctionWithContext<M, OM, RM> joinWithContext);
+      JoinFunction<M, OM, RM> joinFn);
 
   /**
    * Merge all {@code otherStreams} with this {@link MessageStream}.
@@ -131,18 +139,12 @@ public interface MessageStream<M extends MessageEnvelope> {
   MessageStream<M> merge(Collection<MessageStream<M>> otherStreams);
 
   /**
-   * Allows sending {@link MessageEnvelope}s in this {@link MessageStream} to an output {@link org.apache.samza.system.SystemStream}
-   * defined by {@link StreamSpec}
+   * TODO: Place holder for explicit public stream creation API. It can be used by user to explicitly creates "materialized topics".
    *
-   * @param streamSpec  stream specification that defines a physical {@link org.apache.samza.system.SystemStream}
-   */
-  <K, V> void sink(StreamSpec streamSpec, Serde<K> keySerde, Serde<V> msgSerde);
-
-  /**
    * Send the input message to an output {@link org.apache.samza.system.SystemStream} and consume it as input {@link MessageStream} again.
    *
-   * @param streamSpec  the output {@link org.apache.samza.system.SystemStream} defined by {@link StreamSpec}
-   * @return  a {@link MessageStream} object that consume from {@code intStream}
+   * @param parKeyExtractor  a {@link Function} that extract the partition key from {@link MessageEnvelope} in this {@link MessageStream}
+   * @return  a {@link MessageStream} object after the re-partition
    */
-  <K, V> MessageStream<M> through(StreamSpec streamSpec, Serde<K> keySerdeClazz, Serde<V> msgSerdeClazz);
+  <K> MessageStream<M> keyedBy(Function<M, K> parKeyExtractor);
 }

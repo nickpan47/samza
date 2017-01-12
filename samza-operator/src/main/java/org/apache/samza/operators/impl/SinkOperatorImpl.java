@@ -18,10 +18,12 @@
  */
 package org.apache.samza.operators.impl;
 
+import org.apache.samza.config.Config;
 import org.apache.samza.operators.data.MessageEnvelope;
 import org.apache.samza.operators.functions.SinkFunction;
 import org.apache.samza.operators.spec.SinkOperatorSpec;
 import org.apache.samza.task.MessageCollector;
+import org.apache.samza.task.TaskContext;
 import org.apache.samza.task.TaskCoordinator;
 
 
@@ -32,8 +34,9 @@ class SinkOperatorImpl<M extends MessageEnvelope> extends OperatorImpl<M, Messag
 
   private final SinkFunction<M> sinkFn;
 
-  SinkOperatorImpl(SinkOperatorSpec<M> sinkOp) {
+  SinkOperatorImpl(SinkOperatorSpec<M> sinkOp, Config config, TaskContext context) {
     this.sinkFn = sinkOp.getSinkFn();
+    this.sinkFn.init(config, context);
   }
 
   @Override

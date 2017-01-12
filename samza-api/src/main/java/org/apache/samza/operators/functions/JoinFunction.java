@@ -19,9 +19,7 @@
 package org.apache.samza.operators.functions;
 
 import org.apache.samza.annotation.InterfaceStability;
-import org.apache.samza.config.Config;
 import org.apache.samza.operators.data.MessageEnvelope;
-import org.apache.samza.task.TaskContext;
 
 
 /**
@@ -32,7 +30,7 @@ import org.apache.samza.task.TaskContext;
  * @param <RM>  type of the joined {@link org.apache.samza.operators.data.MessageEnvelope}
  */
 @InterfaceStability.Unstable
-public interface JoinFunctionWithContext<M extends MessageEnvelope, JM extends MessageEnvelope, RM extends MessageEnvelope> {
+public interface JoinFunction<M extends MessageEnvelope, JM extends MessageEnvelope, RM extends MessageEnvelope> extends ContextInitFunction {
 
   /**
    * Join the provided {@link org.apache.samza.operators.data.MessageEnvelope}s and produces the joined {@link org.apache.samza.operators.data.MessageEnvelope}.
@@ -41,7 +39,5 @@ public interface JoinFunctionWithContext<M extends MessageEnvelope, JM extends M
    * @return  the joined {@link org.apache.samza.operators.data.MessageEnvelope}
    */
   RM apply(M message, JM otherMessage);
-
-  void init(Config config, TaskContext context);
 
 }

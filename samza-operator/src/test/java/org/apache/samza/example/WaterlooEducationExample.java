@@ -8,7 +8,7 @@ import org.apache.samza.operators.MessageStreamApplication;
 import org.apache.samza.operators.MessageStreamGraph;
 import org.apache.samza.operators.StreamSpec;
 import org.apache.samza.operators.data.MessageEnvelope;
-import org.apache.samza.operators.functions.MapFunctionWithContext;
+import org.apache.samza.operators.functions.MapFunction;
 import org.apache.samza.serializers.StringSerde;
 import org.apache.samza.system.ExecutionEnvironment;
 import org.apache.samza.system.OutgoingMessageEnvelope;
@@ -134,7 +134,7 @@ public class WaterlooEducationExample extends MessageStreamApplication {
     return education;
   }
 
-  class SerializedMap implements MapFunctionWithContext<Profile, MessageEnvelope<String, OutgoingMessageEnvelope>> {
+  class SerializedMap implements MapFunction<Profile, MessageEnvelope<String, OutgoingMessageEnvelope>> {
 
     MessageEnvelope<String, OutgoingMessageEnvelope> getOutgoingMessage(int profileId, StandardizedEducation stdEducation) {
       return new MessageEnvelope<String, OutgoingMessageEnvelope>() {
@@ -157,7 +157,7 @@ public class WaterlooEducationExample extends MessageStreamApplication {
     }
   }
 
-  class StandardizeEducationMap implements MapFunctionWithContext<Profile, Profile> {
+  class StandardizeEducationMap implements MapFunction<Profile, Profile> {
 
     private Integer readVoldemortSchoolTable(int profileId, Education education, Locale defaultLocale) {
       return 0;

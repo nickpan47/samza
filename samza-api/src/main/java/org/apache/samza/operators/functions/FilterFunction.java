@@ -19,9 +19,7 @@
 package org.apache.samza.operators.functions;
 
 import org.apache.samza.annotation.InterfaceStability;
-import org.apache.samza.config.Config;
 import org.apache.samza.operators.data.MessageEnvelope;
-import org.apache.samza.task.TaskContext;
 
 
 /**
@@ -29,7 +27,7 @@ import org.apache.samza.task.TaskContext;
  * @param <M>  type of the input {@link org.apache.samza.operators.data.MessageEnvelope}
  */
 @InterfaceStability.Unstable
-public interface FilterFunctionWithContext<M extends MessageEnvelope> {
+public interface FilterFunction<M extends MessageEnvelope> extends ContextInitFunction {
 
   /**
    * Returns a boolean indicating whether this {@link org.apache.samza.operators.data.MessageEnvelope} should be retained or filtered out.
@@ -37,7 +35,5 @@ public interface FilterFunctionWithContext<M extends MessageEnvelope> {
    * @return  true if {@link org.apache.samza.operators.data.MessageEnvelope} should be retained
    */
   boolean apply(M message);
-
-  void init(Config config, TaskContext context);
 
 }

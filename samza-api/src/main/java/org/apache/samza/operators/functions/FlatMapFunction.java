@@ -19,26 +19,25 @@
 package org.apache.samza.operators.functions;
 
 import org.apache.samza.annotation.InterfaceStability;
-import org.apache.samza.config.Config;
 import org.apache.samza.operators.data.MessageEnvelope;
-import org.apache.samza.task.TaskContext;
+
+import java.util.Collection;
 
 
 /**
- * A function that transforms a {@link org.apache.samza.operators.data.MessageEnvelope} into another {@link org.apache.samza.operators.data.MessageEnvelope}, possibly of a different type.
+ * A function that transforms a {@link org.apache.samza.operators.data.MessageEnvelope} into a collection of 0 or more {@link org.apache.samza.operators.data.MessageEnvelope}s,
+ * possibly of a different type.
  * @param <M>  type of the input {@link org.apache.samza.operators.data.MessageEnvelope}
- * @param <OM>  type of the transformed {@link org.apache.samza.operators.data.MessageEnvelope}
+ * @param <OM>  type of the transformed {@link org.apache.samza.operators.data.MessageEnvelope}s
  */
 @InterfaceStability.Unstable
-public interface MapFunctionWithContext<M extends MessageEnvelope, OM extends MessageEnvelope> {
+public interface FlatMapFunction<M extends MessageEnvelope, OM extends MessageEnvelope> extends ContextInitFunction {
 
   /**
-   * Transforms the provided {@link org.apache.samza.operators.data.MessageEnvelope} into another {@link org.apache.samza.operators.data.MessageEnvelope}
+   * Transforms the provided {@link org.apache.samza.operators.data.MessageEnvelope} into a collection of 0 or more {@link org.apache.samza.operators.data.MessageEnvelope}s.
    * @param message  the {@link org.apache.samza.operators.data.MessageEnvelope} to be transformed
-   * @return  the transformed {@link org.apache.samza.operators.data.MessageEnvelope}
+   * @return  a collection of 0 or more transformed {@link org.apache.samza.operators.data.MessageEnvelope}s
    */
-  OM apply(M message);
-
-  void init(Config config, TaskContext context);
+  Collection<OM> apply(M message);
 
 }

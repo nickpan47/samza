@@ -20,7 +20,7 @@ package org.apache.samza.operators.spec;
 
 import org.apache.samza.operators.MessageStreamImpl;
 import org.apache.samza.operators.data.MessageEnvelope;
-import org.apache.samza.operators.functions.PartialJoinFunctionWithContext;
+import org.apache.samza.operators.functions.PartialJoinFunction;
 import org.apache.samza.operators.windows.StoreFunctions;
 
 
@@ -43,7 +43,7 @@ public class PartialJoinOperatorSpec<M extends MessageEnvelope<K, ?>, K, JM exte
    * type {@code M}, joins with a stream of buffered {@link MessageEnvelope}s of type {@code JM} from another stream,
    * and generates a joined result {@link MessageEnvelope} of type {@code RM}.
    */
-  private final PartialJoinFunctionWithContext<M, JM, RM> transformFn;
+  private final PartialJoinFunction<M, JM, RM> transformFn;
 
   /**
    * The {@link MessageEnvelope} store functions that read the buffered {@link MessageEnvelope}s from the other
@@ -69,7 +69,7 @@ public class PartialJoinOperatorSpec<M extends MessageEnvelope<K, ?>, K, JM exte
    *                       w/ type {@code JM} of buffered {@link MessageEnvelope} from another stream
    * @param joinOutput  the output {@link MessageStreamImpl} of the join results
    */
-  PartialJoinOperatorSpec(PartialJoinFunctionWithContext<M, JM, RM> partialJoinFn, MessageStreamImpl joinOutput, String operatorId) {
+  PartialJoinOperatorSpec(PartialJoinFunction<M, JM, RM> partialJoinFn, MessageStreamImpl joinOutput, String operatorId) {
     this.joinOutput = joinOutput;
     this.transformFn = partialJoinFn;
     // Read-only join store, no creator/updater functions required.
@@ -97,7 +97,7 @@ public class PartialJoinOperatorSpec<M extends MessageEnvelope<K, ?>, K, JM exte
     return this.selfStoreFns;
   }
 
-  public PartialJoinFunctionWithContext<M, JM, RM> getTransformFn() {
+  public PartialJoinFunction<M, JM, RM> getTransformFn() {
     return this.transformFn;
   }
 }

@@ -20,7 +20,7 @@ package org.apache.samza.operators.spec;
 
 import org.apache.samza.operators.MessageStreamImpl;
 import org.apache.samza.operators.data.MessageEnvelope;
-import org.apache.samza.operators.functions.FlatMapFunctionWithContext;
+import org.apache.samza.operators.functions.FlatMapFunction;
 
 
 /**
@@ -33,7 +33,7 @@ public class StreamOperatorSpec<M extends MessageEnvelope, OM extends MessageEnv
 
   private final MessageStreamImpl outputStream;
 
-  private final FlatMapFunctionWithContext<M, OM> transformFn;
+  private final FlatMapFunction<M, OM> transformFn;
 
   /**
    * Constructor for a {@link StreamOperatorSpec} that accepts an output {@link MessageStreamImpl}.
@@ -41,7 +41,7 @@ public class StreamOperatorSpec<M extends MessageEnvelope, OM extends MessageEnv
    * @param transformFn  the transformation function
    * @param outputStream  the output {@link MessageStreamImpl}
    */
-  StreamOperatorSpec(FlatMapFunctionWithContext<M, OM> transformFn, MessageStreamImpl outputStream) {
+  StreamOperatorSpec(FlatMapFunction<M, OM> transformFn, MessageStreamImpl outputStream) {
     this.outputStream = outputStream;
     this.transformFn = transformFn;
   }
@@ -51,7 +51,7 @@ public class StreamOperatorSpec<M extends MessageEnvelope, OM extends MessageEnv
     return this.outputStream;
   }
 
-  public FlatMapFunctionWithContext<M, OM> getTransformFn() {
+  public FlatMapFunction<M, OM> getTransformFn() {
     return this.transformFn;
   }
 }
