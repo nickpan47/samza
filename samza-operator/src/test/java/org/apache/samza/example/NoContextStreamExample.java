@@ -1,10 +1,12 @@
 package org.apache.samza.example;
 
+import org.apache.samza.application.StreamApplication;
 import org.apache.samza.config.Config;
 import org.apache.samza.operators.*;
 import org.apache.samza.operators.data.IncomingSystemMessageEnvelope;
 import org.apache.samza.operators.data.JsonIncomingSystemMessageEnvelope;
 import org.apache.samza.operators.data.Offset;
+import org.apache.samza.serializers.JsonSerde;
 import org.apache.samza.serializers.StringSerde;
 import org.apache.samza.system.ExecutionEnvironment;
 import org.apache.samza.system.SystemStream;
@@ -16,7 +18,7 @@ import java.util.List;
 import java.util.Properties;
 
 
-public class NoContextStreamExample extends MessageStreamApplication {
+public class NoContextStreamExample extends StreamApplication {
 
   StreamSpec input1 = new StreamSpec() {
     @Override public SystemStream getSystemStream() {
@@ -31,6 +33,16 @@ public class NoContextStreamExample extends MessageStreamApplication {
   StreamSpec input2 = new StreamSpec() {
     @Override public SystemStream getSystemStream() {
       return new SystemStream("kafka", "input2");
+    }
+
+    @Override public Properties getProperties() {
+      return null;
+    }
+  };
+
+  StreamSpec intermediate = new StreamSpec() {
+    @Override public SystemStream getSystemStream() {
+      return new SystemStream("kafka", "intermediate");
     }
 
     @Override public Properties getProperties() {
@@ -82,16 +94,26 @@ public class NoContextStreamExample extends MessageStreamApplication {
    *   public static void main(String args[]) throws Exception {
    *     CommandLine cmdLine = new CommandLine();
    *     Config config = cmdLine.loadConfig(cmdLine.parser().parse(args));
-   *     ExecutionEnvironment remoteEnv = ExecutionEnvironment.getRemoteEnvironment(config);  //TODO: Example config vars to indicate YARN
+   *     ExecutionEnvironment remoteEnv = ExecutionEnvironment.fromConfig(config);  //TODO: Example config vars to indicate YARN
    *     UserMainExample runnableApp = MessageStreamApplication.fromConfig(config);
    *     runnableApp.run(remoteEnv, config);
    *   }
    *
    */
-  @Override public void initGraph(MessageStreamGraph graph, Config config) {
-    MessageStream<JsonMessageEnvelope> newSource = graph.<Object, Object, IncomingSystemMessageEnvelope>addInStream(input1, null, null).map(this::getInputMessage);
-    newSource.join(graph.<Object, Object, IncomingSystemMessageEnvelope>addInStream(input2, null, null).map(this::getInputMessage), this::myJoinResult).
-        sink(output, new StringSerde("UTF-8"), new StringSerde("UTF-8"));
+  @Override public void initGraph(MessageStreams graph, Config config) {
+    MessageStream<IncomingSystemMessageEnvelope> inputSource1 = graph.<Object, Object, IncomingSystemMessageEnvelope>createInStream(
+        input1, null, null);
+    MessageStream<IncomingSystemMessageEnvelope> inputSource2 = graph.<Object, Object, IncomingSystemMessageEnvelope>createInStream(
+        input2, null, null);
+    MessageStream<JsonIncomingSystemMessageEnvelope<MessageType>> intStream = graph.createOutStream(intermediate,
+        new StringSerde("UTF-8"), new JsonSerde<>());
+    MessageStream<JsonIncomingSystemMessageEnvelope<MessageType>> outStream = graph.createOutStream(output,
+        new StringSerde("UTF-8"), new JsonSerde<>());
+
+    inputSource1.map(this::getInputMessage).
+        <String, JsonMessageEnvelope, JsonIncomingSystemMessageEnvelope<MessageType>>join(inputSource2.map(this::getInputMessage), this::myJoinResult).
+        sendThrough(intStream).
+        sendTo(outStream);
   }
 
   // standalone local program model

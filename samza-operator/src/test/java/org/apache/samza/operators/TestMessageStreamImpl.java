@@ -18,6 +18,7 @@
  */
 package org.apache.samza.operators;
 
+import org.apache.samza.config.Config;
 import org.apache.samza.operators.functions.*;
 import org.apache.samza.operators.spec.*;
 import org.apache.samza.operators.windows.SessionWindow;
@@ -25,6 +26,8 @@ import org.apache.samza.operators.windows.WindowFn;
 import org.apache.samza.operators.windows.WindowOutput;
 import org.apache.samza.system.OutgoingMessageEnvelope;
 import org.apache.samza.system.SystemStream;
+import org.apache.samza.task.MessageCollector;
+import org.apache.samza.task.TaskContext;
 import org.apache.samza.task.TaskCoordinator;
 import org.junit.Test;
 
@@ -39,13 +42,20 @@ import static org.mockito.Mockito.*;
 
 public class TestMessageStreamImpl {
 
-  private MessageStreamGraphImpl mockGraph = mock(MessageStreamGraphImpl.class);
+  private MessageStreamsImpl mockGraph = mock(MessageStreamsImpl.class);
 
   @Test
   public void testMap() {
     MessageStreamImpl<TestMessageEnvelope> inputStream = new MessageStreamImpl<>(mockGraph);
-    MapFunction<TestMessageEnvelope, TestOutputMessageEnvelope> xMap =
-        m -> new TestOutputMessageEnvelope(m.getKey(), m.getMessage().getValue().length() + 1);
+    MapFunction<TestMessageEnvelope, TestOutputMessageEnvelope> xMap = new MapFunction<TestMessageEnvelope, TestOutputMessageEnvelope>() {
+      @Override public TestOutputMessageEnvelope apply(TestMessageEnvelope m) {
+        return new TestOutputMessageEnvelope(m.getKey(), m.getMessage().getValue().length() + 1);
+      }
+
+      @Override public void init(Config config, TaskContext context) {
+
+      }
+    };
     MessageStream<TestOutputMessageEnvelope> outputStream = inputStream.map(xMap);
     Collection<OperatorSpec> subs = inputStream.getRegisteredOperatorSpecs();
     assertEquals(subs.size(), 1);
@@ -74,7 +84,15 @@ public class TestMessageStreamImpl {
         this.add(mock(TestOutputMessageEnvelope.class));
         this.add(mock(TestOutputMessageEnvelope.class));
       } };
-    FlatMapFunction<TestMessageEnvelope, TestOutputMessageEnvelope> xFlatMap = m -> flatOuts;
+    FlatMapFunction<TestMessageEnvelope, TestOutputMessageEnvelope> xFlatMap = new FlatMapFunction<TestMessageEnvelope, TestOutputMessageEnvelope>() {
+      @Override public Collection<TestOutputMessageEnvelope> apply(TestMessageEnvelope message) {
+        return flatOuts;
+      }
+
+      @Override public void init(Config config, TaskContext context) {
+
+      }
+    };
     MessageStream<TestOutputMessageEnvelope> outputStream = inputStream.flatMap(xFlatMap);
     Collection<OperatorSpec> subs = inputStream.getRegisteredOperatorSpecs();
     assertEquals(subs.size(), 1);
@@ -88,7 +106,15 @@ public class TestMessageStreamImpl {
   @Test
   public void testFilter() {
     MessageStreamImpl<TestMessageEnvelope> inputStream = new MessageStreamImpl<>(mockGraph);
-    FilterFunction<TestMessageEnvelope> xFilter = m -> m.getMessage().getEventTime() > 123456L;
+    FilterFunction<TestMessageEnvelope> xFilter = new FilterFunction<TestMessageEnvelope>() {
+      @Override public boolean apply(TestMessageEnvelope m) {
+        return m.getMessage().getEventTime() > 123456L;
+      }
+
+      @Override public void init(Config config, TaskContext context) {
+
+      }
+    };
     MessageStream<TestMessageEnvelope> outputStream = inputStream.filter(xFilter);
     Collection<OperatorSpec> subs = inputStream.getRegisteredOperatorSpecs();
     assertEquals(subs.size(), 1);
@@ -113,9 +139,16 @@ public class TestMessageStreamImpl {
   @Test
   public void testSink() {
     MessageStreamImpl<TestMessageEnvelope> inputStream = new MessageStreamImpl<>(mockGraph);
-    SinkFunction<TestMessageEnvelope> xSink = (m, mc, tc) -> {
-      mc.send(new OutgoingMessageEnvelope(new SystemStream("test-sys", "test-stream"), m.getMessage()));
-      tc.commit(TaskCoordinator.RequestScope.CURRENT_TASK);
+    SinkFunction<TestMessageEnvelope> xSink = new SinkFunction<TestMessageEnvelope>() {
+      @Override public void apply(TestMessageEnvelope m, MessageCollector mc,
+          TaskCoordinator tc) {
+        mc.send(new OutgoingMessageEnvelope(new SystemStream("test-sys", "test-stream"), m.getMessage()));
+        tc.commit(TaskCoordinator.RequestScope.CURRENT_TASK);
+      }
+
+      @Override public void init(Config config, TaskContext context) {
+
+      }
     };
     inputStream.sink(xSink);
     Collection<OperatorSpec> subs = inputStream.getRegisteredOperatorSpecs();
@@ -143,8 +176,15 @@ public class TestMessageStreamImpl {
   public void testJoin() {
     MessageStreamImpl<TestMessageEnvelope> source1 = new MessageStreamImpl<>(mockGraph);
     MessageStreamImpl<TestMessageEnvelope> source2 = new MessageStreamImpl<>(mockGraph);
-    JoinFunction<TestMessageEnvelope, TestMessageEnvelope, TestOutputMessageEnvelope> joiner =
-        (m1, m2) -> new TestOutputMessageEnvelope(m1.getKey(), m1.getMessage().getValue().length() + m2.getMessage().getValue().length());
+    JoinFunction<TestMessageEnvelope, TestMessageEnvelope, TestOutputMessageEnvelope> joiner = new JoinFunction<TestMessageEnvelope, TestMessageEnvelope, TestOutputMessageEnvelope>() {
+      @Override public TestOutputMessageEnvelope apply(TestMessageEnvelope m1, TestMessageEnvelope m2) {
+        return new TestOutputMessageEnvelope(m1.getKey(), m1.getMessage().getValue().length() + m2.getMessage().getValue().length());
+      }
+
+      @Override public void init(Config config, TaskContext context) {
+
+      }
+    };
     MessageStream<TestOutputMessageEnvelope> joinOutput = source1.join(source2, joiner);
     Collection<OperatorSpec> subs = source1.getRegisteredOperatorSpecs();
     assertEquals(subs.size(), 1);

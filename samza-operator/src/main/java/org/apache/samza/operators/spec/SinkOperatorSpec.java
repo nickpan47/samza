@@ -31,6 +31,10 @@ import org.apache.samza.operators.functions.SinkFunction;
  */
 public class SinkOperatorSpec<M extends MessageEnvelope> implements OperatorSpec {
 
+  private final OperatorSpec.OpCode opCode;
+
+  private final int opId;
+
   /**
    * The user-defined sink function
    */
@@ -43,8 +47,10 @@ public class SinkOperatorSpec<M extends MessageEnvelope> implements OperatorSpec
    *                the output {@link org.apache.samza.task.MessageCollector} and the
    *                {@link org.apache.samza.task.TaskCoordinator}.
    */
-  SinkOperatorSpec(SinkFunction<M> sinkFn) {
+  SinkOperatorSpec(SinkFunction<M> sinkFn, OperatorSpec.OpCode opCode, int opId) {
     this.sinkFn = sinkFn;
+    this.opCode = opCode;
+    this.opId = opId;
   }
 
   /**
@@ -58,5 +64,13 @@ public class SinkOperatorSpec<M extends MessageEnvelope> implements OperatorSpec
 
   public SinkFunction<M> getSinkFn() {
     return this.sinkFn;
+  }
+
+  public OperatorSpec.OpCode getOpCode() {
+    return this.opCode;
+  }
+
+  public int getOpId() {
+    return this.opId;
   }
 }

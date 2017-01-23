@@ -32,7 +32,6 @@ import org.apache.samza.task.TaskContext;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.UUID;
 import java.util.function.Function;
 
 
@@ -42,11 +41,6 @@ import java.util.function.Function;
 public class OperatorSpecs {
 
   private OperatorSpecs() {}
-
-  static String getOperatorId() {
-    // TODO: need to change the IDs to be a consistent, durable IDs that can be recovered across container and job restarts
-    return UUID.randomUUID().toString();
-  }
 
   /**
    * Creates a {@link StreamOperatorSpec}.
@@ -58,8 +52,8 @@ public class OperatorSpecs {
    * @return  the {@link StreamOperatorSpec}
    */
   public static <M extends MessageEnvelope, OM extends MessageEnvelope> StreamOperatorSpec<M, OM> createStreamOperator(
-      FlatMapFunction<M, OM> transformFn, MessageStreamImpl<OM> output) {
-    return new StreamOperatorSpec<>(transformFn, output);
+      FlatMapFunction<M, OM> transformFn, MessageStreamImpl<OM> output, OperatorSpec.OpCode opCode, int opId) {
+    return new StreamOperatorSpec<>(transformFn, output, opCode, opId);
   }
 
   /**
@@ -69,8 +63,8 @@ public class OperatorSpecs {
    * @param <M>  type of input {@link MessageEnvelope}
    * @return  the {@link SinkOperatorSpec}
    */
-  public static <M extends MessageEnvelope> SinkOperatorSpec<M> createSinkOperator(SinkFunction<M> sinkFn) {
-    return new SinkOperatorSpec<>(sinkFn);
+  public static <M extends MessageEnvelope> SinkOperatorSpec<M> createSinkOperator(SinkFunction<M> sinkFn, OperatorSpec.OpCode opCode, int opId) {
+    return new SinkOperatorSpec<>(sinkFn, opCode, opId);
   }
 
   /**
@@ -85,8 +79,8 @@ public class OperatorSpecs {
    * @return  the {@link WindowOperatorSpec}
    */
   public static <M extends MessageEnvelope, WK, WS extends WindowState, WM extends WindowOutput<WK, ?>> WindowOperatorSpec<M, WK, WS, WM> createWindowOperator(
-      WindowFn<M, WK, WS, WM> windowFn, MessageStreamImpl<WM> wndOutput) {
-    return new WindowOperatorSpec<>(windowFn, wndOutput, OperatorSpecs.getOperatorId());
+      WindowFn<M, WK, WS, WM> windowFn, MessageStreamImpl<WM> wndOutput, int opId) {
+    return new WindowOperatorSpec<>(windowFn, wndOutput, opId);
   }
 
   /**
@@ -101,8 +95,8 @@ public class OperatorSpecs {
    * @return  the {@link PartialJoinOperatorSpec}
    */
   public static <M extends MessageEnvelope<K, ?>, K, JM extends MessageEnvelope<K, ?>, OM extends MessageEnvelope> PartialJoinOperatorSpec<M, K, JM, OM> createPartialJoinOperator(
-      PartialJoinFunction<M, JM, OM> partialJoinFn, MessageStreamImpl joinOutput) {
-    return new PartialJoinOperatorSpec<M, K, JM, OM>(partialJoinFn, joinOutput, OperatorSpecs.getOperatorId());
+      PartialJoinFunction<M, JM, OM> partialJoinFn, MessageStreamImpl joinOutput, int opId) {
+    return new PartialJoinOperatorSpec<M, K, JM, OM>(partialJoinFn, joinOutput, opId);
   }
 
   /**
@@ -112,7 +106,7 @@ public class OperatorSpecs {
    * @param <M>  the type of input {@link MessageEnvelope}
    * @return  the {@link StreamOperatorSpec} for the merge
    */
-  public static <M extends MessageEnvelope> StreamOperatorSpec<M, M> createMergeOperator(MessageStreamImpl<M> mergeOutput) {
+  public static <M extends MessageEnvelope> StreamOperatorSpec<M, M> createMergeOperator(MessageStreamImpl<M> mergeOutput, int opId) {
     return new StreamOperatorSpec<M, M>(new FlatMapFunction<M, M>() {
       @Override public void init(Config config, TaskContext context) {
 
@@ -125,13 +119,13 @@ public class OperatorSpecs {
           }
         };
       }
-   }, mergeOutput);
+   }, mergeOutput, OperatorSpec.OpCode.MERGE, opId);
   }
 
   /**
    * Creates a {@link PartitionOperatorSpec} with a key extractor function.
    */
-  public static <K, M extends MessageEnvelope> PartitionOperatorSpec<K, M> createPartitionOperator(Function<M, K> parKeyExtractor, MessageStreamImpl<M> output) {
-    return new PartitionOperatorSpec<K, M>(parKeyExtractor, output);
+  public static <K, M extends MessageEnvelope> PartitionOperatorSpec<K, M> createPartitionOperator(Function<M, K> parKeyExtractor, MessageStreamImpl<M> output, int opId) {
+    return new PartitionOperatorSpec<K, M>(parKeyExtractor, output, opId);
   }
 }

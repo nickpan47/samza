@@ -60,7 +60,7 @@ public class PartialJoinOperatorSpec<M extends MessageEnvelope<K, ?>, K, JM exte
   /**
    * The unique ID for this operator.
    */
-  private final String operatorId;
+  private final int opId;
 
   /**
    * Default constructor for a {@link PartialJoinOperatorSpec}.
@@ -69,19 +69,14 @@ public class PartialJoinOperatorSpec<M extends MessageEnvelope<K, ?>, K, JM exte
    *                       w/ type {@code JM} of buffered {@link MessageEnvelope} from another stream
    * @param joinOutput  the output {@link MessageStreamImpl} of the join results
    */
-  PartialJoinOperatorSpec(PartialJoinFunction<M, JM, RM> partialJoinFn, MessageStreamImpl joinOutput, String operatorId) {
+  PartialJoinOperatorSpec(PartialJoinFunction<M, JM, RM> partialJoinFn, MessageStreamImpl joinOutput, int operatorId) {
     this.joinOutput = joinOutput;
     this.transformFn = partialJoinFn;
     // Read-only join store, no creator/updater functions required.
     this.joinStoreFns = new StoreFunctions<>(m -> m.getKey(), null);
     // Buffered message envelope store for this input stream.
     this.selfStoreFns = new StoreFunctions<>(m -> m.getKey(), (m, s1) -> m);
-    this.operatorId = operatorId;
-  }
-
-  @Override
-  public String toString() {
-    return this.operatorId;
+    this.opId = operatorId;
   }
 
   @Override
@@ -99,5 +94,13 @@ public class PartialJoinOperatorSpec<M extends MessageEnvelope<K, ?>, K, JM exte
 
   public PartialJoinFunction<M, JM, RM> getTransformFn() {
     return this.transformFn;
+  }
+
+  public OperatorSpec.OpCode getOpCode() {
+    return OpCode.JOIN;
+  }
+
+  public int getOpId() {
+    return this.opId;
   }
 }

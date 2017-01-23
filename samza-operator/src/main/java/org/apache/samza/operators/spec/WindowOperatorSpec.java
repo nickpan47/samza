@@ -66,25 +66,20 @@ public class WindowOperatorSpec<M extends MessageEnvelope, WK, WS extends Window
   /**
    * The unique ID of this operator.
    */
-  private final String operatorId;
+  private final int opId;
 
   /**
    * Constructor for {@link WindowOperatorSpec}.
    *
    * @param windowFn  the window function
-   * @param operatorId  auto-generated unique ID of this operator
+   * @param opId  auto-generated unique ID of this operator
    */
-  WindowOperatorSpec(WindowFn<M, WK, WS, WM> windowFn, MessageStreamImpl outputStream, String operatorId) {
+  WindowOperatorSpec(WindowFn<M, WK, WS, WM> windowFn, MessageStreamImpl outputStream, int opId) {
     this.outputStream = outputStream;
     this.transformFn = windowFn.getTransformFn();
     this.storeFns = windowFn.getStoreFns();
     this.trigger = windowFn.getTrigger();
-    this.operatorId = operatorId;
-  }
-
-  @Override
-  public String toString() {
-    return this.operatorId;
+    this.opId = opId;
   }
 
   @Override
@@ -114,5 +109,13 @@ public class WindowOperatorSpec<M extends MessageEnvelope, WK, WS extends Window
   public String getStoreName(MessageStreamImpl inputStream) {
     //TODO: need to get the persistent name of ds and the operator in a serialized form
     return String.format("input-%s-wndop-%s", inputStream.toString(), this.toString());
+  }
+
+  public OpCode getOpCode() {
+    return OpCode.WINDOW;
+  }
+
+  public int getOpId() {
+    return this.opId;
   }
 }

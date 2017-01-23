@@ -30,6 +30,19 @@ import org.apache.samza.operators.data.MessageEnvelope;
 @InterfaceStability.Unstable
 public interface OperatorSpec<OM extends MessageEnvelope> {
 
+  enum OpCode {
+    MAP,
+    FLAT_MAP,
+    FILTER,
+    SINK,
+    SEND_TO,
+    JOIN,
+    WINDOW,
+    MERGE,
+    KEYED_BY
+  }
+
+
   /**
    * Get the output stream containing transformed {@link MessageEnvelope} produced by this operator.
    * @return  the output stream containing transformed {@link MessageEnvelope} produced by this operator.

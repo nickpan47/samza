@@ -19,10 +19,8 @@
 package org.apache.samza.operators.functions;
 
 import org.apache.samza.annotation.InterfaceStability;
-import org.apache.samza.config.Config;
 import org.apache.samza.operators.data.MessageEnvelope;
 import org.apache.samza.task.MessageCollector;
-import org.apache.samza.task.TaskContext;
 import org.apache.samza.task.TaskCoordinator;
 
 
@@ -43,14 +41,5 @@ public interface SinkFunction<M extends MessageEnvelope> extends ContextInitFunc
    * @param taskCoordinator  the {@link TaskCoordinator} to request commits or shutdown
    */
   void apply(M message, MessageCollector messageCollector, TaskCoordinator taskCoordinator);
-
-  /**
-   * Define a NOOP default init method s.t. users who simply call sink to terminate the stream process do not need to
-   * implement the context initialization function.
-   *
-   * @param config
-   * @param context
-   */
-  default void init(Config config, TaskContext context) {};
 
 }

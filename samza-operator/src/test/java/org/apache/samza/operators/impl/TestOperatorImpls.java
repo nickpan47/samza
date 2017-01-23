@@ -55,7 +55,7 @@ public class TestOperatorImpls {
   public void testCreateOperator() throws NoSuchFieldException, IllegalAccessException {
     // get window operator
     WindowOperatorSpec mockWnd = mock(WindowOperatorSpec.class);
-    OperatorImpl<TestMessageEnvelope, ? extends MessageEnvelope> opImpl = OperatorImpls.createOperatorImpl(mockWnd);
+    OperatorImpl<TestMessageEnvelope, ? extends MessageEnvelope> opImpl = OperatorGraph.createOperatorImpl(mockWnd);
     assertTrue(opImpl instanceof SessionWindowOperatorImpl);
     Field sessWndField = SessionWindowOperatorImpl.class.getDeclaredField("windowSpec");
     sessWndField.setAccessible(true);
@@ -66,7 +66,7 @@ public class TestOperatorImpls {
     StreamOperatorSpec<TestMessageEnvelope, TestOutputMessageEnvelope> mockSimpleOp = mock(StreamOperatorSpec.class);
     FlatMapFunction<TestMessageEnvelope, TestOutputMessageEnvelope> mockTxfmFn = mock(FlatMapFunction.class);
     when(mockSimpleOp.getTransformFn()).thenReturn(mockTxfmFn);
-    opImpl = OperatorImpls.createOperatorImpl(mockSimpleOp);
+    opImpl = OperatorGraph.createOperatorImpl(mockSimpleOp);
     assertTrue(opImpl instanceof StreamOperatorImpl);
     Field txfmFnField = StreamOperatorImpl.class.getDeclaredField("transformFn");
     txfmFnField.setAccessible(true);
@@ -76,7 +76,7 @@ public class TestOperatorImpls {
     SinkFunction<TestMessageEnvelope> sinkFn = (m, mc, tc) -> { };
     SinkOperatorSpec<TestMessageEnvelope> sinkOp = mock(SinkOperatorSpec.class);
     when(sinkOp.getSinkFn()).thenReturn(sinkFn);
-    opImpl = OperatorImpls.createOperatorImpl(sinkOp);
+    opImpl = OperatorGraph.createOperatorImpl(sinkOp);
     assertTrue(opImpl instanceof SinkOperatorImpl);
     Field sinkFnField = SinkOperatorImpl.class.getDeclaredField("sinkFn");
     sinkFnField.setAccessible(true);
@@ -87,7 +87,7 @@ public class TestOperatorImpls {
     TestOutputMessageEnvelope mockOutput = mock(TestOutputMessageEnvelope.class);
     BiFunction<TestMessageEnvelope, TestMessageEnvelope, TestOutputMessageEnvelope> joinFn = (m1, m2) -> mockOutput;
     when(joinOp.getTransformFn()).thenReturn(joinFn);
-    opImpl = OperatorImpls.createOperatorImpl(joinOp);
+    opImpl = OperatorGraph.createOperatorImpl(joinOp);
     assertTrue(opImpl instanceof PartialJoinOperatorImpl);
   }
 
@@ -96,18 +96,18 @@ public class TestOperatorImpls {
     // test creation of empty chain
     MessageStreamImpl<TestMessageEnvelope> testStream = mock(MessageStreamImpl.class);
     TaskContext mockContext = mock(TaskContext.class);
-    RootOperatorImpl operatorChain = OperatorImpls.createOperatorImpls(testStream, mockContext);
+    RootOperatorImpl operatorChain = OperatorGraph.createOperatorImpls(testStream, mockContext);
     assertTrue(operatorChain != null);
   }
 
   @Test
   public void testLinearChain() throws IllegalAccessException {
     // test creation of linear chain
-    MessageStreamGraphImpl mockGraph = mock(MessageStreamGraphImpl.class);
+    MessageStreamsImpl mockGraph = mock(MessageStreamsImpl.class);
     MessageStreamImpl<TestMessageEnvelope> testInput = TestMessageStreamImplUtil.<TestMessageEnvelope>getMessageStreamImpl(mockGraph);
     TaskContext mockContext = mock(TaskContext.class);
     testInput.map(m -> m).window(Windows.intoSessionCounter(TestMessageEnvelope::getKey));
-    RootOperatorImpl operatorChain = OperatorImpls.createOperatorImpls(testInput, mockContext);
+    RootOperatorImpl operatorChain = OperatorGraph.createOperatorImpls(testInput, mockContext);
     Set<OperatorImpl> subsSet = (Set<OperatorImpl>) nextOperatorsField.get(operatorChain);
     assertEquals(subsSet.size(), 1);
     OperatorImpl<TestMessageEnvelope, TestMessageEnvelope> firstOpImpl = subsSet.iterator().next();
@@ -121,12 +121,12 @@ public class TestOperatorImpls {
   @Test
   public void testBroadcastChain() throws IllegalAccessException {
     // test creation of broadcast chain
-    MessageStreamGraphImpl mockGraph = mock(MessageStreamGraphImpl.class);
+    MessageStreamsImpl mockGraph = mock(MessageStreamsImpl.class);
     MessageStreamImpl<TestMessageEnvelope> testInput = TestMessageStreamImplUtil.<TestMessageEnvelope>getMessageStreamImpl(mockGraph);
     TaskContext mockContext = mock(TaskContext.class);
     testInput.filter(m -> m.getMessage().getEventTime() > 123456L).flatMap(m -> new ArrayList() { { this.add(m); this.add(m); } });
     testInput.filter(m -> m.getMessage().getEventTime() < 123456L).map(m -> m);
-    RootOperatorImpl operatorChain = OperatorImpls.createOperatorImpls(testInput, mockContext);
+    RootOperatorImpl operatorChain = OperatorGraph.createOperatorImpls(testInput, mockContext);
     Set<OperatorImpl> subsSet = (Set<OperatorImpl>) nextOperatorsField.get(operatorChain);
     assertEquals(subsSet.size(), 2);
     Iterator<OperatorImpl> iter = subsSet.iterator();
@@ -149,7 +149,7 @@ public class TestOperatorImpls {
   @Test
   public void testJoinChain() throws IllegalAccessException {
     // test creation of join chain
-    MessageStreamGraphImpl mockGraph = mock(MessageStreamGraphImpl.class);
+    MessageStreamsImpl mockGraph = mock(MessageStreamsImpl.class);
     MessageStreamImpl<TestMessageEnvelope> input1 = TestMessageStreamImplUtil.<TestMessageEnvelope>getMessageStreamImpl(mockGraph);
     MessageStreamImpl<TestMessageEnvelope> input2 = TestMessageStreamImplUtil.<TestMessageEnvelope>getMessageStreamImpl(mockGraph);
     TaskContext mockContext = mock(TaskContext.class);
@@ -158,8 +158,8 @@ public class TestOperatorImpls {
             new TestOutputMessageEnvelope(m1.getKey(), m1.getMessage().getValue().length() + m2.getMessage().getValue().length()))
         .map(m -> m);
     // now, we create chained operators from each input sources
-    RootOperatorImpl chain1 = OperatorImpls.createOperatorImpls(input1, mockContext);
-    RootOperatorImpl chain2 = OperatorImpls.createOperatorImpls(input2, mockContext);
+    RootOperatorImpl chain1 = OperatorGraph.createOperatorImpls(input1, mockContext);
+    RootOperatorImpl chain2 = OperatorGraph.createOperatorImpls(input2, mockContext);
     // check that those two chains will merge at map operator
     // first branch of the join
     Set<OperatorImpl> subsSet = (Set<OperatorImpl>) nextOperatorsField.get(chain1);

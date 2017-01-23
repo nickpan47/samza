@@ -22,6 +22,7 @@ package org.apache.samza.operators;
 import org.apache.samza.operators.data.IncomingSystemMessageEnvelope;
 import org.apache.samza.operators.data.JsonIncomingSystemMessageEnvelope;
 import org.apache.samza.operators.data.Offset;
+import org.apache.samza.serializers.JsonSerde;
 import org.apache.samza.serializers.StringSerde;
 import org.apache.samza.system.ExecutionEnvironment;
 import org.apache.samza.system.SystemStream;
@@ -51,11 +52,11 @@ public class JoinGraph {
 
   MessageStream<JsonMessageEnvelope> joinOutput = null;
 
-  public MessageStreamGraphImpl createStreamGraph(ExecutionEnvironment runtimeEnv, Set<SystemStreamPartition> inputs) {
-    MessageStreamGraphImpl graph = new MessageStreamGraphImpl(runtimeEnv);
+  public MessageStreamsImpl createStreamGraph(ExecutionEnvironment runtimeEnv, Set<SystemStreamPartition> inputs) {
+    MessageStreamsImpl graph = (MessageStreamsImpl) runtimeEnv.createGraph();
 
     for (SystemStreamPartition input : inputs) {
-      MessageStream<JsonMessageEnvelope> newSource = graph.<Object, Object, IncomingSystemMessageEnvelope>addInStream(
+      MessageStream<JsonMessageEnvelope> newSource = graph.<Object, Object, IncomingSystemMessageEnvelope>createInStream(
           new StreamSpec() {
             @Override public SystemStream getSystemStream() {
               return input.getSystemStream();
@@ -72,7 +73,7 @@ public class JoinGraph {
       }
     }
 
-    joinOutput.sink(new StreamSpec() {
+    joinOutput.sendTo(graph.createOutStream(new StreamSpec() {
       @Override public SystemStream getSystemStream() {
         return null;
       }
@@ -80,7 +81,7 @@ public class JoinGraph {
       @Override public Properties getProperties() {
         return null;
       }
-    }, new StringSerde("UTF-8"), new StringSerde("UTF-8"));
+    }, new StringSerde("UTF-8"), new JsonSerde<>()));
 
     return graph;
   }

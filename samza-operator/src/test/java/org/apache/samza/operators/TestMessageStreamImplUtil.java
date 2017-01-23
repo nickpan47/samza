@@ -19,15 +19,10 @@
 package org.apache.samza.operators;
 
 import org.apache.samza.operators.data.MessageEnvelope;
-import org.apache.samza.serializers.Serde;
 
 
 public class TestMessageStreamImplUtil {
-  public static <M extends MessageEnvelope> MessageStreamImpl<M> getMessageStreamImpl(MessageStreamGraphImpl graph) {
+  public static <M extends MessageEnvelope> MessageStreamImpl<M> getMessageStreamImpl(MessageStreamsImpl graph) {
     return new MessageStreamImpl<M>(graph);
-  }
-
-  public static <K, V, M extends MessageEnvelope<K, V>> MessageStreamImpl<M> getTypedMessageStreamImpl(MessageStreamGraphImpl graph, Serde<K> keySerde, Serde<V> msgSerde) {
-    return new MessageStreamImpl<M>(graph, keySerde, msgSerde);
   }
 }

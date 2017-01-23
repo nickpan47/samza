@@ -31,6 +31,10 @@ import org.apache.samza.operators.functions.FlatMapFunction;
  */
 public class StreamOperatorSpec<M extends MessageEnvelope, OM extends MessageEnvelope> implements OperatorSpec<OM> {
 
+  private final OperatorSpec.OpCode opCode;
+
+  private final int opId;
+
   private final MessageStreamImpl outputStream;
 
   private final FlatMapFunction<M, OM> transformFn;
@@ -41,9 +45,11 @@ public class StreamOperatorSpec<M extends MessageEnvelope, OM extends MessageEnv
    * @param transformFn  the transformation function
    * @param outputStream  the output {@link MessageStreamImpl}
    */
-  StreamOperatorSpec(FlatMapFunction<M, OM> transformFn, MessageStreamImpl outputStream) {
+  StreamOperatorSpec(FlatMapFunction<M, OM> transformFn, MessageStreamImpl outputStream, OperatorSpec.OpCode opCode, int opId) {
     this.outputStream = outputStream;
     this.transformFn = transformFn;
+    this.opCode = opCode;
+    this.opId = opId;
   }
 
   @Override
@@ -53,5 +59,13 @@ public class StreamOperatorSpec<M extends MessageEnvelope, OM extends MessageEnv
 
   public FlatMapFunction<M, OM> getTransformFn() {
     return this.transformFn;
+  }
+
+  public OperatorSpec.OpCode getOpCode() {
+    return this.opCode;
+  }
+
+  public int getOpId() {
+    return this.opId;
   }
 }

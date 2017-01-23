@@ -23,7 +23,6 @@ import org.apache.samza.operators.data.MessageEnvelope;
 import org.apache.samza.operators.functions.*;
 import org.apache.samza.operators.windows.Window;
 import org.apache.samza.operators.windows.WindowOutput;
-import org.apache.samza.serializers.Serde;
 
 import java.util.Collection;
 import java.util.function.BiFunction;
@@ -87,13 +86,13 @@ public interface MessageStream<M extends MessageEnvelope> {
    */
   void sink(SinkFunction<M> sinkFn);
 
-  /**
-   * Allows sending {@link MessageEnvelope}s in this {@link MessageStream} to an output {@link org.apache.samza.system.SystemStream}
-   * defined by {@link StreamSpec}
-   *
-   * @param streamSpec  stream specification that defines a physical {@link org.apache.samza.system.SystemStream}
-   */
-  <K, V> void sink(StreamSpec streamSpec, Serde<K> keySerde, Serde<V> msgSerde);
+  void sendTo(MessageStream<M> stream);
+
+  <K> void sendTo(MessageStream<M> stream, Function<M, K> parKeyFunction);
+
+  MessageStream<M> sendThrough(MessageStream<M> stream);
+
+  <K> MessageStream<M> sendThrough(MessageStream<M> stream, Function<M, K> parKeyFunction);
 
   /**
    * Groups the {@link MessageEnvelope}s in this {@link MessageStream} according to the provided {@link Window} semantics

@@ -24,24 +24,55 @@ import org.apache.samza.operators.data.MessageEnvelope;
 import org.apache.samza.operators.spec.*;
 import org.apache.samza.operators.windows.WindowOutput;
 import org.apache.samza.operators.windows.WindowState;
-import org.apache.samza.system.OutgoingMessageEnvelope;
+import org.apache.samza.system.SystemStream;
 import org.apache.samza.task.TaskContext;
 
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 
 /**
  * Instantiates the DAG of {@link OperatorImpl}s corresponding to the {@link OperatorSpec}s for a
  * {@link MessageStreamImpl}
  */
-public class OperatorImpls {
+public class OperatorGraph {
 
   /**
-   * Holds the mapping between the {@link OperatorSpec} and {@link OperatorImpl}s instances.
+   * A {@link Map} from {@link OperatorSpec} to {@link OperatorImpl}. This map registers all {@link OperatorImpl} in the DAG
+   * of {@link OperatorImpl} in a {@link org.apache.samza.container.TaskInstance}. Each {@link OperatorImpl} is created
+   * according to a single instance of {@link OperatorSpec}.
    */
-  private static final Map<OperatorSpec, OperatorImpl> OPERATOR_IMPLS = new ConcurrentHashMap<>();
+  private final Map<OperatorSpec, OperatorImpl> operators = new HashMap<>();
+
+  /**
+   * This {@link Map} describes the DAG of {@link OperatorImpl} that are chained together to process the input messages.
+   */
+  private final Map<SystemStream, RootOperatorImpl> operatorGraph = new HashMap<>();
+
+  /**
+   * Initialize the whole DAG of {@link OperatorImpl}s, based on the input {@link MessageStreamImpl} from the {@link org.apache.samza.operators.MessageStreams}.
+   * This method will traverse each input {@link org.apache.samza.operators.MessageStream} in the {@code inputStreams} and
+   * instantiate the corresponding {@link OperatorImpl} chains that take the {@link org.apache.samza.operators.MessageStream} as input.
+   *
+   * @param inputStreams  the map of input {@link org.apache.samza.operators.MessageStream}s
+   * @param config  the {@link Config} required to instantiate operators
+   * @param context  the {@link TaskContext} required to instantiate operators
+   */
+  public void init(Map<SystemStream, MessageStreamImpl> inputStreams, Config config, TaskContext context) {
+    inputStreams.forEach((ss, mstream) -> this.operatorGraph.put(ss, this.createOperatorImpls(mstream, config, context)));
+  }
+
+  /**
+   * Method to get the corresponding {@link RootOperatorImpl}
+   *
+   * @param ss  input {@link SystemStream}
+   * @param <M>  the type of input {@link MessageEnvelope}
+   * @return  the {@link OperatorImpl} that starts processing the input {@link MessageEnvelope}
+   */
+  public <M extends MessageEnvelope> OperatorImpl<M, M> get(SystemStream ss) {
+    return this.operatorGraph.get(ss);
+  }
 
   /**
    * Traverses the DAG of {@link OperatorSpec}s starting from the provided {@link MessageStreamImpl},
@@ -49,10 +80,12 @@ public class OperatorImpls {
    *
    * @param source  the input {@link MessageStreamImpl} to instantiate {@link OperatorImpl}s for
    * @param <M>  the type of {@link MessageEnvelope}s in the {@code source} {@link MessageStreamImpl}
+   * @param config  the {@link Config} required to instantiate operators
    * @param context  the {@link TaskContext} required to instantiate operators
    * @return  root node for the {@link OperatorImpl} DAG
    */
-  public static <M extends MessageEnvelope> RootOperatorImpl createOperatorImpls(MessageStreamImpl source, Config config, TaskContext context) {
+  private <M extends MessageEnvelope> RootOperatorImpl<M> createOperatorImpls(MessageStreamImpl<M> source, Config config,
+      TaskContext context) {
     // since the source message stream might have multiple operator specs registered on it,
     // create a new root node as a single point of entry for the DAG.
     RootOperatorImpl<M> rootOperator = new RootOperatorImpl<>();
@@ -60,7 +93,7 @@ public class OperatorImpls {
     source.getRegisteredOperatorSpecs().forEach(registeredOperator -> {
         // pass in the source and context s.t. stateful stream operators can initialize their stores
         OperatorImpl<M, ? extends MessageEnvelope> operatorImpl =
-            createAndRegisterOperatorImpl((OperatorSpec) registeredOperator, source, config, context);
+            this.createAndRegisterOperatorImpl((OperatorSpec) registeredOperator, source, config, context);
         rootOperator.registerNextOperator(operatorImpl);
       });
     return rootOperator;
@@ -72,20 +105,22 @@ public class OperatorImpls {
    *
    * @param operatorSpec  the operatorSpec registered with the {@code source}
    * @param source  the source {@link MessageStreamImpl}
-   * @param context  the context of the task
+   * @param <M>  type of input {@link MessageEnvelope}
+   * @param config  the {@link Config} required to instantiate operators
+   * @param context  the {@link TaskContext} required to instantiate operators
    * @return  the operator implementation for the operatorSpec
    */
-  private static <M extends MessageEnvelope> OperatorImpl<M, ? extends MessageEnvelope> createAndRegisterOperatorImpl(OperatorSpec operatorSpec,
-      MessageStreamImpl source, Config config, TaskContext context) {
-    if (!OPERATOR_IMPLS.containsKey(operatorSpec)) {
+  private <M extends MessageEnvelope> OperatorImpl<M, ? extends MessageEnvelope> createAndRegisterOperatorImpl(OperatorSpec operatorSpec,
+      MessageStreamImpl<M> source, Config config, TaskContext context) {
+    if (!operators.containsKey(operatorSpec)) {
       OperatorImpl<M, ? extends MessageEnvelope> operatorImpl = createOperatorImpl(source, operatorSpec, config, context);
-      if (OPERATOR_IMPLS.putIfAbsent(operatorSpec, operatorImpl) == null) {
+      if (operators.putIfAbsent(operatorSpec, operatorImpl) == null) {
         // this is the first time we've added the operatorImpl corresponding to the operatorSpec,
         // so traverse and initialize and register the rest of the DAG.
         MessageStreamImpl outStream = operatorSpec.getOutputStream();
         Collection<OperatorSpec> registeredSpecs = outStream.getRegisteredOperatorSpecs();
         registeredSpecs.forEach(registeredSpec -> {
-          OperatorImpl subImpl = createAndRegisterOperatorImpl(registeredSpec, outStream, config, context);
+          OperatorImpl subImpl = this.createAndRegisterOperatorImpl(registeredSpec, outStream, config, context);
           operatorImpl.registerNextOperator(subImpl);
         });
         return operatorImpl;
@@ -94,17 +129,21 @@ public class OperatorImpls {
 
     // the implementation corresponding to operatorSpec has already been instantiated
     // and registered, so we do not need to traverse the DAG further.
-    return OPERATOR_IMPLS.get(operatorSpec);
+    return operators.get(operatorSpec);
   }
 
   /**
    * Creates a new {@link OperatorImpl} instance for the provided {@link OperatorSpec}.
    *
-   * @param operatorSpec  the immutable {@link OperatorSpec} definition.
+   * @param source  the source {@link MessageStreamImpl}
    * @param <M>  type of input {@link MessageEnvelope}
+   * @param operatorSpec  the immutable {@link OperatorSpec} definition.
+   * @param config  the {@link Config} required to instantiate operators
+   * @param context  the {@link TaskContext} required to instantiate operators
    * @return  the {@link OperatorImpl} implementation instance
    */
-  protected static <M extends MessageEnvelope> OperatorImpl<M, ? extends MessageEnvelope> createOperatorImpl(MessageStreamImpl<M> source, OperatorSpec operatorSpec, Config config, TaskContext context) {
+  private static <M extends MessageEnvelope> OperatorImpl<M, ? extends MessageEnvelope> createOperatorImpl(MessageStreamImpl<M> source,
+      OperatorSpec operatorSpec, Config config, TaskContext context) {
     if (operatorSpec instanceof StreamOperatorSpec) {
       StreamOperatorSpec<M, ? extends  MessageEnvelope> streamOpSpec = (StreamOperatorSpec<M, ? extends MessageEnvelope>) operatorSpec;
       return new StreamOperatorImpl<>(streamOpSpec, source, config, context);
@@ -114,14 +153,6 @@ public class OperatorImpls {
       return new SessionWindowOperatorImpl<>((WindowOperatorSpec<M, ?, ? extends WindowState, ? extends WindowOutput>) operatorSpec, source, config, context);
     } else if (operatorSpec instanceof PartialJoinOperatorSpec) {
       return new PartialJoinOperatorImpl<>((PartialJoinOperatorSpec) operatorSpec, source, config, context);
-    } else if (operatorSpec instanceof PartitionOperatorSpec) {
-      PartitionOperatorSpec parSpec = (PartitionOperatorSpec<?, M>) operatorSpec;
-      if (parSpec.isPassThrough()) {
-        return StreamOperatorImpl.<M>getPassThroughOp();
-      }
-      return new SinkOperatorImpl<>(OperatorSpecs.createSinkOperator(
-          (m, mc, tc) -> mc.send(new OutgoingMessageEnvelope(parSpec.getStreamSpec().getSystemStream(), parSpec.getParKeyFunction().apply(m), m.getKey(), m.getMessage()))),
-          config, context);
     }
     throw new IllegalArgumentException(
         String.format("Unsupported OperatorSpec: %s", operatorSpec.getClass().getName()));

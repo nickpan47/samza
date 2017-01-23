@@ -57,11 +57,11 @@ public class BroadcastGraph {
     }
   }
 
-  public MessageStreamGraphImpl createStreamGraph(ExecutionEnvironment runtimeEnv, Set<SystemStreamPartition> inputs) {
-    MessageStreamGraphImpl graph = new MessageStreamGraphImpl(runtimeEnv);
+  public MessageStreamsImpl createStreamGraph(ExecutionEnvironment runtimeEnv, Set<SystemStreamPartition> inputs) {
+    MessageStreamsImpl graph = (MessageStreamsImpl) runtimeEnv.createGraph();
 
     inputs.forEach(ssp -> {
-        MessageStream<JsonMessageEnvelope> inputStream = graph.<Object, Object, IncomingSystemMessageEnvelope>addInStream(
+        MessageStream<JsonMessageEnvelope> inputStream = graph.<Object, Object, IncomingSystemMessageEnvelope>createInStream(
             new StreamSpec() {
               @Override public SystemStream getSystemStream() {
                 return ssp.getSystemStream();

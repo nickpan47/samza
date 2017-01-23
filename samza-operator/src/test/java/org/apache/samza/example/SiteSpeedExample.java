@@ -2,12 +2,13 @@ package org.apache.samza.example;
 
 import org.apache.samza.config.Config;
 import org.apache.samza.operators.MessageStream;
-import org.apache.samza.operators.MessageStreamApplication;
-import org.apache.samza.operators.MessageStreamGraph;
+import org.apache.samza.application.StreamApplication;
+import org.apache.samza.operators.MessageStreams;
 import org.apache.samza.operators.StreamSpec;
 import org.apache.samza.operators.data.IncomingSystemMessageEnvelope;
 import org.apache.samza.operators.data.JsonIncomingSystemMessageEnvelope;
 import org.apache.samza.operators.data.Offset;
+import org.apache.samza.serializers.JsonSerde;
 import org.apache.samza.serializers.StringSerde;
 import org.apache.samza.system.ExecutionEnvironment;
 import org.apache.samza.system.SystemStream;
@@ -19,7 +20,7 @@ import java.util.List;
 import java.util.Properties;
 
 
-public class SiteSpeedExample extends MessageStreamApplication {
+public class SiteSpeedExample extends StreamApplication {
 
   StreamSpec input1 = new StreamSpec() {
     @Override public SystemStream getSystemStream() {
@@ -91,11 +92,12 @@ public class SiteSpeedExample extends MessageStreamApplication {
    *   }
    *
    */
-  @Override public void initGraph(MessageStreamGraph graph, Config config) {
-    MessageStream<JsonMessageEnvelope> newSource = graph.<Object, Object, IncomingSystemMessageEnvelope>addInStream(input1, null, null).map(this::getInputMessage);
-    newSource.join(graph.<Object, Object, IncomingSystemMessageEnvelope>addInStream(input2, null, null).map(this::getInputMessage),
+  @Override public void initGraph(MessageStreams graph, Config config) {
+    MessageStream<JsonMessageEnvelope> newSource = graph.<Object, Object, IncomingSystemMessageEnvelope>createInStream(
+        input1, null, null).map(this::getInputMessage);
+    newSource.join(graph.<Object, Object, IncomingSystemMessageEnvelope>createInStream(input2, null, null).map(this::getInputMessage),
         (m1, m2) -> this.myJoinResult(m1, m2)).
-        sink(output, new StringSerde("UTF-8"), new StringSerde("UTF-8"));
+        sendTo(graph.<String, MessageType, JsonMessageEnvelope>createOutStream(output, new StringSerde("UTF-8"), new JsonSerde<>()));
   }
 
   // standalone local program model

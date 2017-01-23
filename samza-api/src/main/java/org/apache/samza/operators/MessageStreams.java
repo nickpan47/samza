@@ -29,12 +29,14 @@ import java.util.Map;
  * Job-level programming interface to create an operator DAG and run in various different runtime environments.
  */
 @InterfaceStability.Unstable
-public interface MessageStreamGraph {
+public interface MessageStreams {
 
-  <K, V, M extends MessageEnvelope<K ,V>> MessageStream<M> addInStream(StreamSpec streamSpec, Serde<K> keySerdeClazz, Serde<V> msgSerdeClazz);
+  <K, V, M extends MessageEnvelope<K ,V>> MessageStream<M> createInStream(StreamSpec streamSpec, Serde<K> keySerde, Serde<V> msgSerde);
+  <K, V, M extends MessageEnvelope<K ,V>> MessageStream<M> createOutStream(StreamSpec streamSpec, Serde<K> keySerde, Serde<V> msgSerde);
+  <K, V, M extends MessageEnvelope<K, V>> MessageStream<M> createIntStream(StreamSpec streamSpec, Serde<K> keySerde, Serde<V> msgSerde);
 
   /**
-   * Place holders for possible access methods needed to get the streams defined in the {@link MessageStreamGraph}
+   * Place holders for possible access methods needed to get the streams defined in the {@link MessageStreams}
    */
    Map<StreamSpec, MessageStream> getInStreams();
    Map<StreamSpec, MessageStream> getOutStreams();

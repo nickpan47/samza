@@ -4,22 +4,25 @@ import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.specific.SpecificRecord;
 import org.apache.samza.config.Config;
 import org.apache.samza.operators.MessageStream;
-import org.apache.samza.operators.MessageStreamApplication;
-import org.apache.samza.operators.MessageStreamGraph;
+import org.apache.samza.application.StreamApplication;
+import org.apache.samza.operators.MessageStreams;
 import org.apache.samza.operators.StreamSpec;
 import org.apache.samza.operators.data.MessageEnvelope;
 import org.apache.samza.operators.functions.MapFunction;
+import org.apache.samza.operators.functions.SinkFunction;
 import org.apache.samza.serializers.StringSerde;
 import org.apache.samza.system.ExecutionEnvironment;
 import org.apache.samza.system.OutgoingMessageEnvelope;
 import org.apache.samza.system.SystemStream;
+import org.apache.samza.task.MessageCollector;
 import org.apache.samza.task.TaskContext;
+import org.apache.samza.task.TaskCoordinator;
 import org.apache.samza.util.CommandLine;
 
 import java.util.*;
 
 
-public class WaterlooEducationExample extends MessageStreamApplication {
+public class WaterlooEducationExample extends StreamApplication {
 
   StreamSpec input1 = new StreamSpec() {
     @Override public SystemStream getSystemStream() {
@@ -134,26 +137,42 @@ public class WaterlooEducationExample extends MessageStreamApplication {
     return education;
   }
 
-  class SerializedMap implements MapFunction<Profile, MessageEnvelope<String, OutgoingMessageEnvelope>> {
+  class SystemOutgoingMessageEnvelope implements MessageEnvelope<Object, Object>{
+    private final OutgoingMessageEnvelope envelope;
 
-    MessageEnvelope<String, OutgoingMessageEnvelope> getOutgoingMessage(int profileId, StandardizedEducation stdEducation) {
-      return new MessageEnvelope<String, OutgoingMessageEnvelope>() {
-        @Override public String getKey() {
-          return null;
-        }
-
-        @Override public OutgoingMessageEnvelope getMessage() {
-          return null;
-        }
-      };
+    SystemOutgoingMessageEnvelope(OutgoingMessageEnvelope envelope) {
+      this.envelope = envelope;
     }
 
-    @Override public MessageEnvelope<String, OutgoingMessageEnvelope> apply(Profile p) {
+    @Override public Object getKey() {
+      return this.envelope.getKey();
+    }
+
+    @Override public Object getMessage() {
+      return this.envelope.getMessage();
+    }
+
+    public OutgoingMessageEnvelope getEnvelope() {
+      return this.envelope;
+    }
+  }
+
+
+  class SerializedMap implements MapFunction<Profile, SystemOutgoingMessageEnvelope> {
+
+    private SystemStream outputStream;
+
+    SystemOutgoingMessageEnvelope getOutgoingMessage(int profileId, StandardizedEducation stdEducation) {
+      return new SystemOutgoingMessageEnvelope(new OutgoingMessageEnvelope(this.outputStream, profileId, stdEducation));
+    }
+
+    @Override public SystemOutgoingMessageEnvelope apply(Profile p) {
       return this.getOutgoingMessage(p.id, p.memberStandardizedEducation);
     }
 
     @Override public void init(Config config, TaskContext context) {
       // potential initialization of context, like Voldemort client
+      this.outputStream = new SystemStream("kafka", "waterloo-education-standardizer");
     }
   }
 
@@ -199,6 +218,18 @@ public class WaterlooEducationExample extends MessageStreamApplication {
     }
   }
 
+  class EducationSinkFunction implements SinkFunction<SystemOutgoingMessageEnvelope> {
+
+    @Override public void apply(SystemOutgoingMessageEnvelope message, MessageCollector messageCollector,
+        TaskCoordinator taskCoordinator) {
+      messageCollector.send(message.getEnvelope());
+    }
+
+    @Override public void init(Config config, TaskContext context) {
+
+    }
+  }
+
   /**
    * used by remote execution environment to launch the job in remote program. The remote program should follow the similar
    * invoking context as in standalone:
@@ -212,13 +243,13 @@ public class WaterlooEducationExample extends MessageStreamApplication {
    *   }
    *
    */
-  @Override public void initGraph(MessageStreamGraph graph, Config config) {
-    MessageStream<IncomingAvroMessageEnvelope> stream = graph.addInStream(input1, new StringSerde("UTF-8"), null);
+  @Override public void initGraph(MessageStreams graph, Config config) {
+    MessageStream<IncomingAvroMessageEnvelope> stream = graph.createInStream(input1, new StringSerde("UTF-8"), null);
     stream.map(m -> this.genericRecordToSpecificRecord(new Profile(), m.getMessage())).
         filter(p -> !(p.educations == null || p.educations.isEmpty())).
         map(new StandardizeEducationMap()).
         map(new SerializedMap()).
-        sink((p, mc, t) -> mc.send(p.getMessage()));
+        sink(new EducationSinkFunction());
   }
 
   // standalone local program model

@@ -20,35 +20,29 @@ package org.apache.samza.operators;
 
 import org.apache.samza.config.Config;
 import org.apache.samza.operators.data.IncomingSystemMessageEnvelope;
-import org.apache.samza.operators.data.MessageEnvelope;
-import org.apache.samza.operators.impl.OperatorImpl;
-import org.apache.samza.operators.impl.OperatorImpls;
+import org.apache.samza.operators.impl.OperatorGraph;
 import org.apache.samza.system.IncomingMessageEnvelope;
 import org.apache.samza.system.SystemStream;
-import org.apache.samza.task.InitableTask;
-import org.apache.samza.task.MessageCollector;
-import org.apache.samza.task.StreamTask;
-import org.apache.samza.task.TaskContext;
-import org.apache.samza.task.TaskCoordinator;
-import org.apache.samza.task.WindowableTask;
+import org.apache.samza.task.*;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.Map;
 
 
 /**
  * An {@link StreamTask} implementation that receives {@link IncomingSystemMessageEnvelope}s and propagates them
- * through the user's stream transformations defined in {@link MessageStreamGraphImpl} using the
+ * through the user's stream transformations defined in {@link MessageStreamsImpl} using the
  * {@link MessageStream} APIs.
  * <p>
  * This class brings all the operator API implementation components together and feeds the
  * {@link IncomingSystemMessageEnvelope}s into the transformation chains.
  * <p>
- * It accepts an instance of the user implemented DAG {@link MessageStreamGraphImpl} as input parameter of the constructor.
+ * It accepts an instance of the user implemented DAG {@link MessageStreamsImpl} as input parameter of the constructor.
  * When its own {@link #init(Config, TaskContext)} method is called during startup, it creates a {@link MessageStreamImpl}
  * corresponding to each of its input {@link org.apache.samza.system.SystemStreamPartition}s. Each input {@link MessageStreamImpl}
- * will be corresponding to either an input stream or intermediate stream in {@link MessageStreamGraphImpl}.
+ * will be corresponding to either an input stream or intermediate stream in {@link MessageStreamsImpl}.
  * <p>
- * Then, this task calls {@link OperatorImpls#createOperatorImpls(MessageStreamImpl, TaskContext)} for each of the input
+ * Then, this task calls {@link org.apache.samza.operators.impl.OperatorGraph#createOperatorImpls(MessageStreamImpl, TaskContext)} for each of the input
  * {@link MessageStreamImpl}. This instantiates the {@link org.apache.samza.operators.impl.OperatorImpl} DAG
  * corresponding to the aforementioned {@link org.apache.samza.operators.spec.OperatorSpec} DAG and returns the
  * root node of the DAG, which this class saves.
@@ -58,31 +52,29 @@ import java.util.*;
  * along to the appropriate root nodes. From then on, each {@link org.apache.samza.operators.impl.OperatorImpl} propagates
  * its transformed output to the next set of {@link org.apache.samza.operators.impl.OperatorImpl}s.
  */
-public final class StreamOperatorAdaptorTask implements StreamTask, InitableTask, WindowableTask {
+public final class StreamOperatorTask implements StreamTask, InitableTask, WindowableTask {
 
   /**
    * A mapping from each {@link SystemStream} to the root node of its operator chain DAG.
    */
-  private final Map<SystemStream, OperatorImpl<IncomingSystemMessageEnvelope, ? extends MessageEnvelope>> operatorGraph = new HashMap<>();
+  private final OperatorGraph operatorGraph = new OperatorGraph();
 
-  private final MessageStreamGraphImpl streamGraph;
+  private final MessageStreamsImpl streamGraph;
 
-  public StreamOperatorAdaptorTask(MessageStreamGraphImpl graph) {
+  public StreamOperatorTask(MessageStreamsImpl graph) {
     this.streamGraph = graph;
   }
 
   @Override
   public final void init(Config config, TaskContext context) throws Exception {
-    // TODO: does it work if multiple SSPs are buffered by the same operatorImpl object?????
-    // Alternative: insert a merge stage that add one merge operator per SSP
     Map<SystemStream, MessageStreamImpl> inputBySystemStream = new HashMap<>();
     context.getSystemStreamPartitions().forEach(ssp -> {
         if (!inputBySystemStream.containsKey(ssp.getSystemStream())) {
           inputBySystemStream.putIfAbsent(ssp.getSystemStream(), this.streamGraph.getStreamByName(ssp.getSystemStream()));
         }
       });
-    context.getSystemStreamPartitions().forEach(ssp -> operatorGraph.put(ssp,
-        OperatorImpls.createOperatorImpls(inputBySystemStream.get(ssp.getSystemStream()), config, context)));
+
+    operatorGraph.init(inputBySystemStream, config, context);
   }
 
   @Override

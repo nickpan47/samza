@@ -20,11 +20,12 @@ package org.apache.samza.system;
 
 import org.apache.samza.annotation.InterfaceStability;
 import org.apache.samza.config.Config;
-import org.apache.samza.operators.MessageStreamGraph;
+import org.apache.samza.operators.MessageStreams;
+import org.apache.samza.task.StreamTask;
 
 
 /**
- * Interface to be implemented by physical execution engine to deploy the config and jobs to run the {@link MessageStreamGraph}
+ * Interface to be implemented by physical execution engine to deploy the config and jobs to run the {@link org.apache.samza.operators.MessageStreams}
  */
 @InterfaceStability.Unstable
 public interface ExecutionEnvironment {
@@ -33,14 +34,22 @@ public interface ExecutionEnvironment {
     return null;
   }
 
-  static ExecutionEnvironment getRemoteEnvironment(Config config) { return null; }
+  static ExecutionEnvironment fromConfig(Config config) { return null; }
 
-  MessageStreamGraph createGraph(Config config);
+  MessageStreams createGraph();
 
   /**
-   * Method to be invoked to deploy and run the actual Samza jobs to execute {@link MessageStreamGraph}
+   * Method to be invoked to deploy and run the actual Samza jobs to execute {@link org.apache.samza.operators.MessageStreams}
    *
    * @param graph  the user-defined operator DAG
    */
-  void run(MessageStreamGraph graph);
+  void run(MessageStreams graph);
+
+  /**
+   * Method to run specific {@link StreamTask} class. This is for backward compatible support and for programmers who really
+   * want to control the physical {@link SystemStreamPartition} level programming logic.
+   *
+   * @param streamTask  the task to be instantiated in a single {@link org.apache.samza.job.StreamJob} and executed
+   */
+  void runTask(StreamTask streamTask, Config config);
 }
