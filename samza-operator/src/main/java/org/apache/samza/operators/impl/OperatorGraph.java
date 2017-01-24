@@ -120,9 +120,9 @@ public class OperatorGraph {
         MessageStreamImpl outStream = operatorSpec.getOutputStream();
         Collection<OperatorSpec> registeredSpecs = outStream.getRegisteredOperatorSpecs();
         registeredSpecs.forEach(registeredSpec -> {
-          OperatorImpl subImpl = this.createAndRegisterOperatorImpl(registeredSpec, outStream, config, context);
-          operatorImpl.registerNextOperator(subImpl);
-        });
+            OperatorImpl subImpl = this.createAndRegisterOperatorImpl(registeredSpec, outStream, config, context);
+            operatorImpl.registerNextOperator(subImpl);
+          });
         return operatorImpl;
       }
     }

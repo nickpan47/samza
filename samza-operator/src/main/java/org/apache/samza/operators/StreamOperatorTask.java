@@ -30,6 +30,9 @@ import java.util.Map;
 
 
 /**
+ * Execution of the logic sub-DAG
+ *
+ *
  * An {@link StreamTask} implementation that receives {@link IncomingSystemMessageEnvelope}s and propagates them
  * through the user's stream transformations defined in {@link MessageStreamsImpl} using the
  * {@link MessageStream} APIs.
@@ -42,7 +45,7 @@ import java.util.Map;
  * corresponding to each of its input {@link org.apache.samza.system.SystemStreamPartition}s. Each input {@link MessageStreamImpl}
  * will be corresponding to either an input stream or intermediate stream in {@link MessageStreamsImpl}.
  * <p>
- * Then, this task calls {@link org.apache.samza.operators.impl.OperatorGraph#createOperatorImpls(MessageStreamImpl, TaskContext)} for each of the input
+ * Then, this task calls {@code org.apache.samza.operators.impl.OperatorGraph#init()} for each of the input
  * {@link MessageStreamImpl}. This instantiates the {@link org.apache.samza.operators.impl.OperatorImpl} DAG
  * corresponding to the aforementioned {@link org.apache.samza.operators.spec.OperatorSpec} DAG and returns the
  * root node of the DAG, which this class saves.

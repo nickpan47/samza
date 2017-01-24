@@ -19,7 +19,6 @@
 
 package org.apache.samza.operators.spec;
 
-import org.apache.samza.config.Config;
 import org.apache.samza.operators.MessageStreamImpl;
 import org.apache.samza.operators.data.MessageEnvelope;
 import org.apache.samza.operators.functions.FlatMapFunction;
@@ -28,10 +27,8 @@ import org.apache.samza.operators.functions.SinkFunction;
 import org.apache.samza.operators.windows.WindowFn;
 import org.apache.samza.operators.windows.WindowOutput;
 import org.apache.samza.operators.windows.WindowState;
-import org.apache.samza.task.TaskContext;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.function.Function;
 
 
@@ -107,19 +104,13 @@ public class OperatorSpecs {
    * @return  the {@link StreamOperatorSpec} for the merge
    */
   public static <M extends MessageEnvelope> StreamOperatorSpec<M, M> createMergeOperator(MessageStreamImpl<M> mergeOutput, int opId) {
-    return new StreamOperatorSpec<M, M>(new FlatMapFunction<M, M>() {
-      @Override public void init(Config config, TaskContext context) {
-
-      }
-
-      @Override public Collection<M> apply(M message) {
-        return new ArrayList<M>() {
+    return new StreamOperatorSpec<M, M>(message ->
+        new ArrayList<M>() {
           {
             this.add(message);
           }
-        };
-      }
-   }, mergeOutput, OperatorSpec.OpCode.MERGE, opId);
+        },
+        mergeOutput, OperatorSpec.OpCode.MERGE, opId);
   }
 
   /**

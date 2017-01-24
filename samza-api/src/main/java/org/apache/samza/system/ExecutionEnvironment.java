@@ -30,12 +30,29 @@ import org.apache.samza.task.StreamTask;
 @InterfaceStability.Unstable
 public interface ExecutionEnvironment {
 
+  /**
+   * Static method to load the local standalone environment
+   *
+   * @param config  configuration passed in to initialize the Samza standalone process
+   * @return  the standalone {@link ExecutionEnvironment} to run the user-defined stream applications
+   */
   static ExecutionEnvironment getLocalEnvironment(Config config) {
     return null;
   }
 
+  /**
+   * Static method to load the non-standalone environment
+   *
+   * @param config  configuration passed in to initialize the Samza processes
+   * @return  the configure-driven {@link ExecutionEnvironment} to run the user-defined stream applications
+   */
   static ExecutionEnvironment fromConfig(Config config) { return null; }
 
+  /**
+   * Helper interface method to allow users to instantiate the {@link MessageStreams} object
+   *
+   * @return  an implementation of {@link MessageStreams}
+   */
   MessageStreams createGraph();
 
   /**

@@ -53,7 +53,7 @@ public class WindowGraph {
   }
 
   public MessageStreamsImpl createStreamGraph(ExecutionEnvironment runtimeEnv, Set<SystemStreamPartition> inputs) {
-    MessageStreamsImpl graph = (MessageStreamsImpl)runtimeEnv.createGraph();
+    MessageStreamsImpl graph = (MessageStreamsImpl) runtimeEnv.createGraph();
 
     inputs.forEach(input -> graph.<Object, Object, IncomingSystemMessageEnvelope>createInStream(new StreamSpec() {
       @Override public SystemStream getSystemStream() {

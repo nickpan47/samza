@@ -31,14 +31,11 @@ import org.apache.samza.task.TaskContext;
 public class StateStoreImpl<M extends MessageEnvelope, SK, SS> {
   private final String storeName;
   private final StoreFunctions<M, SK, SS> storeFunctions;
-  private KeyValueStore<SK, SS> kvStore = null;
+  private final KeyValueStore<SK, SS> kvStore;
 
-  public StateStoreImpl(StoreFunctions<M, SK, SS> store, String storeName) {
+  public StateStoreImpl(StoreFunctions<M, SK, SS> store, String storeName, TaskContext context) {
     this.storeFunctions = store;
     this.storeName = storeName;
-  }
-
-  public void init(TaskContext context) {
     this.kvStore = (KeyValueStore<SK, SS>) context.getStore(this.storeName);
   }
 

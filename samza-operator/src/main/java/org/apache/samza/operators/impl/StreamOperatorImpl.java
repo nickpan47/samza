@@ -40,7 +40,6 @@ class StreamOperatorImpl<M extends MessageEnvelope, RM extends MessageEnvelope> 
 
   StreamOperatorImpl(StreamOperatorSpec<M, RM> streamOperatorSpec, MessageStreamImpl<M> source, Config config, TaskContext context) {
     this.transformFn = streamOperatorSpec.getTransformFn();
-    this.transformFn.init(config, context);
   }
 
   @Override

@@ -18,14 +18,12 @@
  */
 package org.apache.samza.operators;
 
-import org.apache.samza.config.Config;
 import org.apache.samza.operators.data.MessageEnvelope;
 import org.apache.samza.operators.functions.SinkFunction;
 import org.apache.samza.serializers.Serde;
 import org.apache.samza.system.OutgoingMessageEnvelope;
 import org.apache.samza.system.SystemStream;
 import org.apache.samza.task.MessageCollector;
-import org.apache.samza.task.TaskContext;
 import org.apache.samza.task.TaskCoordinator;
 
 import java.util.Collections;
@@ -182,15 +180,8 @@ public class MessageStreamsImpl implements MessageStreams {
       throw new IllegalArgumentException(String.format("The input parameter: %s is not an system stream defined in the graph", stream));
     }
 
-    return new SinkFunction<M>() {
-      @Override public void apply(M message, MessageCollector messageCollector, TaskCoordinator taskCoordinator) {
-         ostream.send(message, messageCollector, taskCoordinator, parKeyFunction);
-      }
-
-      @Override public void init(Config config, TaskContext context) {
-
-      }
-    };
+    return (M message, MessageCollector messageCollector, TaskCoordinator taskCoordinator) ->
+        ostream.send(message, messageCollector, taskCoordinator, parKeyFunction);
   }
 
   int getNextOpId() {

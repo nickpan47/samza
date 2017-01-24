@@ -30,7 +30,7 @@ import org.apache.samza.operators.data.MessageEnvelope;
  * @param <RM>  type of the joined {@link org.apache.samza.operators.data.MessageEnvelope}
  */
 @InterfaceStability.Unstable
-public interface JoinFunction<M extends MessageEnvelope, JM extends MessageEnvelope, RM extends MessageEnvelope> extends ContextInitFunction {
+public interface JoinFunction<M extends MessageEnvelope, JM extends MessageEnvelope, RM extends MessageEnvelope> {
 
   /**
    * Join the provided {@link org.apache.samza.operators.data.MessageEnvelope}s and produces the joined {@link org.apache.samza.operators.data.MessageEnvelope}.

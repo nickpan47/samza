@@ -40,13 +40,10 @@ public class TestStateStoreImpl {
   public void testStateStoreImpl() {
     StoreFunctions<TestMessageEnvelope, String, WindowState> mockStoreFunctions = mock(StoreFunctions.class);
     // test constructor
-    StateStoreImpl<TestMessageEnvelope, String, WindowState> storeImpl = new StateStoreImpl<>(mockStoreFunctions, "myStoreName");
     TaskContext mockContext = mock(TaskContext.class);
     KeyValueStore<String, WindowState> mockKvStore = mock(KeyValueStore.class);
     when(mockContext.getStore("myStoreName")).thenReturn(mockKvStore);
-    // test init()
-    storeImpl.init(mockContext);
-    verify(mockContext, times(1)).getStore("myStoreName");
+    StateStoreImpl<TestMessageEnvelope, String, WindowState> storeImpl = new StateStoreImpl<>(mockStoreFunctions, "myStoreName", mockContext);
     Function<TestMessageEnvelope, String> wndKeyFn = mock(Function.class);
     when(mockStoreFunctions.getStoreKeyFn()).thenReturn(wndKeyFn);
     TestMessageEnvelope mockMsg = mock(TestMessageEnvelope.class);

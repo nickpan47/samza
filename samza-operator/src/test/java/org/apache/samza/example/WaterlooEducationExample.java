@@ -1,10 +1,26 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
 package org.apache.samza.example;
 
-import org.apache.avro.generic.GenericRecord;
-import org.apache.avro.specific.SpecificRecord;
+import org.apache.samza.application.StreamApplication;
 import org.apache.samza.config.Config;
 import org.apache.samza.operators.MessageStream;
-import org.apache.samza.application.StreamApplication;
 import org.apache.samza.operators.MessageStreams;
 import org.apache.samza.operators.StreamSpec;
 import org.apache.samza.operators.data.MessageEnvelope;
@@ -15,7 +31,6 @@ import org.apache.samza.system.ExecutionEnvironment;
 import org.apache.samza.system.OutgoingMessageEnvelope;
 import org.apache.samza.system.SystemStream;
 import org.apache.samza.task.MessageCollector;
-import org.apache.samza.task.TaskContext;
 import org.apache.samza.task.TaskCoordinator;
 import org.apache.samza.util.CommandLine;
 
@@ -34,16 +49,6 @@ public class WaterlooEducationExample extends StreamApplication {
     }
   };
 
-  StreamSpec input2 = new StreamSpec() {
-    @Override public SystemStream getSystemStream() {
-      return new SystemStream("kafka", "input2");
-    }
-
-    @Override public Properties getProperties() {
-      return null;
-    }
-  };
-
   StreamSpec output = new StreamSpec() {
     @Override public SystemStream getSystemStream() {
       return new SystemStream("kafka", "output");
@@ -53,6 +58,15 @@ public class WaterlooEducationExample extends StreamApplication {
       return null;
     }
   };
+
+  // mock GenericRecord and SpecificRecord to avoid pulling in avro dependencies in test code
+  interface GenericRecord {
+
+  }
+
+  interface SpecificRecord {
+
+  }
 
   class IncomingAvroMessageEnvelope implements MessageEnvelope<String, GenericRecord> {
     private final String key;
@@ -137,7 +151,7 @@ public class WaterlooEducationExample extends StreamApplication {
     return education;
   }
 
-  class SystemOutgoingMessageEnvelope implements MessageEnvelope<Object, Object>{
+  class SystemOutgoingMessageEnvelope implements MessageEnvelope<Object, Object> {
     private final OutgoingMessageEnvelope envelope;
 
     SystemOutgoingMessageEnvelope(OutgoingMessageEnvelope envelope) {
@@ -160,7 +174,7 @@ public class WaterlooEducationExample extends StreamApplication {
 
   class SerializedMap implements MapFunction<Profile, SystemOutgoingMessageEnvelope> {
 
-    private SystemStream outputStream;
+    private final SystemStream outputStream = new SystemStream("kafka", "waterloo-education-standardizer");
 
     SystemOutgoingMessageEnvelope getOutgoingMessage(int profileId, StandardizedEducation stdEducation) {
       return new SystemOutgoingMessageEnvelope(new OutgoingMessageEnvelope(this.outputStream, profileId, stdEducation));
@@ -170,10 +184,6 @@ public class WaterlooEducationExample extends StreamApplication {
       return this.getOutgoingMessage(p.id, p.memberStandardizedEducation);
     }
 
-    @Override public void init(Config config, TaskContext context) {
-      // potential initialization of context, like Voldemort client
-      this.outputStream = new SystemStream("kafka", "waterloo-education-standardizer");
-    }
   }
 
   class StandardizeEducationMap implements MapFunction<Profile, Profile> {
@@ -196,7 +206,7 @@ public class WaterlooEducationExample extends StreamApplication {
 
     public Locale defaultLocale = new Locale();
 
-    public TaskMetrics _metrics;
+    public TaskMetrics metrics;
 
     @Override public Profile apply(Profile p) {
       for (Map.Entry<CharSequence, Education> educationEntry : p.educations.entrySet()) {
@@ -208,14 +218,11 @@ public class WaterlooEducationExample extends StreamApplication {
 
         p.memberStandardizedEducation.educations
             .add(toMemberEducationStandardizedValues(education, schoolId, stdDegree, stdFieldsOfStudy));
-        this._metrics.incNumEducationsProcessed();
+        this.metrics.incNumEducationsProcessed();
       }
       return p;
     }
 
-    @Override public void init(Config config, TaskContext context) {
-      // potential initialization of defaultLocale, Voldemort client etc.
-    }
   }
 
   class EducationSinkFunction implements SinkFunction<SystemOutgoingMessageEnvelope> {
@@ -225,9 +232,6 @@ public class WaterlooEducationExample extends StreamApplication {
       messageCollector.send(message.getEnvelope());
     }
 
-    @Override public void init(Config config, TaskContext context) {
-
-    }
   }
 
   /**
@@ -253,7 +257,7 @@ public class WaterlooEducationExample extends StreamApplication {
   }
 
   // standalone local program model
-  public static void main(String args[]) throws Exception {
+  public static void main(String[] args) throws Exception {
     CommandLine cmdLine = new CommandLine();
     Config config = cmdLine.loadConfig(cmdLine.parser().parse(args));
     ExecutionEnvironment standaloneEnv = ExecutionEnvironment.getLocalEnvironment(config);

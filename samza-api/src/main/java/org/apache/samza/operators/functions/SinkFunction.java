@@ -29,7 +29,7 @@ import org.apache.samza.task.TaskCoordinator;
  * @param <M>  type of the input {@link MessageEnvelope}
  */
 @InterfaceStability.Unstable
-public interface SinkFunction<M extends MessageEnvelope> extends ContextInitFunction {
+public interface SinkFunction<M extends MessageEnvelope> {
 
   /**
    * Allows sending the provided {@link MessageEnvelope} to an output {@link org.apache.samza.system.SystemStream} using

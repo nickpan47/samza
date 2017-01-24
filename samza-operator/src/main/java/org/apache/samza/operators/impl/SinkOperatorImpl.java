@@ -36,7 +36,6 @@ class SinkOperatorImpl<M extends MessageEnvelope> extends OperatorImpl<M, Messag
 
   SinkOperatorImpl(SinkOperatorSpec<M> sinkOp, Config config, TaskContext context) {
     this.sinkFn = sinkOp.getSinkFn();
-    this.sinkFn.init(config, context);
   }
 
   @Override

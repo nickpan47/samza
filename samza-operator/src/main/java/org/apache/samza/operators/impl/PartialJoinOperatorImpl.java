@@ -40,7 +40,6 @@ class PartialJoinOperatorImpl<M extends MessageEnvelope<K, ?>, K, JM extends Mes
 
   PartialJoinOperatorImpl(PartialJoinOperatorSpec<M, K, JM, RM> joinOp, MessageStreamImpl<M> source, Config config, TaskContext context) {
     // TODO: implement PartialJoinOperatorImpl constructor
-    joinOp.getTransformFn().init(config, context);
   }
 
   @Override

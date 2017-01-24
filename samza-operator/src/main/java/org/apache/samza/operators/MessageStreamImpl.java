@@ -19,17 +19,14 @@
 
 package org.apache.samza.operators;
 
-import org.apache.samza.config.Config;
 import org.apache.samza.operators.data.MessageEnvelope;
 import org.apache.samza.operators.functions.*;
 import org.apache.samza.operators.spec.OperatorSpec;
 import org.apache.samza.operators.spec.OperatorSpecs;
 import org.apache.samza.operators.windows.Window;
 import org.apache.samza.operators.windows.WindowOutput;
-import org.apache.samza.task.TaskContext;
 
 import java.util.*;
-import java.util.function.BiFunction;
 import java.util.function.Function;
 
 
@@ -59,73 +56,17 @@ public class MessageStreamImpl<M extends MessageEnvelope> implements MessageStre
     this.graph = graph;
   }
 
-  @Override
-  public <TM extends MessageEnvelope> MessageStream<TM> map(Function<M, TM> mapFn) {
-    return this.map(new MapFunction<M, TM>() {
-      @Override public void init(Config config, TaskContext context) {
-      }
-
-      @Override public TM apply(M message) {
-        return mapFn.apply(message);
-      }
-    });
-  }
-
-  @Override
-  public <TM extends MessageEnvelope> MessageStream<TM> flatMap(Function<M, Collection<TM>> flatMapFn) {
-    return this.flatMap(new FlatMapFunction<M, TM>() {
-      @Override public void init(Config config, TaskContext context) {
-      }
-
-      @Override public Collection<TM> apply(M message) {
-        return flatMapFn.apply(message);
-      }
-    });
-  }
-
-  @Override
-  public <K, OM extends MessageEnvelope<K, ?>, RM extends MessageEnvelope> MessageStream<RM> join(MessageStream<OM> otherStream,
-      BiFunction<M, OM, RM> joinFn) {
-    return this.join(otherStream, new JoinFunction<M, OM, RM>() {
-      @Override public void init(Config config, TaskContext context) {
-      }
-
-      @Override public RM apply(M message, OM otherMessage) {
-        return joinFn.apply(message, otherMessage);
-      }
-    });
-  }
-
-  @Override
-  public MessageStream<M> filter(Function<M, Boolean> filterFn) {
-    return this.filter(new FilterFunction<M>() {
-      @Override public void init(Config config, TaskContext context) {
-      }
-
-      @Override public boolean apply(M message) {
-        return filterFn.apply(message);
-      }
-    });
-  }
-
-  @Override public <TM extends MessageEnvelope> MessageStream<TM> map(MapFunction<M, TM> mapWithContext) {
+  @Override public <TM extends MessageEnvelope> MessageStream<TM> map(MapFunction<M, TM> mapFn) {
     OperatorSpec<TM> op = OperatorSpecs.<M, TM>createStreamOperator(
-        new FlatMapFunction<M, TM>() {
-            @Override public Collection<TM> apply(M message) {
-              return new ArrayList<TM>() {
-                {
-                  TM r = mapWithContext.apply(message);
-                  if (r != null) {
-                    this.add(r);
-                  }
-                }
-              };
+        message -> new ArrayList<TM>() {
+          {
+            TM r = mapFn.apply(message);
+            if (r != null) {
+              this.add(r);
             }
-
-            @Override public void init(Config config, TaskContext context) {
-              mapWithContext.init(config, context);
-            }
-        }, new MessageStreamImpl<>(this.graph), OperatorSpec.OpCode.MAP, this.graph.getNextOpId());
+          }
+        },
+        new MessageStreamImpl<>(this.graph), OperatorSpec.OpCode.MAP, this.graph.getNextOpId());
     this.registeredOperatorSpecs.add(op);
     return op.getOutputStream();
   }
@@ -139,21 +80,15 @@ public class MessageStreamImpl<M extends MessageEnvelope> implements MessageStre
   }
 
   @Override public MessageStream<M> filter(FilterFunction<M> filterWithContext) {
-    OperatorSpec<M> op = OperatorSpecs.<M, M>createStreamOperator(new FlatMapFunction<M, M>() {
-      @Override public Collection<M> apply(M message) {
-        return new ArrayList<M>() {
+    OperatorSpec<M> op = OperatorSpecs.<M, M>createStreamOperator(
+        message -> new ArrayList<M>() {
           {
             if (filterWithContext.apply(message)) {
               this.add(message);
             }
           }
-        };
-      }
-
-      @Override public void init(Config config, TaskContext context) {
-        filterWithContext.init(config, context);
-      }
-    }, new MessageStreamImpl<>(this.graph), OperatorSpec.OpCode.FILTER, this.graph.getNextOpId());
+        },
+        new MessageStreamImpl<>(this.graph), OperatorSpec.OpCode.FILTER, this.graph.getNextOpId());
     this.registeredOperatorSpecs.add(op);
     return op.getOutputStream();
   }
@@ -192,28 +127,11 @@ public class MessageStreamImpl<M extends MessageEnvelope> implements MessageStre
   }
 
   @Override public <K, OM extends MessageEnvelope<K, ?>, RM extends MessageEnvelope> MessageStream<RM> join(
-      MessageStream<OM> otherStream, JoinFunction<M, OM, RM> joinWithContext) {
+      MessageStream<OM> otherStream, JoinFunction<M, OM, RM> joinFn) {
     MessageStreamImpl<RM> outputStream = new MessageStreamImpl<>(this.graph);
 
-    PartialJoinFunction<M, OM, RM> parJoin1 = new PartialJoinFunction<M, OM, RM>() {
-      @Override public RM apply(M m1, OM om) {
-        return joinWithContext.apply(m1, om);
-      }
-
-      @Override public void init(Config config, TaskContext context) {
-        joinWithContext.init(config, context);
-      }
-    };
-
-    PartialJoinFunction<OM, M, RM> parJoin2 = new PartialJoinFunction<OM, M, RM>() {
-      @Override public RM apply(OM m1, M m) {
-        return joinWithContext.apply(m, m1);
-      }
-
-      @Override public void init(Config config, TaskContext context) {
-        // no duplicated init call to joinWithContext.init()
-      }
-    };
+    PartialJoinFunction<M, OM, RM> parJoin1 = (M m1, OM om) -> joinFn.apply(m1, om);
+    PartialJoinFunction<OM, M, RM> parJoin2 = (OM m1, M m) -> joinFn.apply(m, m1);
 
     // TODO: need to add default store functions for the two partial join functions
 

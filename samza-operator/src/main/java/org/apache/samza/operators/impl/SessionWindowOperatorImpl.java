@@ -43,10 +43,11 @@ class SessionWindowOperatorImpl<M extends MessageEnvelope, RK, WS extends Window
     extends OperatorImpl<M, RM> {
 
   private final WindowOperatorSpec<M, RK, WS, RM> windowSpec;
-  private StateStoreImpl<M, RK, WS> stateStore = null;
+  private final StateStoreImpl<M, RK, WS> stateStore;
 
   SessionWindowOperatorImpl(WindowOperatorSpec<M, RK, WS, RM> windowSpec, MessageStreamImpl<M> source, Config config, TaskContext context) {
     this.windowSpec = windowSpec;
+    this.stateStore = new StateStoreImpl<>(windowSpec.getStoreFns(), windowSpec.getStoreName(source), context);
   }
 
   @Override

@@ -31,7 +31,7 @@ import java.util.Collection;
  * @param <OM>  type of the transformed {@link org.apache.samza.operators.data.MessageEnvelope}s
  */
 @InterfaceStability.Unstable
-public interface FlatMapFunction<M extends MessageEnvelope, OM extends MessageEnvelope> extends ContextInitFunction {
+public interface FlatMapFunction<M extends MessageEnvelope, OM extends MessageEnvelope> {
 
   /**
    * Transforms the provided {@link org.apache.samza.operators.data.MessageEnvelope} into a collection of 0 or more {@link org.apache.samza.operators.data.MessageEnvelope}s.

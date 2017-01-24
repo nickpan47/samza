@@ -30,15 +30,49 @@ import java.util.Map;
  */
 @InterfaceStability.Unstable
 public interface MessageStreams {
+  /**
+   * Method to add an input {@link MessageStream} from the system
+   *
+   * @param streamSpec  the {@link StreamSpec} describing the physical characteristics of the input {@link MessageStream}
+   * @param keySerde  the serde used to serialize/deserialize the message key from the input {@link MessageStream}
+   * @param msgSerde  the serde used to serialize/deserialize the message body from the input {@link MessageStream}
+   * @param <K>  the type of key in the input message
+   * @param <V>  the type of message in the input message
+   * @param <M>  the type of {@link MessageEnvelope} in the input {@link MessageStream}
+   * @return   the input {@link MessageStream} object
+   */
+  <K, V, M extends MessageEnvelope<K, V>> MessageStream<M> createInStream(StreamSpec streamSpec, Serde<K> keySerde, Serde<V> msgSerde);
 
-  <K, V, M extends MessageEnvelope<K ,V>> MessageStream<M> createInStream(StreamSpec streamSpec, Serde<K> keySerde, Serde<V> msgSerde);
+  /**
+   * Method to add an output {@link MessageStream} from the system
+   *
+   * @param streamSpec  the {@link StreamSpec} describing the physical characteristics of the output {@link MessageStream}
+   * @param keySerde  the serde used to serialize/deserialize the message key from the output {@link MessageStream}
+   * @param msgSerde  the serde used to serialize/deserialize the message body from the output {@link MessageStream}
+   * @param <K>  the type of key in the output message
+   * @param <V>  the type of message in the output message
+   * @param <M>  the type of {@link MessageEnvelope} in the output {@link MessageStream}
+   * @return   the output {@link MessageStream} object
+   */
   <K, V, M extends MessageEnvelope<K ,V>> MessageStream<M> createOutStream(StreamSpec streamSpec, Serde<K> keySerde, Serde<V> msgSerde);
+
+  /**
+   * Method to add an intermediate {@link MessageStream} from the system
+   *
+   * @param streamSpec  the {@link StreamSpec} describing the physical characteristics of the intermediate {@link MessageStream}
+   * @param keySerde  the serde used to serialize/deserialize the message key from the intermediate {@link MessageStream}
+   * @param msgSerde  the serde used to serialize/deserialize the message body from the intermediate {@link MessageStream}
+   * @param <K>  the type of key in the intermediate message
+   * @param <V>  the type of message in the intermediate message
+   * @param <M>  the type of {@link MessageEnvelope} in the intermediate {@link MessageStream}
+   * @return   the intermediate {@link MessageStream} object
+   */
   <K, V, M extends MessageEnvelope<K, V>> MessageStream<M> createIntStream(StreamSpec streamSpec, Serde<K> keySerde, Serde<V> msgSerde);
 
   /**
    * Place holders for possible access methods needed to get the streams defined in the {@link MessageStreams}
    */
-   Map<StreamSpec, MessageStream> getInStreams();
-   Map<StreamSpec, MessageStream> getOutStreams();
-   Map<StreamSpec, MessageStream> getIntStreams();
+  Map<StreamSpec, MessageStream> getInStreams();
+  Map<StreamSpec, MessageStream> getOutStreams();
+  Map<StreamSpec, MessageStream> getIntStreams();
 }

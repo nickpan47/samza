@@ -18,7 +18,6 @@
  */
 package org.apache.samza.operators.spec;
 
-import org.apache.samza.config.Config;
 import org.apache.samza.operators.MessageStreamImpl;
 import org.apache.samza.operators.MessageStreamsImpl;
 import org.apache.samza.operators.TestMessageEnvelope;
@@ -30,7 +29,6 @@ import org.apache.samza.operators.functions.SinkFunction;
 import org.apache.samza.operators.windows.*;
 import org.apache.samza.storage.kv.Entry;
 import org.apache.samza.task.MessageCollector;
-import org.apache.samza.task.TaskContext;
 import org.apache.samza.task.TaskCoordinator;
 import org.junit.Test;
 
@@ -47,17 +45,9 @@ import static org.mockito.Mockito.when;
 public class TestOperatorSpecs {
   @Test
   public void testGetStreamOperator() {
-    FlatMapFunction<MessageEnvelope, TestMessageEnvelope> transformFn = new FlatMapFunction<MessageEnvelope, TestMessageEnvelope>() {
-      @Override public Collection<TestMessageEnvelope> apply(MessageEnvelope m) {
-        return new ArrayList<TestMessageEnvelope>() { {
+    FlatMapFunction<MessageEnvelope, TestMessageEnvelope> transformFn = m -> new ArrayList<TestMessageEnvelope>() { {
           this.add(new TestMessageEnvelope(m.getKey().toString(), m.getMessage().toString(), 12345L));
         } };
-      }
-
-      @Override public void init(Config config, TaskContext context) {
-
-      }
-    };
     MessageStreamImpl<TestMessageEnvelope> mockOutput = mock(MessageStreamImpl.class);
     StreamOperatorSpec<MessageEnvelope, TestMessageEnvelope> strmOp = OperatorSpecs.createStreamOperator(transformFn, mockOutput,
         OperatorSpec.OpCode.FLAT_MAP, 0);
@@ -67,16 +57,8 @@ public class TestOperatorSpecs {
 
   @Test
   public void testGetSinkOperator() {
-    SinkFunction<TestMessageEnvelope> sinkFn = new SinkFunction<TestMessageEnvelope>() {
-      @Override public void apply(TestMessageEnvelope message, MessageCollector messageCollector,
-          TaskCoordinator taskCoordinator) {
-
-      }
-
-      @Override public void init(Config config, TaskContext context) {
-
-      }
-    };
+    SinkFunction<TestMessageEnvelope> sinkFn = (TestMessageEnvelope message, MessageCollector messageCollector,
+          TaskCoordinator taskCoordinator) -> { };
     SinkOperatorSpec<TestMessageEnvelope> sinkOp = OperatorSpecs.createSinkOperator(sinkFn, OperatorSpec.OpCode.SINK, 0);
     assertEquals(sinkOp.getSinkFn(), sinkFn);
     assertTrue(sinkOp.getOutputStream() == null);
@@ -106,16 +88,8 @@ public class TestOperatorSpecs {
   @Test
   public void testGetPartialJoinOperator() {
     PartialJoinFunction<MessageEnvelope<Object, ?>, MessageEnvelope<Object, ?>, TestMessageEnvelope> merger =
-        new PartialJoinFunction<MessageEnvelope<Object, ?>, MessageEnvelope<Object, ?>, TestMessageEnvelope>() {
-          @Override public TestMessageEnvelope apply(MessageEnvelope<Object, ?> m1,
-              MessageEnvelope<Object, ?> m2) {
-            return new TestMessageEnvelope(m1.getKey().toString(), m2.getMessage().toString(), System.nanoTime());
-          }
-
-          @Override public void init(Config config, TaskContext context) {
-
-          }
-        };
+        (MessageEnvelope<Object, ?> m1, MessageEnvelope<Object, ?> m2) ->
+            new TestMessageEnvelope(m1.getKey().toString(), m2.getMessage().toString(), System.nanoTime());
 
     MessageStreamsImpl mockGraph = mock(MessageStreamsImpl.class);
     MessageStreamImpl<TestMessageEnvelope> joinOutput = TestMessageStreamImplUtil

@@ -25,7 +25,6 @@ import org.apache.samza.operators.windows.Window;
 import org.apache.samza.operators.windows.WindowOutput;
 
 import java.util.Collection;
-import java.util.function.BiFunction;
 import java.util.function.Function;
 
 
@@ -47,8 +46,6 @@ public interface MessageStream<M extends MessageEnvelope> {
    * @param <TM>  the type of {@link MessageEnvelope}s in the transformed {@link MessageStream}
    * @return the transformed {@link MessageStream}
    */
-  <TM extends MessageEnvelope> MessageStream<TM> map(Function<M, TM> mapFn);
-
   <TM extends MessageEnvelope> MessageStream<TM> map(MapFunction<M, TM> mapFn);
 
   /**
@@ -59,8 +56,6 @@ public interface MessageStream<M extends MessageEnvelope> {
    * @param <TM>  the type of {@link MessageEnvelope}s in the transformed {@link MessageStream}
    * @return the transformed {@link MessageStream}
    */
-  <TM extends MessageEnvelope> MessageStream<TM> flatMap(Function<M, Collection<TM>> flatMapFn);
-
   <TM extends MessageEnvelope> MessageStream<TM> flatMap(FlatMapFunction<M, TM> flatMapFn);
 
   /**
@@ -73,8 +68,6 @@ public interface MessageStream<M extends MessageEnvelope> {
    * @param filterFn  the predicate to filter {@link MessageEnvelope}s from this {@link MessageStream}
    * @return the transformed {@link MessageStream}
    */
-  MessageStream<M> filter(Function<M, Boolean> filterFn);
-
   MessageStream<M> filter(FilterFunction<M> filterFn);
 
   /**
@@ -86,12 +79,46 @@ public interface MessageStream<M extends MessageEnvelope> {
    */
   void sink(SinkFunction<M> sinkFn);
 
+  /**
+   * Allows sending {@link MessageEnvelope}s in this {@link MessageStream} to an output {@link MessageStream}.
+   *
+   * NOTE: the {@code stream} has to be a {@link MessageStream}.
+   *
+   * @param stream  the output {@link MessageStream}
+   */
   void sendTo(MessageStream<M> stream);
 
+  /**
+   * Allows sending {@link MessageEnvelope}s in this {@link MessageStream} to an output {@link MessageStream} w/ a partition function.
+   *
+   * NOTE: the output has to be a {@link MessageStream}.
+   *
+   * @param stream  the output {@link MessageStream}
+   * @param parKeyFunction  the partition to extract partition key from messages in {@code stream}
+   * @param <K>  the type of partition key
+   */
   <K> void sendTo(MessageStream<M> stream, Function<M, K> parKeyFunction);
 
+  /**
+   * Allows sending {@link MessageEnvelope}s to an intermediate {@link MessageStream}.
+   *
+   * NOTE: the {@code stream} has to be a {@link MessageStream}.
+   *
+   * @param stream  the intermediate {@link MessageStream} to send the message to
+   * @return  the intermediate {@link MessageStream} to consume the messages sent
+   */
   MessageStream<M> sendThrough(MessageStream<M> stream);
 
+  /**
+   * Allows sending {@link MessageEnvelope}s to an intermediate {@link MessageStream}.
+   *
+   * NOTE: the {@code stream} has to be a {@link MessageStream}.
+   *
+   * @param stream  the intermediate {@link MessageStream}
+   * @param parKeyFunction  the partition to extract partition key from messages in {@code stream}
+   * @param <K>  the type of partition key
+   * @return  the intermediate {@link MessageStream} to consume the messages sent
+   */
   <K> MessageStream<M> sendThrough(MessageStream<M> stream, Function<M, K> parKeyFunction);
 
   /**
@@ -110,7 +137,7 @@ public interface MessageStream<M extends MessageEnvelope> {
   <WK, WV, WM extends WindowOutput<WK, WV>> MessageStream<WM> window(Window<M, WK, WV, WM> window);
 
   /**
-   * Joins this {@link MessageStream} with another {@link MessageStream} using the provided pairwise {@link BiFunction}.
+   * Joins this {@link MessageStream} with another {@link MessageStream} using the provided pairwise {@link JoinFunction}.
    * <p>
    * We currently only support 2-way joins.
    *
@@ -121,9 +148,6 @@ public interface MessageStream<M extends MessageEnvelope> {
    * @param <RM>  the type of {@link MessageEnvelope}s in the transformed {@link MessageStream}
    * @return  the joined {@link MessageStream}
    */
-  <K, OM extends MessageEnvelope<K, ?>, RM extends MessageEnvelope> MessageStream<RM> join(MessageStream<OM> otherStream,
-      BiFunction<M, OM, RM> joinFn);
-
   <K, OM extends MessageEnvelope<K, ?>, RM extends MessageEnvelope> MessageStream<RM> join(MessageStream<OM> otherStream,
       JoinFunction<M, OM, RM> joinFn);
 
@@ -138,9 +162,9 @@ public interface MessageStream<M extends MessageEnvelope> {
   MessageStream<M> merge(Collection<MessageStream<M>> otherStreams);
 
   /**
-   * TODO: Place holder for explicit public stream creation API. It can be used by user to explicitly creates "materialized topics".
-   *
    * Send the input message to an output {@link org.apache.samza.system.SystemStream} and consume it as input {@link MessageStream} again.
+   *
+   * Note: this is an transform function only used in logic DAG. In a physical DAG, this is either translated to a NOOP function, or a {@code MessageStream#sendThrough} function.
    *
    * @param parKeyExtractor  a {@link Function} that extract the partition key from {@link MessageEnvelope} in this {@link MessageStream}
    * @return  a {@link MessageStream} object after the re-partition

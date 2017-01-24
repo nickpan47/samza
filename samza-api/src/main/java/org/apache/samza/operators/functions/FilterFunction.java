@@ -27,7 +27,7 @@ import org.apache.samza.operators.data.MessageEnvelope;
  * @param <M>  type of the input {@link org.apache.samza.operators.data.MessageEnvelope}
  */
 @InterfaceStability.Unstable
-public interface FilterFunction<M extends MessageEnvelope> extends ContextInitFunction {
+public interface FilterFunction<M extends MessageEnvelope> {
 
   /**
    * Returns a boolean indicating whether this {@link org.apache.samza.operators.data.MessageEnvelope} should be retained or filtered out.

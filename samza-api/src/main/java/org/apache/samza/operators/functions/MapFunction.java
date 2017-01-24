@@ -28,7 +28,7 @@ import org.apache.samza.operators.data.MessageEnvelope;
  * @param <OM>  type of the transformed {@link org.apache.samza.operators.data.MessageEnvelope}
  */
 @InterfaceStability.Unstable
-public interface MapFunction<M extends MessageEnvelope, OM extends MessageEnvelope> extends ContextInitFunction {
+public interface MapFunction<M extends MessageEnvelope, OM extends MessageEnvelope> {
 
   /**
    * Transforms the provided {@link org.apache.samza.operators.data.MessageEnvelope} into another {@link org.apache.samza.operators.data.MessageEnvelope}
