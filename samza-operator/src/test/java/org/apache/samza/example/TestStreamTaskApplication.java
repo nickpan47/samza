@@ -32,7 +32,7 @@ import org.apache.samza.util.CommandLine;
 /**
  * Example {@link StreamTaskApplication} code to test the API methods
  */
-public class TestStreamTaskApplication extends StreamTaskApplication {
+public class TestStreamTaskApplication implements StreamTaskApplication {
   private final SystemStream ss = new SystemStream("outputSystem", "mytopic-1");
 
   @Override
@@ -45,7 +45,6 @@ public class TestStreamTaskApplication extends StreamTaskApplication {
     CommandLine cmdLine = new CommandLine();
     Config config = cmdLine.loadConfig(cmdLine.parser().parse(args));
     ExecutionEnvironment standaloneEnv = ExecutionEnvironment.getLocalEnvironment(config);
-    TestStreamTaskApplication runnableApp = new TestStreamTaskApplication();
-    runnableApp.run(standaloneEnv, config);
+    standaloneEnv.runTask(new TestStreamTaskApplication(), config);
   }
 }

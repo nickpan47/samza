@@ -18,6 +18,7 @@
  */
 package org.apache.samza.operators;
 
+import org.apache.samza.application.StreamGraphFactory;
 import org.apache.samza.config.Config;
 import org.apache.samza.operators.data.IncomingSystemMessageEnvelope;
 import org.apache.samza.operators.impl.OperatorGraph;
@@ -34,16 +35,16 @@ import java.util.Map;
  *
  *
  * An {@link StreamTask} implementation that receives {@link IncomingSystemMessageEnvelope}s and propagates them
- * through the user's stream transformations defined in {@link MessageStreamsImpl} using the
+ * through the user's stream transformations defined in {@link StreamGraphImpl} using the
  * {@link MessageStream} APIs.
  * <p>
  * This class brings all the operator API implementation components together and feeds the
  * {@link IncomingSystemMessageEnvelope}s into the transformation chains.
  * <p>
- * It accepts an instance of the user implemented DAG {@link MessageStreamsImpl} as input parameter of the constructor.
+ * It accepts an instance of the user implemented DAG {@link StreamGraphImpl} as input parameter of the constructor.
  * When its own {@link #init(Config, TaskContext)} method is called during startup, it creates a {@link MessageStreamImpl}
  * corresponding to each of its input {@link org.apache.samza.system.SystemStreamPartition}s. Each input {@link MessageStreamImpl}
- * will be corresponding to either an input stream or intermediate stream in {@link MessageStreamsImpl}.
+ * will be corresponding to either an input stream or intermediate stream in {@link StreamGraphImpl}.
  * <p>
  * Then, this task calls {@code org.apache.samza.operators.impl.OperatorGraph#init()} for each of the input
  * {@link MessageStreamImpl}. This instantiates the {@link org.apache.samza.operators.impl.OperatorImpl} DAG
@@ -62,18 +63,21 @@ public final class StreamOperatorTask implements StreamTask, InitableTask, Windo
    */
   private final OperatorGraph operatorGraph = new OperatorGraph();
 
-  private final MessageStreamsImpl streamGraph;
+  private final StreamGraphFactory streamTask;
 
-  public StreamOperatorTask(MessageStreamsImpl graph) {
-    this.streamGraph = graph;
+  public StreamOperatorTask(StreamGraphFactory task) {
+    this.streamTask = task;
   }
 
   @Override
   public final void init(Config config, TaskContext context) throws Exception {
+    // create the MessageStreamsImpl object and initialize app-specific logic DAG within the task
+    StreamGraphImpl streams = (StreamGraphImpl) this.streamTask.create(config);
+
     Map<SystemStream, MessageStreamImpl> inputBySystemStream = new HashMap<>();
     context.getSystemStreamPartitions().forEach(ssp -> {
         if (!inputBySystemStream.containsKey(ssp.getSystemStream())) {
-          inputBySystemStream.putIfAbsent(ssp.getSystemStream(), this.streamGraph.getStreamByName(ssp.getSystemStream()));
+          inputBySystemStream.putIfAbsent(ssp.getSystemStream(), streams.getStreamByName(ssp.getSystemStream()));
         }
       });
 

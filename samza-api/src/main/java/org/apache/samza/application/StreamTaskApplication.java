@@ -20,7 +20,6 @@ package org.apache.samza.application;
 
 import org.apache.samza.annotation.InterfaceStability;
 import org.apache.samza.config.Config;
-import org.apache.samza.system.ExecutionEnvironment;
 import org.apache.samza.task.*;
 
 
@@ -28,31 +27,17 @@ import org.apache.samza.task.*;
  * This class defines the base class for applications written in {@link org.apache.samza.task.StreamTask} API
  */
 @InterfaceStability.Unstable
-public abstract class StreamTaskApplication implements StreamTask, InitableTask, WindowableTask, ClosableTask {
+public interface StreamTaskApplication extends StreamTask, InitableTask, WindowableTask, ClosableTask {
 
-  /**
-   * The default run method that runs the given {@link StreamTaskApplication} in the specified environment and config
-   *
-   * @param env  the {@link ExecutionEnvironment} the application is running in
-   * @param config  the {@link Config} of the application
-   */
-  public final void run(ExecutionEnvironment env, Config config) {
-    try {
-      env.runTask(this, config);
-    } catch (Throwable t) {
-      throw new RuntimeException(t);
-    }
-  }
-
-  @Override public void close() throws Exception {
+  default void close() throws Exception {
 
   }
 
-  @Override public void init(Config config, TaskContext context) throws Exception {
+  default void init(Config config, TaskContext context) throws Exception {
 
   }
 
-  @Override public void window(MessageCollector collector, TaskCoordinator coordinator) throws Exception {
+  default void window(MessageCollector collector, TaskCoordinator coordinator) throws Exception {
 
   }
 

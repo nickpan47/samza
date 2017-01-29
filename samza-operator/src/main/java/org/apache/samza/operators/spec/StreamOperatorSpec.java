@@ -18,9 +18,11 @@
  */
 package org.apache.samza.operators.spec;
 
+import org.apache.samza.config.Config;
 import org.apache.samza.operators.MessageStreamImpl;
 import org.apache.samza.operators.data.MessageEnvelope;
 import org.apache.samza.operators.functions.FlatMapFunction;
+import org.apache.samza.task.TaskContext;
 
 
 /**
@@ -67,5 +69,10 @@ public class StreamOperatorSpec<M extends MessageEnvelope, OM extends MessageEnv
 
   public int getOpId() {
     return this.opId;
+  }
+
+  @Override
+  public void init(Config config, TaskContext context) {
+    this.transformFn.init(config, context);
   }
 }

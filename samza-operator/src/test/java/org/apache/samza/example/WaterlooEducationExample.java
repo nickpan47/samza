@@ -18,26 +18,30 @@
  */
 package org.apache.samza.example;
 
-import org.apache.samza.application.StreamApplication;
+import org.apache.samza.application.StreamGraphFactory;
 import org.apache.samza.config.Config;
 import org.apache.samza.operators.MessageStream;
-import org.apache.samza.operators.MessageStreams;
+import org.apache.samza.operators.StreamGraph;
 import org.apache.samza.operators.StreamSpec;
 import org.apache.samza.operators.data.MessageEnvelope;
 import org.apache.samza.operators.functions.MapFunction;
 import org.apache.samza.operators.functions.SinkFunction;
 import org.apache.samza.serializers.StringSerde;
+import org.apache.samza.storage.kv.KeyValueStore;
 import org.apache.samza.system.ExecutionEnvironment;
 import org.apache.samza.system.OutgoingMessageEnvelope;
 import org.apache.samza.system.SystemStream;
 import org.apache.samza.task.MessageCollector;
+import org.apache.samza.task.TaskContext;
 import org.apache.samza.task.TaskCoordinator;
 import org.apache.samza.util.CommandLine;
+import sun.net.www.http.HttpClient;
 
+import java.net.URL;
 import java.util.*;
 
 
-public class WaterlooEducationExample extends StreamApplication {
+public class WaterlooEducationExample implements StreamGraphFactory {
 
   StreamSpec input1 = new StreamSpec() {
     @Override public SystemStream getSystemStream() {
@@ -184,9 +188,19 @@ public class WaterlooEducationExample extends StreamApplication {
       return this.getOutgoingMessage(p.id, p.memberStandardizedEducation);
     }
 
+    @Override public void init(Config config, TaskContext context) {
+
+    }
   }
 
   class StandardizeEducationMap implements MapFunction<Profile, Profile> {
+
+    private KeyValueStore<Integer, Profile> kvStore = null;
+    private Map<Integer, Profile> mapInTask = null;
+
+
+    StandardizeEducationMap() {
+    }
 
     private Integer readVoldemortSchoolTable(int profileId, Education education, Locale defaultLocale) {
       return 0;
@@ -220,19 +234,40 @@ public class WaterlooEducationExample extends StreamApplication {
             .add(toMemberEducationStandardizedValues(education, schoolId, stdDegree, stdFieldsOfStudy));
         this.metrics.incNumEducationsProcessed();
       }
+      // save to kv store and map
+      this.kvStore.put(p.id, p);
+      this.mapInTask.putIfAbsent(p.id, p);
       return p;
     }
 
+    @Override public void init(Config config, TaskContext context) {
+      this.kvStore = (KeyValueStore<Integer, Profile>) context.getStore("my-kvstore");
+      this.mapInTask = context.<Map<Integer, Profile>>getUserDefinedContext();
+    }
   }
 
   class EducationSinkFunction implements SinkFunction<SystemOutgoingMessageEnvelope> {
 
+    private HttpClient restliClient;
+
+    EducationSinkFunction() {
+
+    }
+
     @Override public void apply(SystemOutgoingMessageEnvelope message, MessageCollector messageCollector,
         TaskCoordinator taskCoordinator) {
       messageCollector.send(message.getEnvelope());
+      // this.restliClient.writeRequests(new MessageHeader(), null);
+    }
+
+    public void init(Config config, TaskContext context) {
+      this.restliClient = context.getSamzaContainerContext().<HttpClient>getUserDefinedContext();
     }
 
   }
+
+  // global resource for the whole JVM process of a Samza job
+  HttpClient restLiClient;
 
   /**
    * used by remote execution environment to launch the job in remote program. The remote program should follow the similar
@@ -241,19 +276,48 @@ public class WaterlooEducationExample extends StreamApplication {
    *   public static void main(String args[]) throws Exception {
    *     CommandLine cmdLine = new CommandLine();
    *     Config config = cmdLine.loadConfig(cmdLine.parser().parse(args));
-   *     ExecutionEnvironment remoteEnv = ExecutionEnvironment.getRemoteEnvironment(config);
-   *     UserMainExample runnableApp = new UserMainExample();
-   *     runnableApp.run(remoteEnv, config);
+   *     ExecutionEnvironment remoteEnv = ExecutionEnvironment.fromConfig(config);
+   *     remoteEnv.run(StreamApplication.fromConfig(config), config);
    *   }
    *
    */
-  @Override public void initGraph(MessageStreams graph, Config config) {
+  @Override public StreamGraph create(Config config) {
+    StreamGraph graph = StreamGraph.fromConfig(config);
     MessageStream<IncomingAvroMessageEnvelope> stream = graph.createInStream(input1, new StringSerde("UTF-8"), null);
-    stream.map(m -> this.genericRecordToSpecificRecord(new Profile(), m.getMessage())).
+    stream.map(m -> WaterlooEducationExample.this.genericRecordToSpecificRecord(new Profile(), m.getMessage())).
         filter(p -> !(p.educations == null || p.educations.isEmpty())).
         map(new StandardizeEducationMap()).
         map(new SerializedMap()).
         sink(new EducationSinkFunction());
+    graph.withInitialer(new ContextManager() {
+      TaskContext initTaskContext(config, context) {
+        map = new HashMap<>();
+        context.setUserDefinedContext(map);
+        return context;
+      }
+
+      void closeTaskContext(TaskContext context) {
+        ///
+      }
+
+//      SamzaContainerContext initContainerContext(config, context) {
+//        return context;
+//      }
+    });
+    return graph;
+  }
+
+  public void start(Config config) {
+    try {
+      // global resource for the whole JVM process of a Samza job
+      this.restLiClient = HttpClient.New(new URL("http", "localhost", 8000, "/"));
+    } catch (Exception e) {
+
+    }
+  }
+
+  public void stop() {
+    this.restLiClient.closeIdleConnection();
   }
 
   // standalone local program model
@@ -261,8 +325,7 @@ public class WaterlooEducationExample extends StreamApplication {
     CommandLine cmdLine = new CommandLine();
     Config config = cmdLine.loadConfig(cmdLine.parser().parse(args));
     ExecutionEnvironment standaloneEnv = ExecutionEnvironment.getLocalEnvironment(config);
-    WaterlooEducationExample runnableApp = new WaterlooEducationExample();
-    runnableApp.run(standaloneEnv, config);
+    standaloneEnv.run(new WaterlooEducationExample(), config);
   }
 
 }

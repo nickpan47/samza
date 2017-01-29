@@ -19,16 +19,18 @@
 package org.apache.samza.system;
 
 import org.apache.samza.annotation.InterfaceStability;
+import org.apache.samza.application.StreamGraphFactory;
 import org.apache.samza.config.Config;
-import org.apache.samza.operators.MessageStreams;
+import org.apache.samza.operators.StreamGraph;
 import org.apache.samza.task.StreamTask;
 
 
 /**
- * Interface to be implemented by physical execution engine to deploy the config and jobs to run the {@link org.apache.samza.operators.MessageStreams}
+ * Interface to be implemented by physical execution engine to deploy the config and jobs to run the {@link org.apache.samza.operators.StreamGraph}
  */
 @InterfaceStability.Unstable
 public interface ExecutionEnvironment {
+  StreamGraph createGraph();
 
   /**
    * Static method to load the local standalone environment
@@ -41,7 +43,7 @@ public interface ExecutionEnvironment {
   }
 
   /**
-   * Static method to load the non-standalone environment
+   * Static method to load the non-standalone environment.
    *
    * @param config  configuration passed in to initialize the Samza processes
    * @return  the configure-driven {@link ExecutionEnvironment} to run the user-defined stream applications
@@ -49,18 +51,11 @@ public interface ExecutionEnvironment {
   static ExecutionEnvironment fromConfig(Config config) { return null; }
 
   /**
-   * Helper interface method to allow users to instantiate the {@link MessageStreams} object
+   * Method to be invoked to deploy and run the actual Samza jobs to execute {@link org.apache.samza.operators.StreamGraph}
    *
-   * @return  an implementation of {@link MessageStreams}
+   * @param app  the user-defined operator DAG
    */
-  MessageStreams createGraph();
-
-  /**
-   * Method to be invoked to deploy and run the actual Samza jobs to execute {@link org.apache.samza.operators.MessageStreams}
-   *
-   * @param graph  the user-defined operator DAG
-   */
-  void run(MessageStreams graph);
+  void run(StreamGraphFactory app, Config config);
 
   /**
    * Method to run specific {@link StreamTask} class. This is for backward compatible support and for programmers who really

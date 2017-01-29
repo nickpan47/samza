@@ -20,42 +20,27 @@ package org.apache.samza.application;
 
 import org.apache.samza.annotation.InterfaceStability;
 import org.apache.samza.config.Config;
-import org.apache.samza.operators.MessageStreams;
-import org.apache.samza.system.ExecutionEnvironment;
 
 
 /**
- * This class defines the base class for applications written in {@link MessageStreams} API
+ * This class defines the base class for applications written in {@link org.apache.samza.operators.StreamGraph} API
  */
 @InterfaceStability.Unstable
-public abstract class StreamApplication {
+public interface StreamApplication {
 
-  /**
-   * Run method of the application. This method instantiate and initialize the {@link MessageStreams} and runs the
-   * {@link MessageStreams} in the supplied environment w/ the input {@link Config}
-   *
-   * @param env  the {@link ExecutionEnvironment} of the application
-   * @param config  the {@link Config} of the application
-   */
-  public final void run(ExecutionEnvironment env, Config config) {
-    try {
-      MessageStreams graph = env.createGraph();
-      initGraph(graph, config);
-      env.run(graph);
-    } catch (Throwable t) {
-      throw new RuntimeException(t);
-    }
-  }
+  default void initApp(Config config) {};
 
-  /**
-   * Users are required to implement this abstract method to initialize the processing logic of the application, in terms
-   * of a DAG of {@link org.apache.samza.operators.MessageStream}s and operators
-   *
-   * @param graph  the empty {@link MessageStreams} to be initialized
-   * @param config  the {@link Config} of the application
-   */
-  public abstract void initGraph(MessageStreams graph, Config config);
-
+//  default void initTask(Config config, TaskContext context) {};
+//
+//  /**
+//   * Users are required to implement this abstract method to initialize the processing logic of the application, in terms
+//   * of a DAG of {@link org.apache.samza.operators.MessageStream}s and operators
+//   *
+//   * @param graph  the empty {@link MessageStreams} to be initialized
+//   * @param config  the {@link Config} of the application
+//   */
+//  void initGraph(MessageStreams graph, Config config);
+//
   /**
    * This static method provides a way for remote execution environment (i.e. YARN and Mesos) to load the user-defined
    * {@link StreamApplication} class from configuration.
@@ -67,7 +52,7 @@ public abstract class StreamApplication {
    * @param config  the {@link Config} for the application
    * @return  an instance of {@link StreamApplication} according to the user defined sub-class of {@link StreamApplication}
    */
-  public static StreamApplication fromConfig(Config config) {
+  static StreamApplication fromConfig(Config config) {
     // TODO: placeholder. Should load the class name from config and instantiate the application instance
     // TODO: add config var example that set the user-implemented {@link StreamApplication} class
     return null;

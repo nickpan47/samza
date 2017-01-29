@@ -19,9 +19,10 @@
 package org.apache.samza.example;
 
 import org.apache.samza.application.StreamApplication;
+import org.apache.samza.application.StreamGraphFactory;
 import org.apache.samza.config.Config;
 import org.apache.samza.operators.MessageStream;
-import org.apache.samza.operators.MessageStreams;
+import org.apache.samza.operators.StreamGraph;
 import org.apache.samza.operators.StreamSpec;
 import org.apache.samza.operators.data.IncomingSystemMessageEnvelope;
 import org.apache.samza.operators.data.JsonIncomingSystemMessageEnvelope;
@@ -44,7 +45,7 @@ import java.util.Properties;
 /**
  * Example {@link StreamApplication} code to test the API methods
  */
-public class SiteSpeedExample extends StreamApplication {
+public class SiteSpeedExample implements StreamGraphFactory {
 
   StreamSpec input1 = new StreamSpec() {
     @Override public SystemStream getSystemStream() {
@@ -161,23 +162,25 @@ public class SiteSpeedExample extends StreamApplication {
    *     CommandLine cmdLine = new CommandLine();
    *     Config config = cmdLine.loadConfig(cmdLine.parser().parse(args));
    *     ExecutionEnvironment remoteEnv = ExecutionEnvironment.getRemoteEnvironment(config);
-   *     UserMainExample runnableApp = new UserMainExample();
-   *     runnableApp.run(remoteEnv, config);
+   *     remoteEnv.run(new UserMainExample(), config);
    *   }
    *
    */
-  @Override public void initGraph(MessageStreams graph, Config config) {
+  @Override public StreamGraph create(Config config) {
+    StreamGraph graph = StreamGraph.fromConfig(config);
     MessageStream<IncomingSystemMessageEnvelope> newSource = graph.createInStream(input1, null, null);
-    newSource.map(msg -> new RealUserMonitoringEventMessage(msg)).
+    MessageStream result = newSource.map(msg -> new RealUserMonitoringEventMessage(msg)).
         filter(this::filterFunction).map(msg -> new StandardizedUserMonitoringEventMessage(msg)).
         flatMap(msg -> getMessages(msg)).
-        sendThrough(graph.createIntStream(input2, new StringSerde("UTF-8"), new JsonSerde<MessageType>()),
-            this::getPartitionKey).
+//        sendThrough(graph.createIntStream(input2, new StringSerde("UTF-8"), new JsonSerde<MessageType>()),
+//            this::getPartitionKey).
+        repartitionedBy(this::getPartitionKey).
         map(msg -> new StandardizedUserMonitoringEventMessage(msg, (String) msg.getKey())).
         window(Windows.<StandardizedUserMonitoringEventMessage, String, SessionData>intoSessions(msg -> msg.getKey(),
             msg -> new SessionData(msg))).
         map(this::convertToStats).
         sendTo(graph.createOutStream(output, new StringSerde("UTF-8"), new JsonSerde<SessionStatistics>()));
+    return graph;
   }
 
   // standalone local program model
@@ -185,8 +188,7 @@ public class SiteSpeedExample extends StreamApplication {
     CommandLine cmdLine = new CommandLine();
     Config config = cmdLine.loadConfig(cmdLine.parser().parse(args));
     ExecutionEnvironment standaloneEnv = ExecutionEnvironment.getLocalEnvironment(config);
-    SiteSpeedExample runnableApp = new SiteSpeedExample();
-    runnableApp.run(standaloneEnv, config);
+    standaloneEnv.run(new SiteSpeedExample(), config);
   }
 
 }

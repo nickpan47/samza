@@ -18,19 +18,20 @@
  */
 package org.apache.samza.system;
 
+import org.apache.samza.application.StreamGraphFactory;
 import org.apache.samza.config.Config;
-import org.apache.samza.operators.MessageStreams;
-import org.apache.samza.operators.MessageStreamsImpl;
+import org.apache.samza.operators.StreamGraph;
+import org.apache.samza.operators.StreamGraphImpl;
 import org.apache.samza.task.StreamTask;
 
 
 public class SingleJobExecutionEnvironment implements ExecutionEnvironment {
 
-  @Override public MessageStreams createGraph() {
-    return new MessageStreamsImpl();
+  @Override public StreamGraph createGraph() {
+    return new StreamGraphImpl();
   }
 
-  @Override public void run(MessageStreams graph) {
+  @Override public void run(StreamGraphFactory app, Config config) {
     // TODO: add description of ProcessContext that is going to create a sub-DAG of the {@code graph}
     // TODO: actually instantiate the tasks and run the job, i.e.
     // 1. create all input/output/intermediate topics

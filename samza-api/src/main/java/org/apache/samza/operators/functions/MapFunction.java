@@ -19,7 +19,9 @@
 package org.apache.samza.operators.functions;
 
 import org.apache.samza.annotation.InterfaceStability;
+import org.apache.samza.config.Config;
 import org.apache.samza.operators.data.MessageEnvelope;
+import org.apache.samza.task.TaskContext;
 
 
 /**
@@ -28,7 +30,7 @@ import org.apache.samza.operators.data.MessageEnvelope;
  * @param <OM>  type of the transformed {@link org.apache.samza.operators.data.MessageEnvelope}
  */
 @InterfaceStability.Unstable
-public interface MapFunction<M extends MessageEnvelope, OM extends MessageEnvelope> {
+public interface MapFunction<M extends MessageEnvelope, OM extends MessageEnvelope>  extends InitFunction, Closeable {
 
   /**
    * Transforms the provided {@link org.apache.samza.operators.data.MessageEnvelope} into another {@link org.apache.samza.operators.data.MessageEnvelope}
@@ -37,4 +39,7 @@ public interface MapFunction<M extends MessageEnvelope, OM extends MessageEnvelo
    */
   OM apply(M message);
 
+  default void init(Config config, TaskContext context) { }
+
+  default void close();
 }

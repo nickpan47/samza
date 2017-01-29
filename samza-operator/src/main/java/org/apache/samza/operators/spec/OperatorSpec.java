@@ -19,8 +19,10 @@
 package org.apache.samza.operators.spec;
 
 import org.apache.samza.annotation.InterfaceStability;
+import org.apache.samza.config.Config;
 import org.apache.samza.operators.MessageStreamImpl;
 import org.apache.samza.operators.data.MessageEnvelope;
+import org.apache.samza.task.TaskContext;
 
 
 /**
@@ -49,4 +51,5 @@ public interface OperatorSpec<OM extends MessageEnvelope> {
    */
   MessageStreamImpl<OM> getOutputStream();
 
+  default void init(Config config, TaskContext taskContext) { }
 }

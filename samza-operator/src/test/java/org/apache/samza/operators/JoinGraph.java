@@ -52,8 +52,8 @@ public class JoinGraph {
 
   MessageStream<JsonMessageEnvelope> joinOutput = null;
 
-  public MessageStreamsImpl createStreamGraph(ExecutionEnvironment runtimeEnv, Set<SystemStreamPartition> inputs) {
-    MessageStreamsImpl graph = (MessageStreamsImpl) runtimeEnv.createGraph();
+  public StreamGraphImpl createStreamGraph(ExecutionEnvironment runtimeEnv, Set<SystemStreamPartition> inputs) {
+    StreamGraphImpl graph = new StreamGraphImpl();
 
     for (SystemStreamPartition input : inputs) {
       MessageStream<JsonMessageEnvelope> newSource = graph.<Object, Object, IncomingSystemMessageEnvelope>createInStream(

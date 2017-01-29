@@ -20,7 +20,7 @@ package org.apache.samza.example;
 
 import org.apache.samza.config.Config;
 import org.apache.samza.operators.MessageStream;
-import org.apache.samza.operators.MessageStreams;
+import org.apache.samza.operators.StreamGraph;
 import org.apache.samza.operators.StreamSpec;
 import org.apache.samza.application.StreamApplication;
 import org.apache.samza.operators.data.IncomingSystemMessageEnvelope;
@@ -38,7 +38,7 @@ import java.util.List;
 import java.util.Properties;
 
 
-public class UMPExample extends StreamApplication {
+public class UMPExample implements StreamApplication {
 
   StreamSpec input1 = new StreamSpec() {
     @Override public SystemStream getSystemStream() {
@@ -110,7 +110,7 @@ public class UMPExample extends StreamApplication {
    *   }
    *
    */
-  @Override public void initGraph(MessageStreams graph, Config config) {
+  @Override public void initGraph(StreamGraph graph, Config config) {
     MessageStream<JsonMessageEnvelope> newSource = graph.<Object, Object, IncomingSystemMessageEnvelope>createInStream(
         input1, null, null).map(this::getInputMessage);
     newSource.join(graph.<Object, Object, IncomingSystemMessageEnvelope>createInStream(input2, null, null).map(this::getInputMessage), this::myJoinResult).
@@ -122,8 +122,7 @@ public class UMPExample extends StreamApplication {
     CommandLine cmdLine = new CommandLine();
     Config config = cmdLine.loadConfig(cmdLine.parser().parse(args));
     ExecutionEnvironment standaloneEnv = ExecutionEnvironment.getLocalEnvironment(config);
-    UMPExample runnableApp = new UMPExample();
-    runnableApp.run(standaloneEnv, config);
+    standaloneEnv.run(new UMPExample(), config);
   }
 
 }

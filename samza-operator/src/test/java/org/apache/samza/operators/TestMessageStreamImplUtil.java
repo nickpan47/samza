@@ -22,7 +22,7 @@ import org.apache.samza.operators.data.MessageEnvelope;
 
 
 public class TestMessageStreamImplUtil {
-  public static <M extends MessageEnvelope> MessageStreamImpl<M> getMessageStreamImpl(MessageStreamsImpl graph) {
+  public static <M extends MessageEnvelope> MessageStreamImpl<M> getMessageStreamImpl(StreamGraphImpl graph) {
     return new MessageStreamImpl<M>(graph);
   }
 }

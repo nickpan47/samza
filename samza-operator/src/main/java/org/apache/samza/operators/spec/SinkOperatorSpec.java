@@ -18,9 +18,11 @@
  */
 package org.apache.samza.operators.spec;
 
+import org.apache.samza.config.Config;
 import org.apache.samza.operators.MessageStreamImpl;
 import org.apache.samza.operators.data.MessageEnvelope;
 import org.apache.samza.operators.functions.SinkFunction;
+import org.apache.samza.task.TaskContext;
 
 
 /**
@@ -72,5 +74,9 @@ public class SinkOperatorSpec<M extends MessageEnvelope> implements OperatorSpec
 
   public int getOpId() {
     return this.opId;
+  }
+
+  @Override public void init(Config config, TaskContext context) {
+    this.sinkFn.init(config, context);
   }
 }

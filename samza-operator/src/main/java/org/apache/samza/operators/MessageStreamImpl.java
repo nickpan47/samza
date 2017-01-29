@@ -38,9 +38,9 @@ import java.util.function.Function;
  */
 public class MessageStreamImpl<M extends MessageEnvelope> implements MessageStream<M> {
   /**
-   * The {@link MessageStreamsImpl} object that contains this {@link MessageStreamImpl}
+   * The {@link StreamGraphImpl} object that contains this {@link MessageStreamImpl}
    */
-  private final MessageStreamsImpl graph;
+  private final StreamGraphImpl graph;
 
   /**
    * The set of operators that consume the {@link MessageEnvelope}s in this {@link MessageStream}
@@ -50,9 +50,9 @@ public class MessageStreamImpl<M extends MessageEnvelope> implements MessageStre
   /**
    * Default constructor
    *
-   * @param graph the {@link MessageStreamsImpl} object that this stream belongs to
+   * @param graph the {@link StreamGraphImpl} object that this stream belongs to
    */
-  MessageStreamImpl(MessageStreamsImpl graph) {
+  MessageStreamImpl(StreamGraphImpl graph) {
     this.graph = graph;
   }
 

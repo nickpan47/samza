@@ -51,7 +51,7 @@ public class OperatorGraph {
   private final Map<SystemStream, RootOperatorImpl> operatorGraph = new HashMap<>();
 
   /**
-   * Initialize the whole DAG of {@link OperatorImpl}s, based on the input {@link MessageStreamImpl} from the {@link org.apache.samza.operators.MessageStreams}.
+   * Initialize the whole DAG of {@link OperatorImpl}s, based on the input {@link MessageStreamImpl} from the {@link org.apache.samza.operators.StreamGraph}.
    * This method will traverse each input {@link org.apache.samza.operators.MessageStream} in the {@code inputStreams} and
    * instantiate the corresponding {@link OperatorImpl} chains that take the {@link org.apache.samza.operators.MessageStream} as input.
    *
@@ -117,6 +117,8 @@ public class OperatorGraph {
       if (operators.putIfAbsent(operatorSpec, operatorImpl) == null) {
         // this is the first time we've added the operatorImpl corresponding to the operatorSpec,
         // so traverse and initialize and register the rest of the DAG.
+        // initialize the corresponding operator function
+        operatorSpec.init(config, context);
         MessageStreamImpl outStream = operatorSpec.getOutputStream();
         Collection<OperatorSpec> registeredSpecs = outStream.getRegisteredOperatorSpecs();
         registeredSpecs.forEach(registeredSpec -> {

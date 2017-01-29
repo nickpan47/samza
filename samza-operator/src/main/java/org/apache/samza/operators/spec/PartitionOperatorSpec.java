@@ -28,7 +28,7 @@ import java.util.function.Function;
  * This operator spec should only exist in the logic graph. When a specific {@link org.apache.samza.system.ExecutionEnvironment}
  * translate the logic graph to a physical graph, this operator is either translated into a pass-through {@link StreamOperatorSpec},
  * or a physical {@link SinkOperatorSpec} and an intermediate {@link org.apache.samza.operators.MessageStreamImpl} needs
- * to be added to the {@link org.apache.samza.operators.MessageStreamsImpl}.
+ * to be added to the {@link org.apache.samza.operators.StreamGraphImpl}.
  */
 public class PartitionOperatorSpec<K, M extends MessageEnvelope> implements OperatorSpec<M> {
 

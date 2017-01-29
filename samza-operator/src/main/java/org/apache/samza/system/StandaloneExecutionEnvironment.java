@@ -19,9 +19,10 @@
 
 package org.apache.samza.system;
 
+import org.apache.samza.application.StreamGraphFactory;
 import org.apache.samza.config.Config;
-import org.apache.samza.operators.MessageStreams;
-import org.apache.samza.operators.MessageStreamsImpl;
+import org.apache.samza.operators.StreamGraph;
+import org.apache.samza.operators.StreamGraphImpl;
 import org.apache.samza.task.StreamTask;
 
 
@@ -30,15 +31,18 @@ import org.apache.samza.task.StreamTask;
  */
 public class StandaloneExecutionEnvironment implements ExecutionEnvironment {
 
-  @Override public MessageStreams createGraph() {
-    return new MessageStreamsImpl();
+  @Override public StreamGraph createGraph() {
+    return new StreamGraphImpl();
   }
 
-  @Override public void run(MessageStreams graph) {
-    // TODO: actually instantiate the tasks and run the job, i.e.
-    // 1. create all input/output/intermediate topics
-    // 2. create the configuration for StreamProcessor
-    // 3. start the StreamProcessor
+  @Override public void run(StreamGraphFactory app, Config config) {
+    // 1. get logic graph for optimization
+    StreamGraph logicGraph = app.create(config);
+    // 2. potential optimization....
+    // 3. create new instance of StreamGraphFactory that would generate the optimized graph
+    // 4. create all input/output/intermediate topics
+    // 5. create the configuration for StreamProcessor
+    // 6. start the StreamProcessor w/ optimized instance of StreamGraphFactory
   }
 
   @Override public void runTask(StreamTask streamTask, Config config) {

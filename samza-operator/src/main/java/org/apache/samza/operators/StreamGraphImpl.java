@@ -32,7 +32,7 @@ import java.util.Map;
 import java.util.function.Function;
 
 
-public class MessageStreamsImpl implements MessageStreams {
+public class StreamGraphImpl implements StreamGraph {
 
   /**
    * Unique identifier for each {@link org.apache.samza.operators.spec.OperatorSpec} added to transform the {@link MessageEnvelope}
@@ -49,9 +49,9 @@ public class MessageStreamsImpl implements MessageStreams {
      * Default constructor
      *
 
-     * @param graph the {@link org.apache.samza.operators.MessageStreamsImpl} object that this stream belongs to
+     * @param graph the {@link StreamGraphImpl} object that this stream belongs to
      */
-    SystemMessageStream(MessageStreamsImpl graph, StreamSpec streamSpec, Serde<K> keySerde, Serde<V> msgSerde) {
+    SystemMessageStream(StreamGraphImpl graph, StreamSpec streamSpec, Serde<K> keySerde, Serde<V> msgSerde) {
       super(graph);
       this.spec = streamSpec;
       this.keySerde = keySerde;
@@ -75,7 +75,7 @@ public class MessageStreamsImpl implements MessageStreams {
   }
 
   /**
-   * Maps keeping all {@link SystemStream}s that are input and output of operators in {@link MessageStreamsImpl}
+   * Maps keeping all {@link SystemStream}s that are input and output of operators in {@link StreamGraphImpl}
    */
   private final Map<SystemStream, SystemMessageStream> inStreams = new HashMap<>();
   private final Map<SystemStream, SystemMessageStream> outStreams = new HashMap<>();
@@ -203,4 +203,29 @@ public class MessageStreamsImpl implements MessageStreams {
     }
     return null;
   }
+
+//  public void init(Config config, TaskContext context) {
+//    // Assuming user-defined shared context is set in context
+//    // this is to traverse the graph to initialize all the operator functions
+//    Map<SystemStream, SystemMessageStream> inputStreams = new HashMap<>();
+//    inputStreams.putAll(this.inStreams);
+//    inputStreams.putAll(this.intStreams);
+//    Set<MessageStream> allStreams = new HashSet<>();
+//    inputStreams.forEach((sys, stream) -> {
+//      if(!allStreams.contains(stream)) {
+//        allStreams.add(stream);
+//        Collection<OperatorSpec> ops = stream.getRegisteredOperatorSpecs();
+//        ops.forEach(op -> initOperator(op, config, context, allStreams));
+//      }
+//    });
+//  }
+//
+//  private void initOperator(OperatorSpec op, Config config, TaskContext context, Set<MessageStream> allStreams) {
+//    op.init(config, context);
+//    if (!allStreams.contains(op.getOutputStream())) {
+//      allStreams.add(op.getOutputStream());
+//      Collection<OperatorSpec> ops = op.getOutputStream().getRegisteredOperatorSpecs();
+//      ops.forEach( nextOp -> initOperator(nextOp, config, context, allStreams));
+//    }
+//  }
 }

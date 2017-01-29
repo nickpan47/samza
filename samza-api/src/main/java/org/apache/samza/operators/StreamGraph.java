@@ -19,8 +19,10 @@
 package org.apache.samza.operators;
 
 import org.apache.samza.annotation.InterfaceStability;
+import org.apache.samza.config.Config;
 import org.apache.samza.operators.data.MessageEnvelope;
 import org.apache.samza.serializers.Serde;
+import org.apache.samza.system.ExecutionEnvironment;
 
 import java.util.Map;
 
@@ -29,7 +31,7 @@ import java.util.Map;
  * Job-level programming interface to create an operator DAG and run in various different runtime environments.
  */
 @InterfaceStability.Unstable
-public interface MessageStreams {
+public interface StreamGraph {
   /**
    * Method to add an input {@link MessageStream} from the system
    *
@@ -70,9 +72,13 @@ public interface MessageStreams {
   <K, V, M extends MessageEnvelope<K, V>> MessageStream<M> createIntStream(StreamSpec streamSpec, Serde<K> keySerde, Serde<V> msgSerde);
 
   /**
-   * Place holders for possible access methods needed to get the streams defined in the {@link MessageStreams}
+   * Place holders for possible access methods needed to get the streams defined in the {@link StreamGraph}
    */
   Map<StreamSpec, MessageStream> getInStreams();
   Map<StreamSpec, MessageStream> getOutStreams();
   Map<StreamSpec, MessageStream> getIntStreams();
+
+  static StreamGraph fromConfig(Config config) {
+    return ExecutionEnvironment.fromConfig(config).createGraph();
+  }
 }

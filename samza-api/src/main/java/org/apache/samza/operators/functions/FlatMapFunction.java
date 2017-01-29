@@ -19,7 +19,9 @@
 package org.apache.samza.operators.functions;
 
 import org.apache.samza.annotation.InterfaceStability;
+import org.apache.samza.config.Config;
 import org.apache.samza.operators.data.MessageEnvelope;
+import org.apache.samza.task.TaskContext;
 
 import java.util.Collection;
 
@@ -31,7 +33,7 @@ import java.util.Collection;
  * @param <OM>  type of the transformed {@link org.apache.samza.operators.data.MessageEnvelope}s
  */
 @InterfaceStability.Unstable
-public interface FlatMapFunction<M extends MessageEnvelope, OM extends MessageEnvelope> {
+public interface FlatMapFunction<M extends MessageEnvelope, OM extends MessageEnvelope>  extends InitFunction {
 
   /**
    * Transforms the provided {@link org.apache.samza.operators.data.MessageEnvelope} into a collection of 0 or more {@link org.apache.samza.operators.data.MessageEnvelope}s.
@@ -40,4 +42,5 @@ public interface FlatMapFunction<M extends MessageEnvelope, OM extends MessageEn
    */
   Collection<OM> apply(M message);
 
+  default void init(Config config, TaskContext context) { };
 }

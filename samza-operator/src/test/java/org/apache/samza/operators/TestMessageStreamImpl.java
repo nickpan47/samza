@@ -40,7 +40,7 @@ import static org.mockito.Mockito.*;
 
 public class TestMessageStreamImpl {
 
-  private MessageStreamsImpl mockGraph = mock(MessageStreamsImpl.class);
+  private StreamGraphImpl mockGraph = mock(StreamGraphImpl.class);
 
   @Test
   public void testMap() {

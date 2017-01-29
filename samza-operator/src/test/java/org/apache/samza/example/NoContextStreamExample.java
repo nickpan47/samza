@@ -19,9 +19,10 @@
 package org.apache.samza.example;
 
 import org.apache.samza.application.StreamApplication;
+import org.apache.samza.application.StreamGraphFactory;
 import org.apache.samza.config.Config;
 import org.apache.samza.operators.MessageStream;
-import org.apache.samza.operators.MessageStreams;
+import org.apache.samza.operators.StreamGraph;
 import org.apache.samza.operators.StreamSpec;
 import org.apache.samza.operators.data.IncomingSystemMessageEnvelope;
 import org.apache.samza.operators.data.JsonIncomingSystemMessageEnvelope;
@@ -41,7 +42,7 @@ import java.util.Properties;
 /**
  * Example {@link StreamApplication} code to test the API methods
  */
-public class NoContextStreamExample extends StreamApplication {
+public class NoContextStreamExample implements StreamGraphFactory {
 
   StreamSpec input1 = new StreamSpec() {
     @Override public SystemStream getSystemStream() {
@@ -118,12 +119,12 @@ public class NoContextStreamExample extends StreamApplication {
    *     CommandLine cmdLine = new CommandLine();
    *     Config config = cmdLine.loadConfig(cmdLine.parser().parse(args));
    *     ExecutionEnvironment remoteEnv = ExecutionEnvironment.fromConfig(config);  //TODO: Example config vars to indicate YARN
-   *     UserMainExample runnableApp = MessageStreamApplication.fromConfig(config);
-   *     runnableApp.run(remoteEnv, config);
+   *     remoteEnv.run(StreamApplication.fromConfig(config), config);
    *   }
    *
    */
-  @Override public void initGraph(MessageStreams graph, Config config) {
+  @Override public StreamGraph create(Config config) {
+    StreamGraph graph = StreamGraph.fromConfig(config);
     MessageStream<IncomingSystemMessageEnvelope> inputSource1 = graph.<Object, Object, IncomingSystemMessageEnvelope>createInStream(
         input1, null, null);
     MessageStream<IncomingSystemMessageEnvelope> inputSource2 = graph.<Object, Object, IncomingSystemMessageEnvelope>createInStream(
@@ -134,9 +135,10 @@ public class NoContextStreamExample extends StreamApplication {
         new StringSerde("UTF-8"), new JsonSerde<>());
 
     inputSource1.map(this::getInputMessage).
-        <String, JsonMessageEnvelope, JsonIncomingSystemMessageEnvelope<MessageType>>join(inputSource2.map(this::getInputMessage), this::myJoinResult).
-        sendThrough(intStream).
+        <String, JsonMessageEnvelope, JsonIncomingSystemMessageEnvelope<MessageType>>join(inputSource2.map(this::getInputMessage), this::myJoinResult, Duration.of()).
         sendTo(outStream);
+
+    return graph;
   }
 
   // standalone local program model
@@ -144,8 +146,7 @@ public class NoContextStreamExample extends StreamApplication {
     CommandLine cmdLine = new CommandLine();
     Config config = cmdLine.loadConfig(cmdLine.parser().parse(args));
     ExecutionEnvironment standaloneEnv = ExecutionEnvironment.getLocalEnvironment(config);
-    NoContextStreamExample runnableApp = new NoContextStreamExample();
-    runnableApp.run(standaloneEnv, config);
+    standaloneEnv.run(new NoContextStreamExample(), config);
   }
 
 }

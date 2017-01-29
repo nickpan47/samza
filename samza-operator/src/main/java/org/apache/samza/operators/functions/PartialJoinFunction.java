@@ -19,7 +19,9 @@
 package org.apache.samza.operators.functions;
 
 import org.apache.samza.annotation.InterfaceStability;
+import org.apache.samza.config.Config;
 import org.apache.samza.operators.data.MessageEnvelope;
+import org.apache.samza.task.TaskContext;
 
 
 /**
@@ -27,7 +29,7 @@ import org.apache.samza.operators.data.MessageEnvelope;
  * {@link org.apache.samza.operators.MessageStream}s and merge them into a single output joined message in the join output
  */
 @InterfaceStability.Unstable
-public interface PartialJoinFunction<M extends MessageEnvelope, OM extends MessageEnvelope, RM extends MessageEnvelope> {
+public interface PartialJoinFunction<M extends MessageEnvelope, OM extends MessageEnvelope, RM extends MessageEnvelope> extends InitFunction{
 
   /**
    * Method to perform join method on the two input messages
@@ -37,4 +39,6 @@ public interface PartialJoinFunction<M extends MessageEnvelope, OM extends Messa
    * @return  the joined message in the output stream
    */
   RM apply(M m1, OM om);
+
+  default void init(Config config, TaskContext context) { }
 }
