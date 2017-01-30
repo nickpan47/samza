@@ -54,4 +54,6 @@ public interface TaskContext {
    *
    */
   void setStartingOffset(SystemStreamPartition ssp, String offset);
+
+  default <T> T getUserDefinedContext() { return null; };
 }

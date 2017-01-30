@@ -19,23 +19,27 @@
 package org.apache.samza.operators.functions;
 
 import org.apache.samza.annotation.InterfaceStability;
+import org.apache.samza.config.Config;
 import org.apache.samza.operators.data.MessageEnvelope;
+import org.apache.samza.task.TaskContext;
 
 
 /**
- * A function that transforms a {@link MessageEnvelope} into another {@link MessageEnvelope}, possibly of a different type.
- * @param <M>  type of the input {@link MessageEnvelope}
- * @param <OM>  type of the transformed {@link MessageEnvelope}
+ * A function that transforms a {@link org.apache.samza.operators.data.MessageEnvelope} into another {@link org.apache.samza.operators.data.MessageEnvelope}, possibly of a different type.
+ * @param <M>  type of the input {@link org.apache.samza.operators.data.MessageEnvelope}
+ * @param <OM>  type of the transformed {@link org.apache.samza.operators.data.MessageEnvelope}
  */
 @InterfaceStability.Unstable
-@FunctionalInterface
-public interface MapFunction<M extends MessageEnvelope, OM extends MessageEnvelope> {
+public interface MapFunction<M extends MessageEnvelope, OM extends MessageEnvelope>  extends InitFunction, Closeable {
 
   /**
-   * Transforms the provided {@link MessageEnvelope} into another {@link MessageEnvelope}
-   * @param message  the {@link MessageEnvelope} to be transformed
-   * @return  the transformed {@link MessageEnvelope}
+   * Transforms the provided {@link org.apache.samza.operators.data.MessageEnvelope} into another {@link org.apache.samza.operators.data.MessageEnvelope}
+   * @param message  the {@link org.apache.samza.operators.data.MessageEnvelope} to be transformed
+   * @return  the transformed {@link org.apache.samza.operators.data.MessageEnvelope}
    */
   OM apply(M message);
 
+  default void init(Config config, TaskContext context) { }
+
+  default void close();
 }

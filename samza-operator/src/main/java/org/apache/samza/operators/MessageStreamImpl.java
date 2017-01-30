@@ -20,23 +20,15 @@
 package org.apache.samza.operators;
 
 import org.apache.samza.operators.data.MessageEnvelope;
-import org.apache.samza.operators.functions.FilterFunction;
-import org.apache.samza.operators.functions.FlatMapFunction;
-import org.apache.samza.operators.functions.JoinFunction;
-import org.apache.samza.operators.functions.MapFunction;
-import org.apache.samza.operators.functions.SinkFunction;
+import org.apache.samza.operators.functions.*;
 import org.apache.samza.operators.spec.OperatorSpec;
 import org.apache.samza.operators.spec.OperatorSpecs;
 import org.apache.samza.operators.windows.Window;
 import org.apache.samza.operators.windows.WindowPane;
 import org.apache.samza.operators.windows.internal.WindowInternal;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Set;
-import java.util.function.BiFunction;
+import java.util.*;
+import java.util.function.Function;
 
 
 /**
@@ -46,78 +38,126 @@ import java.util.function.BiFunction;
  * @param <M>  type of {@link MessageEnvelope}s in this {@link MessageStream}
  */
 public class MessageStreamImpl<M extends MessageEnvelope> implements MessageStream<M> {
+  /**
+   * The {@link StreamGraphImpl} object that contains this {@link MessageStreamImpl}
+   */
+  private final StreamGraphImpl graph;
 
   /**
    * The set of operators that consume the {@link MessageEnvelope}s in this {@link MessageStream}
    */
   private final Set<OperatorSpec> registeredOperatorSpecs = new HashSet<>();
 
-  @Override
-  public <OM extends MessageEnvelope> MessageStream<OM> map(MapFunction<M, OM> mapFn) {
-    OperatorSpec<OM> op = OperatorSpecs.<M, OM>createStreamOperatorSpec(m -> new ArrayList<OM>() { {
-        OM r = mapFn.apply(m);
-        if (r != null) {
-          this.add(r);
-        }
-      } });
+  /**
+   * Default constructor
+   *
+   * @param graph the {@link StreamGraphImpl} object that this stream belongs to
+   */
+  MessageStreamImpl(StreamGraphImpl graph) {
+    this.graph = graph;
+  }
+
+  @Override public <TM extends MessageEnvelope> MessageStream<TM> map(MapFunction<M, TM> mapFn) {
+    OperatorSpec<TM> op = OperatorSpecs.<M, TM>createStreamOperator(
+        message -> new ArrayList<TM>() {
+          {
+            TM r = mapFn.apply(message);
+            if (r != null) {
+              this.add(r);
+            }
+          }
+        },
+        new MessageStreamImpl<>(this.graph), OperatorSpec.OpCode.MAP, this.graph.getNextOpId());
     this.registeredOperatorSpecs.add(op);
     return op.getOutputStream();
   }
 
   @Override
-  public <OM extends MessageEnvelope> MessageStream<OM> flatMap(FlatMapFunction<M, OM> flatMapFn) {
-    OperatorSpec<OM> op = OperatorSpecs.createStreamOperatorSpec(flatMapFn);
+  public <TM extends MessageEnvelope> MessageStream<TM> flatMap(FlatMapFunction<M, TM> flatMapWithContext) {
+    OperatorSpec<TM> op = OperatorSpecs.<M, TM>createStreamOperator(flatMapWithContext, new MessageStreamImpl<>(this.graph),
+        OperatorSpec.OpCode.FLAT_MAP, this.graph.getNextOpId());
     this.registeredOperatorSpecs.add(op);
     return op.getOutputStream();
   }
 
-  @Override
-  public MessageStream<M> filter(FilterFunction<M> filterFn) {
-    OperatorSpec<M> op = OperatorSpecs.<M, M>createStreamOperatorSpec(t -> new ArrayList<M>() { {
-        if (filterFn.apply(t)) {
-          this.add(t);
-        }
-      } });
+  @Override public MessageStream<M> filter(FilterFunction<M> filterWithContext) {
+    OperatorSpec<M> op = OperatorSpecs.<M, M>createStreamOperator(
+        message -> new ArrayList<M>() {
+          {
+            if (filterWithContext.apply(message)) {
+              this.add(message);
+            }
+          }
+        },
+        new MessageStreamImpl<>(this.graph), OperatorSpec.OpCode.FILTER, this.graph.getNextOpId());
     this.registeredOperatorSpecs.add(op);
     return op.getOutputStream();
   }
 
   @Override
   public void sink(SinkFunction<M> sinkFn) {
-    this.registeredOperatorSpecs.add(OperatorSpecs.createSinkOperatorSpec(sinkFn));
+    this.registeredOperatorSpecs.add(OperatorSpecs.createSinkOperator(sinkFn, OperatorSpec.OpCode.SINK,
+        this.graph.getNextOpId()));
+  }
+
+  @Override public void sendTo(MessageStream<M> stream) {
+    this.sendTo(stream, null);
+  }
+
+  @Override public MessageStream<M> sendThrough(MessageStream<M> stream) {
+    this.sendTo(stream, null);
+    return stream;
+  }
+
+  @Override public <K> void sendTo(MessageStream<M> stream, Function<M, K> parKeyFunction) {
+    this.registeredOperatorSpecs.add(OperatorSpecs.createSinkOperator(this.graph.getSinkFunction(stream, parKeyFunction),
+        OperatorSpec.OpCode.SEND_TO, this.graph.getNextOpId()));
+  }
+
+  @Override public <K> MessageStream<M> sendThrough(MessageStream<M> stream, Function<M, K> parKeyFunction) {
+    this.sendTo(stream, parKeyFunction);
+    return stream;
   }
 
   @Override
   public <K, WV, WM extends WindowPane<K, WV>> MessageStream<WM> window(
       Window<M, K, WV, WM> window) {
-    OperatorSpec<WM> wndOp = OperatorSpecs.createWindowOperatorSpec((WindowInternal<MessageEnvelope, K, WV>) window);
+    OperatorSpec<WM> wndOp = OperatorSpecs.createWindowOperatorSpec((WindowInternal<MessageEnvelope, K, WV>) window,
+        new MessageStreamImpl<>(this.graph), this.graph.getNextOpId());
     this.registeredOperatorSpecs.add(wndOp);
     return wndOp.getOutputStream();
   }
 
-  @Override
-  public <K, JM extends MessageEnvelope<K, ?>, RM extends MessageEnvelope> MessageStream<RM> join(
-      MessageStream<JM> otherStream, JoinFunction<M, JM, RM> joinFn) {
-    MessageStreamImpl<RM> outputStream = new MessageStreamImpl<>();
+  @Override public <K, OM extends MessageEnvelope<K, ?>, RM extends MessageEnvelope> MessageStream<RM> join(
+      MessageStream<OM> otherStream, JoinFunction<M, OM, RM> joinFn) {
+    MessageStreamImpl<RM> outputStream = new MessageStreamImpl<>(this.graph);
 
-    BiFunction<M, JM, RM> parJoin1 = joinFn::apply;
-    BiFunction<JM, M, RM> parJoin2 = (m, t1) -> joinFn.apply(t1, m);
+    PartialJoinFunction<M, OM, RM> parJoin1 = (M m1, OM om) -> joinFn.apply(m1, om);
+    PartialJoinFunction<OM, M, RM> parJoin2 = (OM m1, M m) -> joinFn.apply(m, m1);
 
     // TODO: need to add default store functions for the two partial join functions
 
-    ((MessageStreamImpl<JM>) otherStream).registeredOperatorSpecs.add(OperatorSpecs.createPartialJoinOperatorSpec(parJoin2, outputStream));
-    this.registeredOperatorSpecs.add(OperatorSpecs.createPartialJoinOperatorSpec(parJoin1, outputStream));
+    ((MessageStreamImpl<OM>) otherStream).registeredOperatorSpecs.add(
+        OperatorSpecs.<OM, K, M, RM>createPartialJoinOperatorSpec(parJoin2, outputStream, this.graph.getNextOpId()));
+    this.registeredOperatorSpecs.add(OperatorSpecs.<M, K, OM, RM>createPartialJoinOperatorSpec(parJoin1, outputStream, this.graph.getNextOpId()));
     return outputStream;
   }
 
   @Override
   public MessageStream<M> merge(Collection<MessageStream<M>> otherStreams) {
-    MessageStreamImpl<M> outputStream = new MessageStreamImpl<>();
+    MessageStreamImpl<M> outputStream = new MessageStreamImpl<>(this.graph);
 
     otherStreams.add(this);
-    otherStreams.forEach(other ->
-        ((MessageStreamImpl<M>) other).registeredOperatorSpecs.add(OperatorSpecs.createMergeOperatorSpec(outputStream)));
+    otherStreams.forEach(other -> ((MessageStreamImpl<M>) other).registeredOperatorSpecs
+        .add(OperatorSpecs.createMergeOperator(outputStream, this.graph.getNextOpId())));
     return outputStream;
+  }
+
+  @Override
+  public <K> MessageStream<M> keyedBy(Function<M, K> parKeyExtractor) {
+    OperatorSpec<M> op = OperatorSpecs.createPartitionOperator(parKeyExtractor, new MessageStreamImpl<>(this.graph), this.graph.getNextOpId());
+    this.registeredOperatorSpecs.add(op);
+    return op.getOutputStream();
   }
 
   /**
@@ -129,4 +169,5 @@ public class MessageStreamImpl<M extends MessageEnvelope> implements MessageStre
   public Collection<OperatorSpec> getRegisteredOperatorSpecs() {
     return Collections.unmodifiableSet(this.registeredOperatorSpecs);
   }
+
 }

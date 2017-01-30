@@ -18,10 +18,11 @@
  */
 package org.apache.samza.operators.spec;
 
-import org.apache.samza.operators.data.MessageEnvelope;
+import org.apache.samza.config.Config;
 import org.apache.samza.operators.MessageStreamImpl;
-
-import java.util.function.BiFunction;
+import org.apache.samza.operators.data.MessageEnvelope;
+import org.apache.samza.operators.functions.PartialJoinFunction;
+import org.apache.samza.task.TaskContext;
 
 
 /**
@@ -43,13 +44,13 @@ public class PartialJoinOperatorSpec<M extends MessageEnvelope<K, ?>, K, JM exte
    * type {@code M}, joins with a stream of buffered {@link MessageEnvelope}s of type {@code JM} from another stream,
    * and generates a joined result {@link MessageEnvelope} of type {@code RM}.
    */
-  private final BiFunction<M, JM, RM> transformFn;
+  private final PartialJoinFunction<M, JM, RM> transformFn;
 
 
   /**
    * The unique ID for this operator.
    */
-  private final String operatorId;
+  private final int opId;
 
   /**
    * Default constructor for a {@link PartialJoinOperatorSpec}.
@@ -58,23 +59,30 @@ public class PartialJoinOperatorSpec<M extends MessageEnvelope<K, ?>, K, JM exte
    *                       w/ type {@code JM} of buffered {@link MessageEnvelope} from another stream
    * @param joinOutput  the output {@link MessageStreamImpl} of the join results
    */
-  PartialJoinOperatorSpec(BiFunction<M, JM, RM> partialJoinFn, MessageStreamImpl<RM> joinOutput, String operatorId) {
+  PartialJoinOperatorSpec(PartialJoinFunction<M, JM, RM> partialJoinFn, MessageStreamImpl joinOutput, int opId) {
     this.joinOutput = joinOutput;
     this.transformFn = partialJoinFn;
-    this.operatorId = operatorId;
+    this.opId = opId;
   }
 
   @Override
-  public String toString() {
-    return this.operatorId;
-  }
-
-  @Override
-  public MessageStreamImpl<RM> getOutputStream() {
+  public MessageStreamImpl getOutputStream() {
     return this.joinOutput;
   }
 
-  public BiFunction<M, JM, RM> getTransformFn() {
+  public PartialJoinFunction<M, JM, RM> getTransformFn() {
     return this.transformFn;
+  }
+
+  public OperatorSpec.OpCode getOpCode() {
+    return OpCode.JOIN;
+  }
+
+  public int getOpId() {
+    return this.opId;
+  }
+
+  @Override public void init(Config config, TaskContext context) {
+    this.transformFn.init(config, context);
   }
 }

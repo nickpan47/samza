@@ -16,47 +16,44 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-
 package org.apache.samza.operators.spec;
 
-import org.apache.samza.operators.MessageStream;
 import org.apache.samza.operators.MessageStreamImpl;
 import org.apache.samza.operators.data.MessageEnvelope;
-import org.apache.samza.operators.windows.WindowPane;
-import org.apache.samza.operators.windows.internal.WindowInternal;
 
-public class WindowOperatorSpec<M extends MessageEnvelope, K, WK, WV, WM extends WindowPane<WK, WV>> implements OperatorSpec<WM> {
+import java.util.function.Function;
 
-  private final WindowInternal window;
 
-  private final MessageStreamImpl<WM> outputStream;
+/**
+ * This operator spec should only exist in the logic graph. When a specific {@link org.apache.samza.system.ExecutionEnvironment}
+ * translate the logic graph to a physical graph, this operator is either translated into a pass-through {@link StreamOperatorSpec},
+ * or a physical {@link SinkOperatorSpec} and an intermediate {@link org.apache.samza.operators.MessageStreamImpl} needs
+ * to be added to the {@link org.apache.samza.operators.StreamGraphImpl}.
+ */
+public class PartitionOperatorSpec<K, M extends MessageEnvelope> implements OperatorSpec<M> {
 
   private final int opId;
 
+  private final MessageStreamImpl<M> outputStream;
 
-  /**
-   * Constructor for {@link WindowOperatorSpec}.
-   *
-   * @param windowFn  the window function
-   * @param opId  auto-generated unique ID of this operator
-   */
-  WindowOperatorSpec(WindowInternal window, MessageStreamImpl outputStream, int opId) {
-    this.outputStream = outputStream;
-    this.window = window;
+  private final Function<M, K> parKeyExtractor;
+
+  PartitionOperatorSpec(Function<M, K> parKeyExtractor, MessageStreamImpl<M> output, int opId) {
+    this.parKeyExtractor = parKeyExtractor;
+    this.outputStream = output;
     this.opId = opId;
   }
 
-  @Override
-  public MessageStreamImpl<WM> getOutputStream() {
+  @Override public MessageStreamImpl<M> getOutputStream() {
     return this.outputStream;
   }
 
-  public WindowInternal getWindow() {
-    return window;
+  public Function<M, K> getParKeyFunction() {
+    return this.parKeyExtractor;
   }
 
   public OpCode getOpCode() {
-    return OpCode.WINDOW;
+    return OpCode.KEYED_BY;
   }
 
   public int getOpId() {

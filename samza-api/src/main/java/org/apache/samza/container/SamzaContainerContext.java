@@ -31,6 +31,7 @@ public class SamzaContainerContext {
   public final int id;
   public final Config config;
   public final Collection<TaskName> taskNames;
+  public final Object userDefinedContext;
 
   /**
    * An immutable context object that can passed to tasks to give them information
@@ -39,12 +40,25 @@ public class SamzaContainerContext {
    * @param config The job configuration.
    * @param taskNames The set of taskName keys for which this container is responsible.
    */
+  public <T> SamzaContainerContext(
+      int id,
+      Config config,
+      Collection<TaskName> taskNames,
+      T userDefinedContext) {
+    this.id = id;
+    this.config = config;
+    this.taskNames = Collections.unmodifiableCollection(taskNames);
+    this.userDefinedContext = userDefinedContext;
+  }
+
   public SamzaContainerContext(
       int id,
       Config config,
       Collection<TaskName> taskNames) {
-    this.id = id;
-    this.config = config;
-    this.taskNames = Collections.unmodifiableCollection(taskNames);
+    this(id, config, taskNames, null);
+  }
+
+  public <T> T getUserDefinedContext() {
+    return (T) this.userDefinedContext;
   }
 }

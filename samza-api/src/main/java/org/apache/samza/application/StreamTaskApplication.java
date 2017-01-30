@@ -16,40 +16,29 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.samza.operators.spec;
+package org.apache.samza.application;
 
 import org.apache.samza.annotation.InterfaceStability;
 import org.apache.samza.config.Config;
-import org.apache.samza.operators.MessageStreamImpl;
-import org.apache.samza.operators.data.MessageEnvelope;
-import org.apache.samza.task.TaskContext;
+import org.apache.samza.task.*;
 
 
 /**
- * A stateless serializable stream operator specification that holds all the information required
- * to transform the input {@link MessageStreamImpl} and produce the output {@link MessageStreamImpl}.
+ * This class defines the base class for applications written in {@link org.apache.samza.task.StreamTask} API
  */
 @InterfaceStability.Unstable
-public interface OperatorSpec<OM extends MessageEnvelope> {
+public interface StreamTaskApplication extends StreamTask, InitableTask, WindowableTask, ClosableTask {
 
-  enum OpCode {
-    MAP,
-    FLAT_MAP,
-    FILTER,
-    SINK,
-    SEND_TO,
-    JOIN,
-    WINDOW,
-    MERGE,
-    KEYED_BY
+  default void close() throws Exception {
+
   }
 
+  default void init(Config config, TaskContext context) throws Exception {
 
-  /**
-   * Get the output stream containing transformed {@link MessageEnvelope} produced by this operator.
-   * @return  the output stream containing transformed {@link MessageEnvelope} produced by this operator.
-   */
-  MessageStreamImpl<OM> getOutputStream();
+  }
 
-  default void init(Config config, TaskContext taskContext) { }
+  default void window(MessageCollector collector, TaskCoordinator coordinator) throws Exception {
+
+  }
+
 }

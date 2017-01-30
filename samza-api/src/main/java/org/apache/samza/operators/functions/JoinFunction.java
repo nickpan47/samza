@@ -19,26 +19,28 @@
 package org.apache.samza.operators.functions;
 
 import org.apache.samza.annotation.InterfaceStability;
+import org.apache.samza.config.Config;
 import org.apache.samza.operators.data.MessageEnvelope;
+import org.apache.samza.task.TaskContext;
 
 
 /**
- * A function that joins {@link MessageEnvelope}s from two {@link org.apache.samza.operators.MessageStream}s and produces
- * a joined {@link MessageEnvelope}.
- * @param <M>  type of the input {@link MessageEnvelope}
- * @param <JM>  type of the {@link MessageEnvelope} to join with
- * @param <RM>  type of the joined {@link MessageEnvelope}
+ * A function that joins {@link org.apache.samza.operators.data.MessageEnvelope}s from two {@link org.apache.samza.operators.MessageStream}s and produces
+ * a joined {@link org.apache.samza.operators.data.MessageEnvelope}.
+ * @param <M>  type of the input {@link org.apache.samza.operators.data.MessageEnvelope}
+ * @param <JM>  type of the {@link org.apache.samza.operators.data.MessageEnvelope} to join with
+ * @param <RM>  type of the joined {@link org.apache.samza.operators.data.MessageEnvelope}
  */
 @InterfaceStability.Unstable
-@FunctionalInterface
-public interface JoinFunction<M extends MessageEnvelope, JM extends MessageEnvelope, RM extends MessageEnvelope> {
+public interface JoinFunction<M extends MessageEnvelope, JM extends MessageEnvelope, RM extends MessageEnvelope>  extends InitFunction {
 
   /**
-   * Join the provided {@link MessageEnvelope}s and produces the joined {@link MessageEnvelope}.
-   * @param message  the input {@link MessageEnvelope}
-   * @param otherMessage  the {@link MessageEnvelope} to join with
-   * @return  the joined {@link MessageEnvelope}
+   * Join the provided {@link org.apache.samza.operators.data.MessageEnvelope}s and produces the joined {@link org.apache.samza.operators.data.MessageEnvelope}.
+   * @param message  the input {@link org.apache.samza.operators.data.MessageEnvelope}
+   * @param otherMessage  the {@link org.apache.samza.operators.data.MessageEnvelope} to join with
+   * @return  the joined {@link org.apache.samza.operators.data.MessageEnvelope}
    */
   RM apply(M message, JM otherMessage);
 
+  default void init(Config config, TaskContext context) { }
 }

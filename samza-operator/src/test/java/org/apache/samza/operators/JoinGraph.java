@@ -20,20 +20,25 @@
 package org.apache.samza.operators;
 
 import org.apache.samza.operators.data.IncomingSystemMessageEnvelope;
-import org.apache.samza.operators.data.Offset;
 import org.apache.samza.operators.data.JsonIncomingSystemMessageEnvelope;
+import org.apache.samza.operators.data.Offset;
+import org.apache.samza.serializers.JsonSerde;
+import org.apache.samza.serializers.StringSerde;
+import org.apache.samza.system.ExecutionEnvironment;
+import org.apache.samza.system.SystemStream;
 import org.apache.samza.system.SystemStreamPartition;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
+import java.util.Properties;
+import java.util.Set;
 
 
 /**
  * Example implementation of unique key-based stream-stream join tasks
  *
  */
-public class JoinTask implements StreamOperatorTask {
+public class JoinGraph {
   class MessageType {
     String joinKey;
     List<String> joinFields = new ArrayList<>();
@@ -47,16 +52,38 @@ public class JoinTask implements StreamOperatorTask {
 
   MessageStream<JsonMessageEnvelope> joinOutput = null;
 
-  @Override
-  public void transform(Map<SystemStreamPartition, MessageStream<IncomingSystemMessageEnvelope>> messageStreams) {
-    messageStreams.values().forEach(messageStream -> {
-        MessageStream<JsonMessageEnvelope> newSource = messageStream.map(this::getInputMessage);
-        if (joinOutput == null) {
-          joinOutput = newSource;
-        } else {
-          joinOutput = joinOutput.join(newSource, (m1, m2) -> this.myJoinResult(m1, m2));
-        }
-      });
+  public StreamGraphImpl createStreamGraph(ExecutionEnvironment runtimeEnv, Set<SystemStreamPartition> inputs) {
+    StreamGraphImpl graph = new StreamGraphImpl();
+
+    for (SystemStreamPartition input : inputs) {
+      MessageStream<JsonMessageEnvelope> newSource = graph.<Object, Object, IncomingSystemMessageEnvelope>createInStream(
+          new StreamSpec() {
+            @Override public SystemStream getSystemStream() {
+              return input.getSystemStream();
+            }
+
+            @Override public Properties getProperties() {
+              return null;
+            }
+          }, null, null).map(this::getInputMessage);
+      if (joinOutput == null) {
+        joinOutput = newSource;
+      } else {
+        joinOutput = joinOutput.join(newSource, (m1, m2) -> this.myJoinResult(m1, m2));
+      }
+    }
+
+    joinOutput.sendTo(graph.createOutStream(new StreamSpec() {
+      @Override public SystemStream getSystemStream() {
+        return null;
+      }
+
+      @Override public Properties getProperties() {
+        return null;
+      }
+    }, new StringSerde("UTF-8"), new JsonSerde<>()));
+
+    return graph;
   }
 
   private JsonMessageEnvelope getInputMessage(IncomingSystemMessageEnvelope ism) {

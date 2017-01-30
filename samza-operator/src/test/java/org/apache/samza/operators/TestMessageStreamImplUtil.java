@@ -16,30 +16,13 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.samza.operators.impl;
+package org.apache.samza.operators;
 
-import org.apache.samza.config.Config;
 import org.apache.samza.operators.data.MessageEnvelope;
-import org.apache.samza.operators.functions.SinkFunction;
-import org.apache.samza.operators.spec.SinkOperatorSpec;
-import org.apache.samza.task.MessageCollector;
-import org.apache.samza.task.TaskContext;
-import org.apache.samza.task.TaskCoordinator;
 
 
-/**
- * Implementation for {@link SinkOperatorSpec}
- */
-class SinkOperatorImpl<M extends MessageEnvelope> extends OperatorImpl<M, MessageEnvelope> {
-
-  private final SinkFunction<M> sinkFn;
-
-  SinkOperatorImpl(SinkOperatorSpec<M> sinkOp, Config config, TaskContext context) {
-    this.sinkFn = sinkOp.getSinkFn();
-  }
-
-  @Override
-  public void onNext(M message, MessageCollector collector, TaskCoordinator coordinator) {
-    this.sinkFn.apply(message, collector, coordinator);
+public class TestMessageStreamImplUtil {
+  public static <M extends MessageEnvelope> MessageStreamImpl<M> getMessageStreamImpl(StreamGraphImpl graph) {
+    return new MessageStreamImpl<M>(graph);
   }
 }

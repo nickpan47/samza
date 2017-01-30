@@ -18,10 +18,8 @@
  */
 package org.apache.samza.operators.impl;
 
-import org.apache.samza.operators.MessageStream;
 import org.apache.samza.operators.data.MessageEnvelope;
 import org.apache.samza.task.MessageCollector;
-import org.apache.samza.task.TaskContext;
 import org.apache.samza.task.TaskCoordinator;
 
 import java.util.HashSet;
@@ -42,14 +40,6 @@ public abstract class OperatorImpl<M extends MessageEnvelope, RM extends Message
   void registerNextOperator(OperatorImpl<RM, ? extends MessageEnvelope> nextOperator) {
     nextOperators.add(nextOperator);
   }
-
-  /**
-   * Initialize the initial state for stateful operators.
-   *
-   * @param source  the source that this {@link OperatorImpl} operator is registered with
-   * @param context  the task context to initialize the operator implementation
-   */
-  public void init(MessageStream<M> source, TaskContext context) {}
 
   /**
    * Perform the transformation required for this operator and call the downstream operators.
@@ -74,4 +64,5 @@ public abstract class OperatorImpl<M extends MessageEnvelope, RM extends Message
   void propagateResult(RM outputMessage, MessageCollector collector, TaskCoordinator coordinator) {
     nextOperators.forEach(sub -> sub.onNext(outputMessage, collector, coordinator));
   }
+
 }

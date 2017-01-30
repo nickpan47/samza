@@ -19,16 +19,16 @@
 
 package org.apache.samza.operators.spec;
 
+import org.apache.samza.operators.MessageStreamImpl;
 import org.apache.samza.operators.data.MessageEnvelope;
 import org.apache.samza.operators.functions.FlatMapFunction;
+import org.apache.samza.operators.functions.PartialJoinFunction;
 import org.apache.samza.operators.functions.SinkFunction;
-import org.apache.samza.operators.MessageStreamImpl;
 import org.apache.samza.operators.windows.WindowPane;
 import org.apache.samza.operators.windows.internal.WindowInternal;
 
 import java.util.ArrayList;
-import java.util.UUID;
-import java.util.function.BiFunction;
+import java.util.function.Function;
 
 
 /**
@@ -38,22 +38,18 @@ public class OperatorSpecs {
 
   private OperatorSpecs() {}
 
-  private static String getOperatorId() {
-    // TODO: need to change the IDs to be a consistent, durable IDs that can be recovered across container and job restarts
-    return UUID.randomUUID().toString();
-  }
-
   /**
    * Creates a {@link StreamOperatorSpec}.
    *
    * @param transformFn  the transformation function
+   * @param output  the output {@link MessageStreamImpl} object
    * @param <M>  type of input {@link MessageEnvelope}
    * @param <OM>  type of output {@link MessageEnvelope}
    * @return  the {@link StreamOperatorSpec}
    */
-  public static <M extends MessageEnvelope, OM extends MessageEnvelope> StreamOperatorSpec<M, OM> createStreamOperatorSpec(
-      FlatMapFunction<M, OM> transformFn) {
-    return new StreamOperatorSpec<>(transformFn);
+  public static <M extends MessageEnvelope, OM extends MessageEnvelope> StreamOperatorSpec<M, OM> createStreamOperator(
+      FlatMapFunction<M, OM> transformFn, MessageStreamImpl<OM> output, OperatorSpec.OpCode opCode, int opId) {
+    return new StreamOperatorSpec<>(transformFn, output, opCode, opId);
   }
 
   /**
@@ -63,8 +59,8 @@ public class OperatorSpecs {
    * @param <M>  type of input {@link MessageEnvelope}
    * @return  the {@link SinkOperatorSpec}
    */
-  public static <M extends MessageEnvelope> SinkOperatorSpec<M> createSinkOperatorSpec(SinkFunction<M> sinkFn) {
-    return new SinkOperatorSpec<>(sinkFn);
+  public static <M extends MessageEnvelope> SinkOperatorSpec<M> createSinkOperator(SinkFunction<M> sinkFn, OperatorSpec.OpCode opCode, int opId) {
+    return new SinkOperatorSpec<>(sinkFn, opCode, opId);
   }
 
   /**
@@ -80,8 +76,9 @@ public class OperatorSpecs {
    * @return  the {@link WindowOperatorSpec}
    */
 
-  public static <M extends MessageEnvelope, K, WK, WV, WM extends WindowPane<WK, WV>> WindowOperatorSpec<M, K, WK, WV, WM> createWindowOperatorSpec(WindowInternal<M, K, WV> window) {
-    return new WindowOperatorSpec<>(window, OperatorSpecs.getOperatorId());
+  public static <M extends MessageEnvelope, K, WK, WV, WM extends WindowPane<WK, WV>> WindowOperatorSpec<M, K, WK, WV, WM> createWindowOperatorSpec(
+      WindowInternal<M, K, WV> window, MessageStreamImpl<WM> wndOutput, int opId) {
+    return new WindowOperatorSpec<>(window, wndOutput, opId);
   }
 
   /**
@@ -96,8 +93,8 @@ public class OperatorSpecs {
    * @return  the {@link PartialJoinOperatorSpec}
    */
   public static <M extends MessageEnvelope<K, ?>, K, JM extends MessageEnvelope<K, ?>, OM extends MessageEnvelope> PartialJoinOperatorSpec<M, K, JM, OM> createPartialJoinOperatorSpec(
-      BiFunction<M, JM, OM> partialJoinFn, MessageStreamImpl<OM> joinOutput) {
-    return new PartialJoinOperatorSpec<>(partialJoinFn, joinOutput, OperatorSpecs.getOperatorId());
+      PartialJoinFunction<M, JM, OM> partialJoinFn, MessageStreamImpl<OM> joinOutput, int opId) {
+    return new PartialJoinOperatorSpec<>(partialJoinFn, joinOutput, opId);
   }
 
   /**
@@ -107,11 +104,20 @@ public class OperatorSpecs {
    * @param <M>  the type of input {@link MessageEnvelope}
    * @return  the {@link StreamOperatorSpec} for the merge
    */
-  public static <M extends MessageEnvelope> StreamOperatorSpec<M, M> createMergeOperatorSpec(MessageStreamImpl<M> mergeOutput) {
-    return new StreamOperatorSpec<M, M>(t ->
-      new ArrayList<M>() { {
-          this.add(t);
-        } },
-      mergeOutput);
+  public static <M extends MessageEnvelope> StreamOperatorSpec<M, M> createMergeOperator(MessageStreamImpl<M> mergeOutput, int opId) {
+    return new StreamOperatorSpec<M, M>(message ->
+        new ArrayList<M>() {
+          {
+            this.add(message);
+          }
+        },
+        mergeOutput, OperatorSpec.OpCode.MERGE, opId);
+  }
+
+  /**
+   * Creates a {@link PartitionOperatorSpec} with a key extractor function.
+   */
+  public static <K, M extends MessageEnvelope> PartitionOperatorSpec<K, M> createPartitionOperator(Function<M, K> parKeyExtractor, MessageStreamImpl<M> output, int opId) {
+    return new PartitionOperatorSpec<K, M>(parKeyExtractor, output, opId);
   }
 }

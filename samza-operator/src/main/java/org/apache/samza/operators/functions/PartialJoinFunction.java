@@ -21,28 +21,24 @@ package org.apache.samza.operators.functions;
 import org.apache.samza.annotation.InterfaceStability;
 import org.apache.samza.config.Config;
 import org.apache.samza.operators.data.MessageEnvelope;
-import org.apache.samza.task.MessageCollector;
 import org.apache.samza.task.TaskContext;
-import org.apache.samza.task.TaskCoordinator;
 
 
 /**
- * A function that allows sending a {@link MessageEnvelope} to an output system.
- * @param <M>  type of the input {@link MessageEnvelope}
+ * This defines the interface function a two-way join functions that takes input messages from two input
+ * {@link org.apache.samza.operators.MessageStream}s and merge them into a single output joined message in the join output
  */
 @InterfaceStability.Unstable
-public interface SinkFunction<M extends MessageEnvelope>  extends InitFunction {
+public interface PartialJoinFunction<M extends MessageEnvelope, OM extends MessageEnvelope, RM extends MessageEnvelope> extends InitFunction{
 
   /**
-   * Allows sending the provided {@link MessageEnvelope} to an output {@link org.apache.samza.system.SystemStream} using
-   * the provided {@link MessageCollector}. Also provides access to the {@link TaskCoordinator} to request commits
-   * or shut the container down.
+   * Method to perform join method on the two input messages
    *
-   * @param message  the {@link MessageEnvelope} to be sent to an output {@link org.apache.samza.system.SystemStream}
-   * @param messageCollector  the {@link MessageCollector} to use to send the {@link MessageEnvelope}
-   * @param taskCoordinator  the {@link TaskCoordinator} to request commits or shutdown
+   * @param m1  message from the first input stream
+   * @param om  message from the second input stream
+   * @return  the joined message in the output stream
    */
-  void apply(M message, MessageCollector messageCollector, TaskCoordinator taskCoordinator);
+  RM apply(M m1, OM om);
 
   default void init(Config config, TaskContext context) { }
 }
