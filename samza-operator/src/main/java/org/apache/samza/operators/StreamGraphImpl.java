@@ -18,12 +18,14 @@
  */
 package org.apache.samza.operators;
 
+import org.apache.samza.config.Config;
 import org.apache.samza.operators.data.MessageEnvelope;
 import org.apache.samza.operators.functions.SinkFunction;
 import org.apache.samza.serializers.Serde;
 import org.apache.samza.system.OutgoingMessageEnvelope;
 import org.apache.samza.system.SystemStream;
 import org.apache.samza.task.MessageCollector;
+import org.apache.samza.task.TaskContext;
 import org.apache.samza.task.TaskCoordinator;
 
 import java.util.Collections;
@@ -80,6 +82,8 @@ public class StreamGraphImpl implements StreamGraph {
   private final Map<SystemStream, SystemMessageStream> inStreams = new HashMap<>();
   private final Map<SystemStream, SystemMessageStream> outStreams = new HashMap<>();
   private final Map<SystemStream, SystemMessageStream> intStreams = new HashMap<>();
+
+  private ContextManager contextManager = new ContextManager() {};
 
   /**
    * Helper function to convert the map to a map of {@link StreamSpec} to {@link MessageStream} that
@@ -143,6 +147,12 @@ public class StreamGraphImpl implements StreamGraph {
     return this.getStreamSpecMap(this.intStreams);
   }
 
+  @Override
+  public StreamGraph withInitializer(ContextManager manager) {
+    this.contextManager = manager;
+    return this;
+  }
+
   /**
    * Helper method to get the {@link SystemMessageStream} corresponding to the input {@code messageStream}
    *
@@ -188,6 +198,10 @@ public class StreamGraphImpl implements StreamGraph {
     return this.opId++;
   }
 
+  ContextManager getContextManager() {
+    return this.contextManager;
+  }
+
   /**
    * Helper method to be accessed by {@link StreamOperatorTask}
    *
@@ -204,28 +218,4 @@ public class StreamGraphImpl implements StreamGraph {
     return null;
   }
 
-//  public void init(Config config, TaskContext context) {
-//    // Assuming user-defined shared context is set in context
-//    // this is to traverse the graph to initialize all the operator functions
-//    Map<SystemStream, SystemMessageStream> inputStreams = new HashMap<>();
-//    inputStreams.putAll(this.inStreams);
-//    inputStreams.putAll(this.intStreams);
-//    Set<MessageStream> allStreams = new HashSet<>();
-//    inputStreams.forEach((sys, stream) -> {
-//      if(!allStreams.contains(stream)) {
-//        allStreams.add(stream);
-//        Collection<OperatorSpec> ops = stream.getRegisteredOperatorSpecs();
-//        ops.forEach(op -> initOperator(op, config, context, allStreams));
-//      }
-//    });
-//  }
-//
-//  private void initOperator(OperatorSpec op, Config config, TaskContext context, Set<MessageStream> allStreams) {
-//    op.init(config, context);
-//    if (!allStreams.contains(op.getOutputStream())) {
-//      allStreams.add(op.getOutputStream());
-//      Collection<OperatorSpec> ops = op.getOutputStream().getRegisteredOperatorSpecs();
-//      ops.forEach( nextOp -> initOperator(nextOp, config, context, allStreams));
-//    }
-//  }
 }

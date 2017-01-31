@@ -18,14 +18,17 @@
  */
 package org.apache.samza.example;
 
+import org.apache.samza.application.StreamApplication;
+import org.apache.samza.application.StreamGraphFactory;
 import org.apache.samza.config.Config;
-import org.apache.samza.operators.MessageStream;
 import org.apache.samza.operators.StreamGraph;
 import org.apache.samza.operators.StreamSpec;
-import org.apache.samza.application.StreamApplication;
-import org.apache.samza.operators.data.IncomingSystemMessageEnvelope;
 import org.apache.samza.operators.data.JsonIncomingSystemMessageEnvelope;
+import org.apache.samza.operators.data.MessageEnvelope;
 import org.apache.samza.operators.data.Offset;
+import org.apache.samza.operators.windows.WindowPane;
+import org.apache.samza.operators.windows.Windows;
+import org.apache.samza.serializers.IntegerSerde;
 import org.apache.samza.serializers.JsonSerde;
 import org.apache.samza.serializers.StringSerde;
 import org.apache.samza.system.ExecutionEnvironment;
@@ -33,26 +36,18 @@ import org.apache.samza.system.SystemStream;
 import org.apache.samza.system.SystemStreamPartition;
 import org.apache.samza.util.CommandLine;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Properties;
+import java.time.Duration;
+import java.util.*;
 
 
-public class UMPExample implements StreamApplication {
+/**
+ * Example {@link StreamApplication} code to test the API methods
+ */
+public class RepartitionExample implements StreamGraphFactory {
 
   StreamSpec input1 = new StreamSpec() {
     @Override public SystemStream getSystemStream() {
-      return new SystemStream("kafka", "input1");
-    }
-
-    @Override public Properties getProperties() {
-      return null;
-    }
-  };
-
-  StreamSpec input2 = new StreamSpec() {
-    @Override public SystemStream getSystemStream() {
-      return new SystemStream("kafka", "input2");
+      return new SystemStream("kafka", "PageViewEvent");
     }
 
     @Override public Properties getProperties() {
@@ -62,7 +57,7 @@ public class UMPExample implements StreamApplication {
 
   StreamSpec output = new StreamSpec() {
     @Override public SystemStream getSystemStream() {
-      return new SystemStream("kafka", "output");
+      return new SystemStream("kafka", "PageViewPerMember5min");
     }
 
     @Override public Properties getProperties() {
@@ -70,31 +65,49 @@ public class UMPExample implements StreamApplication {
     }
   };
 
-  class MessageType {
-    String joinKey;
-    List<String> joinFields = new ArrayList<>();
+  class PageViewEvent {
+    String pageId;
+    String memberId;
+    long timestamp;
   }
 
-  class JsonMessageEnvelope extends JsonIncomingSystemMessageEnvelope<MessageType> {
-    JsonMessageEnvelope(String key, MessageType data, Offset offset, SystemStreamPartition partition) {
+  class JsonMessageEnvelope extends JsonIncomingSystemMessageEnvelope<PageViewEvent> {
+    JsonMessageEnvelope(String key, PageViewEvent data, Offset offset, SystemStreamPartition partition) {
       super(key, data, offset, partition);
     }
   }
 
-  private JsonMessageEnvelope getInputMessage(IncomingSystemMessageEnvelope ism) {
-    return new JsonMessageEnvelope(
-        ((MessageType) ism.getMessage()).joinKey,
-        (MessageType) ism.getMessage(),
-        ism.getOffset(),
-        ism.getSystemStreamPartition());
+  class MyStreamOutput implements MessageEnvelope<String, MyStreamOutput.OutputRecord> {
+    WindowPane<String, Integer> wndOutput;
+
+    class OutputRecord {
+      String wndKey;
+      long timestamp;
+      int count;
+    }
+
+    OutputRecord record;
+
+    MyStreamOutput(WindowPane<String, Integer> m) {
+      this.wndOutput = m;
+      this.record.wndKey = m.getKey().getKey();
+      this.record.timestamp = Long.valueOf(m.getKey().getPaneId());
+      this.record.count = m.getMessage();
+    }
+
+    @Override
+    public String getKey() {
+      return this.record.wndKey;
+    }
+
+    @Override
+    public OutputRecord getMessage() {
+      return this.record;
+    }
   }
 
-  JsonMessageEnvelope myJoinResult(JsonMessageEnvelope m1, JsonMessageEnvelope m2) {
-    MessageType newJoinMsg = new MessageType();
-    newJoinMsg.joinKey = m1.getKey();
-    newJoinMsg.joinFields.addAll(m1.getMessage().joinFields);
-    newJoinMsg.joinFields.addAll(m2.getMessage().joinFields);
-    return new JsonMessageEnvelope(m1.getMessage().joinKey, newJoinMsg, null, null);
+  private String getPartitionKey(JsonMessageEnvelope jsonEvent) {
+    return jsonEvent.getMessage().memberId;
   }
 
   /**
@@ -105,16 +118,20 @@ public class UMPExample implements StreamApplication {
    *     CommandLine cmdLine = new CommandLine();
    *     Config config = cmdLine.loadConfig(cmdLine.parser().parse(args));
    *     ExecutionEnvironment remoteEnv = ExecutionEnvironment.getRemoteEnvironment(config);
-   *     UserMainExample runnableApp = new UserMainExample();
-   *     runnableApp.run(remoteEnv, config);
+   *     remoteEnv.run(new UserMainExample(), config);
    *   }
    *
    */
-  @Override public void initGraph(StreamGraph graph, Config config) {
-    MessageStream<JsonMessageEnvelope> newSource = graph.<Object, Object, IncomingSystemMessageEnvelope>createInStream(
-        input1, null, null).map(this::getInputMessage);
-    newSource.join(graph.<Object, Object, IncomingSystemMessageEnvelope>createInStream(input2, null, null).map(this::getInputMessage), this::myJoinResult).
-        sendTo(graph.<String, MessageType, JsonMessageEnvelope>createOutStream(output, new StringSerde("UTF-8"), new JsonSerde<>()));
+  @Override public StreamGraph create(Config config) {
+    StreamGraph graph = StreamGraph.fromConfig(config);
+    graph.<String, PageViewEvent, JsonMessageEnvelope>createInStream(input1, new StringSerde("UTF-8"), new JsonSerde<>()).
+        partitionBy(this::getPartitionKey).
+        window(Windows.<JsonMessageEnvelope, String, Integer>keyedTumblingWindow(
+                msg -> msg.getMessage().memberId, Duration.ofMinutes(5), (m, c) -> c+1)).
+        map(m -> new MyStreamOutput(m)).
+        sendTo(graph.createOutStream(output, new StringSerde("UTF-8"), new JsonSerde<>()));
+
+    return graph;
   }
 
   // standalone local program model
@@ -122,7 +139,7 @@ public class UMPExample implements StreamApplication {
     CommandLine cmdLine = new CommandLine();
     Config config = cmdLine.loadConfig(cmdLine.parser().parse(args));
     ExecutionEnvironment standaloneEnv = ExecutionEnvironment.getLocalEnvironment(config);
-    standaloneEnv.run(new UMPExample(), config);
+    standaloneEnv.run(new RepartitionExample(), config);
   }
 
 }

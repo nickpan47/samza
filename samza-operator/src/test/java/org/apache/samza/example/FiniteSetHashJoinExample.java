@@ -37,16 +37,14 @@ import org.apache.samza.util.CommandLine;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
+import sun.plugin2.message.Message;
 
 
-/**
- * Example {@link StreamApplication} code to test the API methods
- */
-public class NoContextStreamExample implements StreamGraphFactory {
+public class FiniteSetHashJoinExample implements StreamGraphFactory {
 
   StreamSpec input1 = new StreamSpec() {
     @Override public SystemStream getSystemStream() {
-      return new SystemStream("kafka", "input1");
+      return new SystemStream("kafka", "Orders");
     }
 
     @Override public Properties getProperties() {
@@ -56,17 +54,7 @@ public class NoContextStreamExample implements StreamGraphFactory {
 
   StreamSpec input2 = new StreamSpec() {
     @Override public SystemStream getSystemStream() {
-      return new SystemStream("kafka", "input2");
-    }
-
-    @Override public Properties getProperties() {
-      return null;
-    }
-  };
-
-  StreamSpec intermediate = new StreamSpec() {
-    @Override public SystemStream getSystemStream() {
-      return new SystemStream("kafka", "intermediate");
+      return new SystemStream("kafka", "Shipment");
     }
 
     @Override public Properties getProperties() {
@@ -76,7 +64,7 @@ public class NoContextStreamExample implements StreamGraphFactory {
 
   StreamSpec output = new StreamSpec() {
     @Override public SystemStream getSystemStream() {
-      return new SystemStream("kafka", "output");
+      return new SystemStream("kafka", "FulfilledOrders");
     }
 
     @Override public Properties getProperties() {
@@ -84,31 +72,46 @@ public class NoContextStreamExample implements StreamGraphFactory {
     }
   };
 
-  class MessageType {
-    String joinKey;
-    List<String> joinFields = new ArrayList<>();
+  class OrderRecord {
+    String orderId;
+    long orderTimeMs;
   }
 
-  class JsonMessageEnvelope extends JsonIncomingSystemMessageEnvelope<MessageType> {
-    JsonMessageEnvelope(String key, MessageType data, Offset offset, SystemStreamPartition partition) {
-      super(key, data, offset, partition);
+  class OrderMessage extends JsonIncomingSystemMessageEnvelope<OrderRecord> {
+    OrderMessage(OrderRecord data, Offset offset, SystemStreamPartition partition) {
+      super(data.orderId, data, offset, partition);
     }
   }
 
-  private JsonMessageEnvelope getInputMessage(IncomingSystemMessageEnvelope ism) {
-    return new JsonMessageEnvelope(
-        ((MessageType) ism.getMessage()).joinKey,
-        (MessageType) ism.getMessage(),
-        ism.getOffset(),
-        ism.getSystemStreamPartition());
+  class ShipmentRecord {
+    String orderId;
+    long shipTimeMs;
   }
 
-  JsonMessageEnvelope myJoinResult(JsonMessageEnvelope m1, JsonMessageEnvelope m2) {
-    MessageType newJoinMsg = new MessageType();
-    newJoinMsg.joinKey = m1.getKey();
-    newJoinMsg.joinFields.addAll(m1.getMessage().joinFields);
-    newJoinMsg.joinFields.addAll(m2.getMessage().joinFields);
-    return new JsonMessageEnvelope(m1.getMessage().joinKey, newJoinMsg, null, null);
+  class ShipmentMessage extends JsonIncomingSystemMessageEnvelope<ShipmentRecord> {
+    ShipmentMessage(ShipmentRecord data, Offset offset, SystemStreamPartition partition) {
+      super(data.orderId, data, offset, partition);
+    }
+  }
+
+  class FulFilledOrderRecord {
+    String orderId;
+    long orderTimeMs;
+    long shipTimeMs;
+  }
+
+  class FulfilledOrderMessage extends JsonIncomingSystemMessageEnvelope<FulFilledOrderRecord> {
+    FulfilledOrderMessage(FulFilledOrderRecord data, Offset offset, SystemStreamPartition partition) {
+      super(data.orderId, data, offset, partition);
+    }
+  }
+
+  FulfilledOrderMessage myJoinResult(OrderMessage m1, ShipmentMessage m2) {
+    FulFilledOrderRecord joinRecord = new FulFilledOrderRecord();
+    joinRecord.orderId = m1.getMessage().orderId;
+    joinRecord.orderTimeMs = m1.getMessage().orderTimeMs;
+    joinRecord.shipTimeMs = m2.getMessage().shipTimeMs;
+    return new FulfilledOrderMessage(joinRecord, null, null);
   }
 
   /**
@@ -118,25 +121,18 @@ public class NoContextStreamExample implements StreamGraphFactory {
    *   public static void main(String args[]) throws Exception {
    *     CommandLine cmdLine = new CommandLine();
    *     Config config = cmdLine.loadConfig(cmdLine.parser().parse(args));
-   *     ExecutionEnvironment remoteEnv = ExecutionEnvironment.fromConfig(config);  //TODO: Example config vars to indicate YARN
-   *     remoteEnv.run(StreamApplication.fromConfig(config), config);
+   *     ExecutionEnvironment remoteEnv = ExecutionEnvironment.getRemoteEnvironment(config);
+   *     UserMainExample runnableApp = new UserMainExample();
+   *     runnableApp.run(remoteEnv, config);
    *   }
    *
    */
   @Override public StreamGraph create(Config config) {
     StreamGraph graph = StreamGraph.fromConfig(config);
-    MessageStream<IncomingSystemMessageEnvelope> inputSource1 = graph.<Object, Object, IncomingSystemMessageEnvelope>createInStream(
-        input1, null, null);
-    MessageStream<IncomingSystemMessageEnvelope> inputSource2 = graph.<Object, Object, IncomingSystemMessageEnvelope>createInStream(
-        input2, null, null);
-    MessageStream<JsonIncomingSystemMessageEnvelope<MessageType>> intStream = graph.createOutStream(intermediate,
-        new StringSerde("UTF-8"), new JsonSerde<>());
-    MessageStream<JsonIncomingSystemMessageEnvelope<MessageType>> outStream = graph.createOutStream(output,
-        new StringSerde("UTF-8"), new JsonSerde<>());
 
-    inputSource1.map(this::getInputMessage).
-        <String, JsonMessageEnvelope, JsonIncomingSystemMessageEnvelope<MessageType>>join(inputSource2.map(this::getInputMessage), this::myJoinResult).
-        sendTo(outStream);
+    graph.<String, OrderRecord, OrderMessage>createInStream(input1, new StringSerde("UTF-8"), new JsonSerde<>()).
+        join(graph.<String, ShipmentRecord, ShipmentMessage>createInStream(input2, new StringSerde("UTF-8"), new JsonSerde<>()), this::myJoinResult).
+        sendTo(graph.createOutStream(output, new StringSerde("UTF-8"), new JsonSerde<>()));
 
     return graph;
   }
@@ -146,7 +142,7 @@ public class NoContextStreamExample implements StreamGraphFactory {
     CommandLine cmdLine = new CommandLine();
     Config config = cmdLine.loadConfig(cmdLine.parser().parse(args));
     ExecutionEnvironment standaloneEnv = ExecutionEnvironment.getLocalEnvironment(config);
-    standaloneEnv.run(new NoContextStreamExample(), config);
+    standaloneEnv.run(new FiniteSetHashJoinExample(), config);
   }
 
 }

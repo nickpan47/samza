@@ -154,7 +154,7 @@ public class MessageStreamImpl<M extends MessageEnvelope> implements MessageStre
   }
 
   @Override
-  public <K> MessageStream<M> keyedBy(Function<M, K> parKeyExtractor) {
+  public <K> MessageStream<M> partitionBy(Function<M, K> parKeyExtractor) {
     OperatorSpec<M> op = OperatorSpecs.createPartitionOperator(parKeyExtractor, new MessageStreamImpl<>(this.graph), this.graph.getNextOpId());
     this.registeredOperatorSpecs.add(op);
     return op.getOutputStream();

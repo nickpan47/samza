@@ -289,21 +289,7 @@ public class WaterlooEducationExample implements StreamGraphFactory {
         map(new StandardizeEducationMap()).
         map(new SerializedMap()).
         sink(new EducationSinkFunction());
-    graph.withInitialer(new ContextManager() {
-      TaskContext initTaskContext(config, context) {
-        map = new HashMap<>();
-        context.setUserDefinedContext(map);
-        return context;
-      }
 
-      void closeTaskContext(TaskContext context) {
-        ///
-      }
-
-//      SamzaContainerContext initContainerContext(config, context) {
-//        return context;
-//      }
-    });
     return graph;
   }
 

@@ -170,5 +170,5 @@ public interface MessageStream<M extends MessageEnvelope> {
    * @param parKeyExtractor  a {@link Function} that extract the partition key from {@link MessageEnvelope} in this {@link MessageStream}
    * @return  a {@link MessageStream} object after the re-partition
    */
-  <K> MessageStream<M> keyedBy(Function<M, K> parKeyExtractor);
+  <K> MessageStream<M> partitionBy(Function<M, K> parKeyExtractor);
 }

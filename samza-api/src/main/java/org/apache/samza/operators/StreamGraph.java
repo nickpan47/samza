@@ -78,6 +78,8 @@ public interface StreamGraph {
   Map<StreamSpec, MessageStream> getOutStreams();
   Map<StreamSpec, MessageStream> getIntStreams();
 
+  StreamGraph withInitializer(ContextManager manager);
+
   static StreamGraph fromConfig(Config config) {
     return ExecutionEnvironment.fromConfig(config).createGraph();
   }

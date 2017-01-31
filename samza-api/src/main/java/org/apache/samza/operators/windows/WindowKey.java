@@ -29,18 +29,27 @@ public class WindowKey<K> {
 
   private final  K key;
 
-  private final String windowId;
+  private final String paneId;
 
   public WindowKey(K key, String  windowId) {
     this.key = key;
-    this.windowId = windowId;
+    this.paneId = windowId;
   }
 
   public K getKey() {
     return key;
   }
 
-  public String getWindowId() {
-    return windowId;
+  public String getPaneId() {
+    return paneId;
+  }
+
+  @Override
+  public String toString() {
+    String wndKey = "";
+    if ( !(key instanceof Void) ) {
+      wndKey = String.format("%s:", key.toString());
+    }
+    return String.format("%s%s", wndKey, paneId);
   }
 }
