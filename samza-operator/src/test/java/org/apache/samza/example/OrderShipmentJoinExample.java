@@ -18,13 +18,10 @@
  */
 package org.apache.samza.example;
 
-import org.apache.samza.application.StreamApplication;
 import org.apache.samza.application.StreamGraphFactory;
 import org.apache.samza.config.Config;
-import org.apache.samza.operators.MessageStream;
 import org.apache.samza.operators.StreamGraph;
 import org.apache.samza.operators.StreamSpec;
-import org.apache.samza.operators.data.IncomingSystemMessageEnvelope;
 import org.apache.samza.operators.data.JsonIncomingSystemMessageEnvelope;
 import org.apache.samza.operators.data.Offset;
 import org.apache.samza.serializers.JsonSerde;
@@ -34,13 +31,10 @@ import org.apache.samza.system.SystemStream;
 import org.apache.samza.system.SystemStreamPartition;
 import org.apache.samza.util.CommandLine;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Properties;
-import sun.plugin2.message.Message;
 
 
-public class FiniteSetHashJoinExample implements StreamGraphFactory {
+public class OrderShipmentJoinExample implements StreamGraphFactory {
 
   StreamSpec input1 = new StreamSpec() {
     @Override public SystemStream getSystemStream() {
@@ -142,7 +136,7 @@ public class FiniteSetHashJoinExample implements StreamGraphFactory {
     CommandLine cmdLine = new CommandLine();
     Config config = cmdLine.loadConfig(cmdLine.parser().parse(args));
     ExecutionEnvironment standaloneEnv = ExecutionEnvironment.getLocalEnvironment(config);
-    standaloneEnv.run(new FiniteSetHashJoinExample(), config);
+    standaloneEnv.run(new OrderShipmentJoinExample(), config);
   }
 
 }
