@@ -81,7 +81,7 @@ public class RepartitionExample implements StreamGraphFactory {
     WindowPane<String, Integer> wndOutput;
 
     class OutputRecord {
-      String wndKey;
+      String memberId;
       long timestamp;
       int count;
     }
@@ -90,24 +90,20 @@ public class RepartitionExample implements StreamGraphFactory {
 
     MyStreamOutput(WindowPane<String, Integer> m) {
       this.wndOutput = m;
-      this.record.wndKey = m.getKey().getKey();
+      this.record.memberId = m.getKey().getKey();
       this.record.timestamp = Long.valueOf(m.getKey().getPaneId());
       this.record.count = m.getMessage();
     }
 
     @Override
     public String getKey() {
-      return this.record.wndKey;
+      return this.record.memberId;
     }
 
     @Override
     public OutputRecord getMessage() {
       return this.record;
     }
-  }
-
-  private String getPartitionKey(JsonMessageEnvelope jsonEvent) {
-    return jsonEvent.getMessage().memberId;
   }
 
   /**
@@ -125,10 +121,10 @@ public class RepartitionExample implements StreamGraphFactory {
   @Override public StreamGraph create(Config config) {
     StreamGraph graph = StreamGraph.fromConfig(config);
     graph.<String, PageViewEvent, JsonMessageEnvelope>createInStream(input1, new StringSerde("UTF-8"), new JsonSerde<>()).
-        partitionBy(this::getPartitionKey).
+        partitionBy(m -> m.getMessage().memberId).
         window(Windows.<JsonMessageEnvelope, String, Integer>keyedTumblingWindow(
                 msg -> msg.getMessage().memberId, Duration.ofMinutes(5), (m, c) -> c+1)).
-        map(m -> new MyStreamOutput(m)).
+        map(MyStreamOutput::new).
         sendTo(graph.createOutStream(output, new StringSerde("UTF-8"), new JsonSerde<>()));
 
     return graph;

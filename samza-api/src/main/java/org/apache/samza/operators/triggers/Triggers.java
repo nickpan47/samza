@@ -52,8 +52,8 @@ public final class Triggers<M extends MessageEnvelope> {
    * @param count the number of {@link MessageEnvelope}s to fire the trigger after
    * @return the created trigger
    */
-  public static Trigger count(long count) {
-    return new CountTrigger(count);
+  public static <M extends MessageEnvelope> Trigger<M> count(long count) {
+    return new CountTrigger<M>(count);
   }
 
   /**
@@ -63,8 +63,8 @@ public final class Triggers<M extends MessageEnvelope> {
    * @param duration the duration since the first element
    * @return the created trigger
    */
-  public static Trigger timeSinceFirstMessage(Duration duration) {
-    return new TimeSinceFirstMessageTrigger(duration);
+  public static <M extends MessageEnvelope> Trigger<M> timeSinceFirstMessage(Duration duration) {
+    return new TimeSinceFirstMessageTrigger<M>(duration);
   }
 
   /**
@@ -73,8 +73,8 @@ public final class Triggers<M extends MessageEnvelope> {
    * @param duration the duration since the last element
    * @return the created trigger
    */
-  public static Trigger timeSinceLastMessage(Duration duration) {
-    return new TimeSinceLastMessageTrigger(duration);
+  public static <M extends MessageEnvelope> Trigger<M> timeSinceLastMessage(Duration duration) {
+    return new TimeSinceLastMessageTrigger<M>(duration);
   }
 
   /**
@@ -84,12 +84,12 @@ public final class Triggers<M extends MessageEnvelope> {
    * @param triggers the individual triggers
    * @return the created trigger
    */
-  public static <M extends MessageEnvelope> Trigger any(Trigger<M>... triggers) {
+  public static <M extends MessageEnvelope> Trigger<M> any(Trigger<M>... triggers) {
     List<Trigger> triggerList = new ArrayList<>();
     for (Trigger trigger : triggers) {
       triggerList.add(trigger);
     }
-    return new AnyTrigger(Collections.unmodifiableList(triggerList));
+    return new AnyTrigger<M>(Collections.unmodifiableList(triggerList));
   }
 
   /**
@@ -102,7 +102,7 @@ public final class Triggers<M extends MessageEnvelope> {
    * @param trigger the individual trigger to repeat
    * @return the created trigger
    */
-  public static <M extends MessageEnvelope> Trigger repeat(Trigger<M> trigger) {
+  public static <M extends MessageEnvelope> Trigger<M> repeat(Trigger<M> trigger) {
     return new RepeatingTrigger<>(trigger);
   }
 }

@@ -30,11 +30,11 @@ import java.util.Properties;
 /**
  * Created by yipan on 1/26/17.
  */
-public class MaxAggrWindowExample implements StreamGraphFactory {
+public class PageViewCounterExample implements StreamGraphFactory {
 
-  StreamSpec input = new StreamSpec() {
+  StreamSpec input1 = new StreamSpec() {
     @Override public SystemStream getSystemStream() {
-      return new SystemStream("kafka", "input1");
+      return new SystemStream("kafka", "PageViewEvent");
     }
 
     @Override public Properties getProperties() {
@@ -44,7 +44,7 @@ public class MaxAggrWindowExample implements StreamGraphFactory {
 
   StreamSpec output = new StreamSpec() {
     @Override public SystemStream getSystemStream() {
-      return new SystemStream("kafka", "output");
+      return new SystemStream("kafka", "PageViewPerMember5min");
     }
 
     @Override public Properties getProperties() {
@@ -52,58 +52,55 @@ public class MaxAggrWindowExample implements StreamGraphFactory {
     }
   };
 
-  class MessageType {
-    List<String> joinFields = new ArrayList<>();
+  class PageViewEvent {
+    String pageId;
+    String memberId;
+    long timestamp;
   }
 
-  class JsonMessageEnvelope extends JsonIncomingSystemMessageEnvelope<MessageType> {
-    JsonMessageEnvelope(String key, MessageType data, Offset offset, SystemStreamPartition partition) {
+  class JsonMessageEnvelope extends JsonIncomingSystemMessageEnvelope<PageViewEvent> {
+    JsonMessageEnvelope(String key, PageViewEvent data, Offset offset, SystemStreamPartition partition) {
       super(key, data, offset, partition);
     }
   }
 
   class MyStreamOutput implements MessageEnvelope<String, MyStreamOutput.OutputRecord> {
-    WindowPane<Void, Integer> wndOutput;
+    WindowPane<String, Integer> wndOutput;
 
     class OutputRecord {
+      String memberId;
       long timestamp;
       int count;
     }
 
-    OutputRecord record;
+    MyStreamOutput.OutputRecord record;
 
-    MyStreamOutput(WindowPane<Void, Integer> m) {
+    MyStreamOutput(WindowPane<String, Integer> m) {
       this.wndOutput = m;
+      this.record.memberId = m.getKey().getKey();
       this.record.timestamp = Long.valueOf(m.getKey().getPaneId());
       this.record.count = m.getMessage();
     }
 
     @Override
     public String getKey() {
-      return new Long(this.record.timestamp).toString();
+      return this.record.memberId;
     }
 
     @Override
-    public OutputRecord getMessage() {
+    public MyStreamOutput.OutputRecord getMessage() {
       return this.record;
     }
-  }
-
-  Integer getMaxFieldsLength(JsonMessageEnvelope m, Integer curMaxLen) {
-    if (curMaxLen == null) {
-      return m.getMessage().joinFields.size();
-    }
-    return m.getMessage().joinFields.size() > curMaxLen ? m.getMessage().joinFields.size() : curMaxLen;
   }
 
   @Override public StreamGraph create(Config config) {
     StreamGraph graph = StreamGraph.fromConfig(config);
 
-    graph.<String, MessageType, JsonMessageEnvelope>createInStream(input, new StringSerde("UTF-8"), new JsonSerde<>()).
-        <Void, Integer, WindowPane<Void, Integer>>window(Windows.tumblingWindow(Duration.ofSeconds(10), this::getMaxFieldsLength).
+    graph.<String, PageViewEvent, JsonMessageEnvelope>createInStream(input1, new StringSerde("UTF-8"), new JsonSerde<>()).
+        window(Windows.<JsonMessageEnvelope, String, Integer>keyedTumblingWindow(m -> m.getMessage().memberId, Duration.ofSeconds(10), (m, c) -> c + 1).
             setEarlyTrigger(Triggers.repeat(Triggers.count(5))).
             setAccumulationMode(AccumulationMode.DISCARDING)).
-        map(m -> new MyStreamOutput(m)).
+        map(MyStreamOutput::new).
         sendTo(graph.createOutStream(output, new StringSerde("UTF-8"), new JsonSerde<>()));
     return graph;
   }

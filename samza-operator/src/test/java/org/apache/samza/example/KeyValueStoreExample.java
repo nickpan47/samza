@@ -78,7 +78,7 @@ public class KeyValueStoreExample implements StreamGraphFactory {
   class StatsOutput implements MessageEnvelope<String, StatsOutput.OutputRecord> {
 
     class OutputRecord {
-      private String key;
+      private String memberId;
       private long timestamp;
       private Integer count;
     }
@@ -87,14 +87,14 @@ public class KeyValueStoreExample implements StreamGraphFactory {
 
     StatsOutput(String key, long timestamp, Integer count) {
       this.record = new OutputRecord();
-      this.record.key = key;
+      this.record.memberId = key;
       this.record.timestamp = timestamp;
       this.record.count = count;
     }
 
     @Override
     public String getKey() {
-      return this.record.key;
+      return this.record.memberId;
     }
 
     @Override
