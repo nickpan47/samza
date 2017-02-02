@@ -21,6 +21,7 @@ package org.apache.samza.example;
 import org.apache.samza.application.StreamApplication;
 import org.apache.samza.application.StreamGraphFactory;
 import org.apache.samza.config.Config;
+import org.apache.samza.operators.MessageStream;
 import org.apache.samza.operators.StreamGraph;
 import org.apache.samza.operators.StreamSpec;
 import org.apache.samza.operators.data.JsonIncomingSystemMessageEnvelope;
@@ -44,6 +45,42 @@ import java.util.*;
  * Example {@link StreamApplication} code to test the API methods
  */
 public class RepartitionExample implements StreamGraphFactory {
+
+  /**
+   * used by remote execution environment to launch the job in remote program. The remote program should follow the similar
+   * invoking context as in standalone:
+   *
+   *   public static void main(String args[]) throws Exception {
+   *     CommandLine cmdLine = new CommandLine();
+   *     Config config = cmdLine.loadConfig(cmdLine.parser().parse(args));
+   *     ExecutionEnvironment remoteEnv = ExecutionEnvironment.getRemoteEnvironment(config);
+   *     remoteEnv.run(new UserMainExample(), config);
+   *   }
+   *
+   */
+  @Override public StreamGraph create(Config config) {
+    StreamGraph graph = StreamGraph.fromConfig(config);
+
+    MessageStream<JsonMessageEnvelope> pageViewEvents = graph.createInStream(input1, new StringSerde("UTF-8"), new JsonSerde<>());
+    MessageStream<MyStreamOutput> pageViewPerMemberCounters = graph.createOutStream(output, new StringSerde("UTF-8"), new JsonSerde<>());
+
+    pageViewEvents.
+        partitionBy(m -> m.getMessage().memberId).
+        window(Windows.<JsonMessageEnvelope, String, Integer>keyedTumblingWindow(
+            msg -> msg.getMessage().memberId, Duration.ofMinutes(5), (m, c) -> c+1)).
+        map(MyStreamOutput::new).
+        sendTo(pageViewPerMemberCounters);
+
+    return graph;
+  }
+
+  // standalone local program model
+  public static void main(String[] args) throws Exception {
+    CommandLine cmdLine = new CommandLine();
+    Config config = cmdLine.loadConfig(cmdLine.parser().parse(args));
+    ExecutionEnvironment standaloneEnv = ExecutionEnvironment.getLocalEnvironment(config);
+    standaloneEnv.run(new RepartitionExample(), config);
+  }
 
   StreamSpec input1 = new StreamSpec() {
     @Override public SystemStream getSystemStream() {
@@ -78,7 +115,6 @@ public class RepartitionExample implements StreamGraphFactory {
   }
 
   class MyStreamOutput implements MessageEnvelope<String, MyStreamOutput.OutputRecord> {
-    WindowPane<String, Integer> wndOutput;
 
     class OutputRecord {
       String memberId;
@@ -89,7 +125,6 @@ public class RepartitionExample implements StreamGraphFactory {
     OutputRecord record;
 
     MyStreamOutput(WindowPane<String, Integer> m) {
-      this.wndOutput = m;
       this.record.memberId = m.getKey().getKey();
       this.record.timestamp = Long.valueOf(m.getKey().getPaneId());
       this.record.count = m.getMessage();
@@ -104,38 +139,6 @@ public class RepartitionExample implements StreamGraphFactory {
     public OutputRecord getMessage() {
       return this.record;
     }
-  }
-
-  /**
-   * used by remote execution environment to launch the job in remote program. The remote program should follow the similar
-   * invoking context as in standalone:
-   *
-   *   public static void main(String args[]) throws Exception {
-   *     CommandLine cmdLine = new CommandLine();
-   *     Config config = cmdLine.loadConfig(cmdLine.parser().parse(args));
-   *     ExecutionEnvironment remoteEnv = ExecutionEnvironment.getRemoteEnvironment(config);
-   *     remoteEnv.run(new UserMainExample(), config);
-   *   }
-   *
-   */
-  @Override public StreamGraph create(Config config) {
-    StreamGraph graph = StreamGraph.fromConfig(config);
-    graph.<String, PageViewEvent, JsonMessageEnvelope>createInStream(input1, new StringSerde("UTF-8"), new JsonSerde<>()).
-        partitionBy(m -> m.getMessage().memberId).
-        window(Windows.<JsonMessageEnvelope, String, Integer>keyedTumblingWindow(
-                msg -> msg.getMessage().memberId, Duration.ofMinutes(5), (m, c) -> c+1)).
-        map(MyStreamOutput::new).
-        sendTo(graph.createOutStream(output, new StringSerde("UTF-8"), new JsonSerde<>()));
-
-    return graph;
-  }
-
-  // standalone local program model
-  public static void main(String[] args) throws Exception {
-    CommandLine cmdLine = new CommandLine();
-    Config config = cmdLine.loadConfig(cmdLine.parser().parse(args));
-    ExecutionEnvironment standaloneEnv = ExecutionEnvironment.getLocalEnvironment(config);
-    standaloneEnv.run(new RepartitionExample(), config);
   }
 
 }

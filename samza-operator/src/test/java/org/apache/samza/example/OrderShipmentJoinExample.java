@@ -20,6 +20,7 @@ package org.apache.samza.example;
 
 import org.apache.samza.application.StreamGraphFactory;
 import org.apache.samza.config.Config;
+import org.apache.samza.operators.MessageStream;
 import org.apache.samza.operators.StreamGraph;
 import org.apache.samza.operators.StreamSpec;
 import org.apache.samza.operators.data.JsonIncomingSystemMessageEnvelope;
@@ -35,6 +36,39 @@ import java.util.Properties;
 
 
 public class OrderShipmentJoinExample implements StreamGraphFactory {
+
+  /**
+   * used by remote execution environment to launch the job in remote program. The remote program should follow the similar
+   * invoking context as in standalone:
+   *
+   *   public static void main(String args[]) throws Exception {
+   *     CommandLine cmdLine = new CommandLine();
+   *     Config config = cmdLine.loadConfig(cmdLine.parser().parse(args));
+   *     ExecutionEnvironment remoteEnv = ExecutionEnvironment.getRemoteEnvironment(config);
+   *     UserMainExample runnableApp = new UserMainExample();
+   *     runnableApp.run(remoteEnv, config);
+   *   }
+   *
+   */
+  @Override public StreamGraph create(Config config) {
+    StreamGraph graph = StreamGraph.fromConfig(config);
+
+    MessageStream<OrderMessage> orders = graph.createInStream(input1, new StringSerde("UTF-8"), new JsonSerde<>());
+    MessageStream<ShipmentMessage> shipments = graph.createInStream(input2, new StringSerde("UTF-8"), new JsonSerde<>());
+    MessageStream<FulfilledOrderMessage> fulfilledOrders = graph.createOutStream(output, new StringSerde("UTF-8"), new JsonSerde<>());
+
+    orders.join(shipments, this::myJoinResult).sendTo(fulfilledOrders);
+
+    return graph;
+  }
+
+  // standalone local program model
+  public static void main(String[] args) throws Exception {
+    CommandLine cmdLine = new CommandLine();
+    Config config = cmdLine.loadConfig(cmdLine.parser().parse(args));
+    ExecutionEnvironment standaloneEnv = ExecutionEnvironment.getLocalEnvironment(config);
+    standaloneEnv.run(new OrderShipmentJoinExample(), config);
+  }
 
   StreamSpec input1 = new StreamSpec() {
     @Override public SystemStream getSystemStream() {
@@ -106,37 +140,6 @@ public class OrderShipmentJoinExample implements StreamGraphFactory {
     joinRecord.orderTimeMs = m1.getMessage().orderTimeMs;
     joinRecord.shipTimeMs = m2.getMessage().shipTimeMs;
     return new FulfilledOrderMessage(joinRecord, null, null);
-  }
-
-  /**
-   * used by remote execution environment to launch the job in remote program. The remote program should follow the similar
-   * invoking context as in standalone:
-   *
-   *   public static void main(String args[]) throws Exception {
-   *     CommandLine cmdLine = new CommandLine();
-   *     Config config = cmdLine.loadConfig(cmdLine.parser().parse(args));
-   *     ExecutionEnvironment remoteEnv = ExecutionEnvironment.getRemoteEnvironment(config);
-   *     UserMainExample runnableApp = new UserMainExample();
-   *     runnableApp.run(remoteEnv, config);
-   *   }
-   *
-   */
-  @Override public StreamGraph create(Config config) {
-    StreamGraph graph = StreamGraph.fromConfig(config);
-
-    graph.<String, OrderRecord, OrderMessage>createInStream(input1, new StringSerde("UTF-8"), new JsonSerde<>()).
-        join(graph.<String, ShipmentRecord, ShipmentMessage>createInStream(input2, new StringSerde("UTF-8"), new JsonSerde<>()), this::myJoinResult).
-        sendTo(graph.createOutStream(output, new StringSerde("UTF-8"), new JsonSerde<>()));
-
-    return graph;
-  }
-
-  // standalone local program model
-  public static void main(String[] args) throws Exception {
-    CommandLine cmdLine = new CommandLine();
-    Config config = cmdLine.loadConfig(cmdLine.parser().parse(args));
-    ExecutionEnvironment standaloneEnv = ExecutionEnvironment.getLocalEnvironment(config);
-    standaloneEnv.run(new OrderShipmentJoinExample(), config);
   }
 
 }

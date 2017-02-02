@@ -3,6 +3,7 @@ package org.apache.samza.example;
 import com.sun.tools.doclets.internal.toolkit.util.DocFinder;
 import org.apache.samza.application.StreamGraphFactory;
 import org.apache.samza.config.Config;
+import org.apache.samza.operators.MessageStream;
 import org.apache.samza.operators.StreamGraph;
 import org.apache.samza.operators.StreamSpec;
 import org.apache.samza.operators.data.IncomingSystemMessageEnvelope;
@@ -31,6 +32,28 @@ import java.util.Properties;
  * Created by yipan on 1/26/17.
  */
 public class PageViewCounterExample implements StreamGraphFactory {
+
+  @Override public StreamGraph create(Config config) {
+    StreamGraph graph = StreamGraph.fromConfig(config);
+
+    MessageStream<JsonMessageEnvelope> pageViewEvents = graph.<String, PageViewEvent, JsonMessageEnvelope>createInStream(input1, new StringSerde("UTF-8"), new JsonSerde<>());
+    MessageStream<MyStreamOutput> pageViewPerMemberCounters = graph.createOutStream(output, new StringSerde("UTF-8"), new JsonSerde<>());
+
+    pageViewEvents.
+        window(Windows.<JsonMessageEnvelope, String, Integer>keyedTumblingWindow(m -> m.getMessage().memberId, Duration.ofSeconds(10), (m, c) -> c + 1).
+            setEarlyTrigger(Triggers.repeat(Triggers.count(5))).
+            setAccumulationMode(AccumulationMode.DISCARDING)).
+        map(MyStreamOutput::new).
+        sendTo(pageViewPerMemberCounters);
+    return graph;
+  }
+
+  public static void main(String[] args) {
+    CommandLine cmdLine = new CommandLine();
+    Config config = cmdLine.loadConfig(cmdLine.parser().parse(args));
+    ExecutionEnvironment standaloneEnv = ExecutionEnvironment.getLocalEnvironment(config);
+    standaloneEnv.run(new PageViewCounterExample(), config);
+  }
 
   StreamSpec input1 = new StreamSpec() {
     @Override public SystemStream getSystemStream() {
@@ -65,7 +88,6 @@ public class PageViewCounterExample implements StreamGraphFactory {
   }
 
   class MyStreamOutput implements MessageEnvelope<String, MyStreamOutput.OutputRecord> {
-    WindowPane<String, Integer> wndOutput;
 
     class OutputRecord {
       String memberId;
@@ -76,7 +98,6 @@ public class PageViewCounterExample implements StreamGraphFactory {
     MyStreamOutput.OutputRecord record;
 
     MyStreamOutput(WindowPane<String, Integer> m) {
-      this.wndOutput = m;
       this.record.memberId = m.getKey().getKey();
       this.record.timestamp = Long.valueOf(m.getKey().getPaneId());
       this.record.count = m.getMessage();
@@ -93,22 +114,4 @@ public class PageViewCounterExample implements StreamGraphFactory {
     }
   }
 
-  @Override public StreamGraph create(Config config) {
-    StreamGraph graph = StreamGraph.fromConfig(config);
-
-    graph.<String, PageViewEvent, JsonMessageEnvelope>createInStream(input1, new StringSerde("UTF-8"), new JsonSerde<>()).
-        window(Windows.<JsonMessageEnvelope, String, Integer>keyedTumblingWindow(m -> m.getMessage().memberId, Duration.ofSeconds(10), (m, c) -> c + 1).
-            setEarlyTrigger(Triggers.repeat(Triggers.count(5))).
-            setAccumulationMode(AccumulationMode.DISCARDING)).
-        map(MyStreamOutput::new).
-        sendTo(graph.createOutStream(output, new StringSerde("UTF-8"), new JsonSerde<>()));
-    return graph;
-  }
-
-  public static void main(String[] args) {
-    CommandLine cmdLine = new CommandLine();
-    Config config = cmdLine.loadConfig(cmdLine.parser().parse(args));
-    ExecutionEnvironment standaloneEnv = ExecutionEnvironment.getLocalEnvironment(config);
-    standaloneEnv.run(new WaterlooEducationExample(), config);
-  }
 }

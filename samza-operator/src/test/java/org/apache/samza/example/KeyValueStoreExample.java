@@ -49,6 +49,77 @@ import java.util.Properties;
 
 public class KeyValueStoreExample implements StreamGraphFactory {
 
+  /**
+   * used by remote execution environment to launch the job in remote program. The remote program should follow the similar
+   * invoking context as in standalone:
+   *
+   *   public static void main(String args[]) throws Exception {
+   *     CommandLine cmdLine = new CommandLine();
+   *     Config config = cmdLine.loadConfig(cmdLine.parser().parse(args));
+   *     ExecutionEnvironment remoteEnv = ExecutionEnvironment.getRemoteEnvironment(config);
+   *     UserMainExample runnableApp = new UserMainExample();
+   *     runnableApp.run(remoteEnv, config);
+   *   }
+   *
+   */
+  @Override public StreamGraph create(Config config) {
+    StreamGraph graph = StreamGraph.fromConfig(config);
+
+    MessageStream<JsonMessageEnvelope> pageViewEvents = graph.createInStream(input1, new StringSerde("UTF-8"), new JsonSerde<>());
+    MessageStream<StatsOutput> pageViewPerMemberCounters = graph.createOutStream(output, new StringSerde("UTF-8"), new JsonSerde<>());
+
+    pageViewEvents.
+        partitionBy(m -> m.getMessage().memberId).
+        map(new MyStatsCounter()).
+        sendTo(pageViewPerMemberCounters);
+
+    return graph;
+  }
+
+  // standalone local program model
+  public static void main(String[] args) throws Exception {
+    CommandLine cmdLine = new CommandLine();
+    Config config = cmdLine.loadConfig(cmdLine.parser().parse(args));
+    ExecutionEnvironment standaloneEnv = ExecutionEnvironment.getLocalEnvironment(config);
+    standaloneEnv.run(new KeyValueStoreExample(), config);
+  }
+
+  class MyStatsCounter implements MapFunction<JsonMessageEnvelope, StatsOutput> {
+    private final int TIMEOUT_MS = 10*60*1000;
+
+    KeyValueStore<String, StatsWindowState> statsStore;
+
+    class StatsWindowState {
+      int lastCount = 0;
+      long timeAtLastOutput = 0;
+      int newCount = 0;
+    }
+
+    @Override
+    public StatsOutput apply(JsonMessageEnvelope message) {
+      long wndTimestamp = (long) Math.floor(TimeUnit.MILLISECONDS.toMinutes(message.getMessage().timestamp) / 5) * 5;
+      String wndKey = String.format("%s-%d", message.getMessage().memberId, wndTimestamp);
+      StatsWindowState curState = this.statsStore.get(wndKey);
+      curState.newCount++;
+      if (curState.newCount > 0 && curState.timeAtLastOutput + TIMEOUT_MS < System.currentTimeMillis()) {
+        curState.timeAtLastOutput = System.currentTimeMillis();
+        curState.lastCount += curState.newCount;
+        curState.newCount = 0;
+        StatsOutput newStats = new StatsOutput(message.getMessage().memberId, wndTimestamp, curState.lastCount);
+        this.statsStore.put(wndKey, curState);
+        return newStats;
+      }
+      // update counter w/o generating output
+      this.statsStore.put(wndKey, curState);
+      return null;
+    }
+
+    @Override
+    public void init(Config config, TaskContext context) {
+      this.statsStore = (KeyValueStore<String, StatsWindowState>) context.getStore("my-stats-wnd-store");
+    }
+  }
+
   StreamSpec input1 = new StreamSpec() {
     @Override public SystemStream getSystemStream() {
       return new SystemStream("kafka", "PageViewEvent");
@@ -103,79 +174,10 @@ public class KeyValueStoreExample implements StreamGraphFactory {
     }
   }
 
-  class MyStatsCounter implements MapFunction<JsonMessageEnvelope, StatsOutput> {
-    private final Integer TIMEOUT_MS = 10*60*1000;
-
-    KeyValueStore<String, StatsWindowState> statsStore;
-
-    class StatsWindowState {
-      int lastCount = 0;
-      long timeAtLastOutput = 0;
-      int newCount = 0;
-    }
-
-    @Override
-    public StatsOutput apply(JsonMessageEnvelope message) {
-      long wndTimestamp = (long) Math.floor(TimeUnit.MILLISECONDS.toMinutes(message.getMessage().timestamp) / 5) * 5;
-      String wndKey = String.format("%s-%d", message.getMessage().memberId, wndTimestamp);
-      StatsWindowState curState = this.statsStore.get(wndKey);
-      curState.newCount++;
-      if (curState.newCount > 0 && curState.timeAtLastOutput + TIMEOUT_MS < System.currentTimeMillis()) {
-        curState.timeAtLastOutput = System.currentTimeMillis();
-        curState.lastCount += curState.newCount;
-        curState.newCount = 0;
-        StatsOutput newStats = new StatsOutput(message.getMessage().memberId, wndTimestamp, curState.lastCount);
-        this.statsStore.put(wndKey, curState);
-        return newStats;
-      }
-      // update counter w/o generating output
-      this.statsStore.put(wndKey, curState);
-      return null;
-    }
-
-    @Override
-    public void init(Config config, TaskContext context) {
-      this.statsStore = (KeyValueStore<String, StatsWindowState>) context.getStore("my-stats-wnd-store");
-    }
-  }
-
-  class JsonMessageEnvelope extends JsonIncomingSystemMessageEnvelope<PageViewEvent> {
+ class JsonMessageEnvelope extends JsonIncomingSystemMessageEnvelope<PageViewEvent> {
     JsonMessageEnvelope(String key, PageViewEvent data, Offset offset, SystemStreamPartition partition) {
       super(key, data, offset, partition);
     }
-  }
-
-  /**
-   * used by remote execution environment to launch the job in remote program. The remote program should follow the similar
-   * invoking context as in standalone:
-   *
-   *   public static void main(String args[]) throws Exception {
-   *     CommandLine cmdLine = new CommandLine();
-   *     Config config = cmdLine.loadConfig(cmdLine.parser().parse(args));
-   *     ExecutionEnvironment remoteEnv = ExecutionEnvironment.getRemoteEnvironment(config);
-   *     UserMainExample runnableApp = new UserMainExample();
-   *     runnableApp.run(remoteEnv, config);
-   *   }
-   *
-   */
-  @Override public StreamGraph create(Config config) {
-    StreamGraph graph = StreamGraph.fromConfig(config);
-
-    graph.<String, PageViewEvent, JsonMessageEnvelope>createInStream(
-        input1, new StringSerde("UTF-8"), new JsonSerde<>()).
-        partitionBy(m -> m.getMessage().memberId).
-        map(new MyStatsCounter()).
-        sendTo(graph.createOutStream(output, new StringSerde("UTF-8"), new JsonSerde<>()));
-
-    return graph;
-  }
-
-  // standalone local program model
-  public static void main(String[] args) throws Exception {
-    CommandLine cmdLine = new CommandLine();
-    Config config = cmdLine.loadConfig(cmdLine.parser().parse(args));
-    ExecutionEnvironment standaloneEnv = ExecutionEnvironment.getLocalEnvironment(config);
-    standaloneEnv.run(new KeyValueStoreExample(), config);
   }
 
 }
