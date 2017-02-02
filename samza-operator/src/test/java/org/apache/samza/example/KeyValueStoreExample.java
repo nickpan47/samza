@@ -65,7 +65,7 @@ public class KeyValueStoreExample implements StreamGraphFactory {
   @Override public StreamGraph create(Config config) {
     StreamGraph graph = StreamGraph.fromConfig(config);
 
-    MessageStream<JsonMessageEnvelope> pageViewEvents = graph.createInStream(input1, new StringSerde("UTF-8"), new JsonSerde<>());
+    MessageStream<PageViewEvent> pageViewEvents = graph.createInStream(input1, new StringSerde("UTF-8"), new JsonSerde<>());
     MessageStream<StatsOutput> pageViewPerMemberCounters = graph.createOutStream(output, new StringSerde("UTF-8"), new JsonSerde<>());
 
     pageViewEvents.
@@ -84,7 +84,7 @@ public class KeyValueStoreExample implements StreamGraphFactory {
     standaloneEnv.run(new KeyValueStoreExample(), config);
   }
 
-  class MyStatsCounter implements MapFunction<JsonMessageEnvelope, StatsOutput> {
+  class MyStatsCounter implements MapFunction<PageViewEvent, StatsOutput> {
     private final int TIMEOUT_MS = 10*60*1000;
 
     KeyValueStore<String, StatsWindowState> statsStore;
@@ -96,7 +96,7 @@ public class KeyValueStoreExample implements StreamGraphFactory {
     }
 
     @Override
-    public StatsOutput apply(JsonMessageEnvelope message) {
+    public StatsOutput apply(PageViewEvent message) {
       long wndTimestamp = (long) Math.floor(TimeUnit.MILLISECONDS.toMinutes(message.getMessage().timestamp) / 5) * 5;
       String wndKey = String.format("%s-%d", message.getMessage().memberId, wndTimestamp);
       StatsWindowState curState = this.statsStore.get(wndKey);
@@ -140,43 +140,47 @@ public class KeyValueStoreExample implements StreamGraphFactory {
     }
   };
 
-  class PageViewEvent {
+  class PageViewEvent implements MessageEnvelope<String, PageViewEvent> {
     String pageId;
     String memberId;
     long timestamp;
-  }
 
-  class StatsOutput implements MessageEnvelope<String, StatsOutput.OutputRecord> {
-
-    class OutputRecord {
-      private String memberId;
-      private long timestamp;
-      private Integer count;
-    }
-
-    final OutputRecord record;
-
-    StatsOutput(String key, long timestamp, Integer count) {
-      this.record = new OutputRecord();
-      this.record.memberId = key;
-      this.record.timestamp = timestamp;
-      this.record.count = count;
+    PageViewEvent(String pageId, String memberId, long timestamp) {
+      this.pageId = pageId;
+      this.memberId = memberId;
+      this.timestamp = timestamp;
     }
 
     @Override
     public String getKey() {
-      return this.record.memberId;
+      return this.pageId;
     }
 
     @Override
-    public OutputRecord getMessage() {
-      return this.record;
+    public PageViewEvent getMessage() {
+      return this;
     }
   }
 
- class JsonMessageEnvelope extends JsonIncomingSystemMessageEnvelope<PageViewEvent> {
-    JsonMessageEnvelope(String key, PageViewEvent data, Offset offset, SystemStreamPartition partition) {
-      super(key, data, offset, partition);
+  class StatsOutput implements MessageEnvelope<String, StatsOutput> {
+    private String memberId;
+    private long timestamp;
+    private Integer count;
+
+    StatsOutput(String key, long timestamp, Integer count) {
+      this.memberId = key;
+      this.timestamp = timestamp;
+      this.count = count;
+    }
+
+    @Override
+    public String getKey() {
+      return this.memberId;
+    }
+
+    @Override
+    public StatsOutput getMessage() {
+      return this;
     }
   }
 

@@ -24,6 +24,7 @@ import org.apache.samza.operators.MessageStream;
 import org.apache.samza.operators.StreamGraph;
 import org.apache.samza.operators.StreamSpec;
 import org.apache.samza.operators.data.JsonIncomingSystemMessageEnvelope;
+import org.apache.samza.operators.data.MessageEnvelope;
 import org.apache.samza.operators.data.Offset;
 import org.apache.samza.serializers.JsonSerde;
 import org.apache.samza.serializers.StringSerde;
@@ -53,9 +54,9 @@ public class OrderShipmentJoinExample implements StreamGraphFactory {
   @Override public StreamGraph create(Config config) {
     StreamGraph graph = StreamGraph.fromConfig(config);
 
-    MessageStream<OrderMessage> orders = graph.createInStream(input1, new StringSerde("UTF-8"), new JsonSerde<>());
-    MessageStream<ShipmentMessage> shipments = graph.createInStream(input2, new StringSerde("UTF-8"), new JsonSerde<>());
-    MessageStream<FulfilledOrderMessage> fulfilledOrders = graph.createOutStream(output, new StringSerde("UTF-8"), new JsonSerde<>());
+    MessageStream<OrderRecord> orders = graph.createInStream(input1, new StringSerde("UTF-8"), new JsonSerde<>());
+    MessageStream<ShipmentRecord> shipments = graph.createInStream(input2, new StringSerde("UTF-8"), new JsonSerde<>());
+    MessageStream<FulFilledOrderRecord> fulfilledOrders = graph.createOutStream(output, new StringSerde("UTF-8"), new JsonSerde<>());
 
     orders.join(shipments, this::myJoinResult).sendTo(fulfilledOrders);
 
@@ -100,46 +101,71 @@ public class OrderShipmentJoinExample implements StreamGraphFactory {
     }
   };
 
-  class OrderRecord {
+  class OrderRecord implements MessageEnvelope<String, OrderRecord> {
     String orderId;
     long orderTimeMs;
-  }
 
-  class OrderMessage extends JsonIncomingSystemMessageEnvelope<OrderRecord> {
-    OrderMessage(OrderRecord data, Offset offset, SystemStreamPartition partition) {
-      super(data.orderId, data, offset, partition);
+    OrderRecord(String orderId, long timeMs) {
+      this.orderId = orderId;
+      this.orderTimeMs = timeMs;
+    }
+
+    @Override
+    public String getKey() {
+      return this.orderId;
+    }
+
+    @Override
+    public OrderRecord getMessage() {
+      return this;
     }
   }
 
-  class ShipmentRecord {
+  class ShipmentRecord implements MessageEnvelope<String, ShipmentRecord>{
     String orderId;
     long shipTimeMs;
-  }
 
-  class ShipmentMessage extends JsonIncomingSystemMessageEnvelope<ShipmentRecord> {
-    ShipmentMessage(ShipmentRecord data, Offset offset, SystemStreamPartition partition) {
-      super(data.orderId, data, offset, partition);
+    ShipmentRecord(String orderId, long timeMs) {
+      this.orderId = orderId;
+      this.shipTimeMs = timeMs;
+    }
+
+    @Override
+    public String getKey() {
+      return this.orderId;
+    }
+
+    @Override
+    public ShipmentRecord getMessage() {
+      return this;
     }
   }
 
-  class FulFilledOrderRecord {
+  class FulFilledOrderRecord implements MessageEnvelope<String, FulFilledOrderRecord> {
     String orderId;
     long orderTimeMs;
     long shipTimeMs;
-  }
 
-  class FulfilledOrderMessage extends JsonIncomingSystemMessageEnvelope<FulFilledOrderRecord> {
-    FulfilledOrderMessage(FulFilledOrderRecord data, Offset offset, SystemStreamPartition partition) {
-      super(data.orderId, data, offset, partition);
+    FulFilledOrderRecord(String orderId, long orderTimeMs, long shipTimeMs) {
+      this.orderId = orderId;
+      this.orderTimeMs = orderTimeMs;
+      this.shipTimeMs = shipTimeMs;
+    }
+
+
+    @Override
+    public String getKey() {
+      return this.orderId;
+    }
+
+    @Override
+    public FulFilledOrderRecord getMessage() {
+      return this;
     }
   }
 
-  FulfilledOrderMessage myJoinResult(OrderMessage m1, ShipmentMessage m2) {
-    FulFilledOrderRecord joinRecord = new FulFilledOrderRecord();
-    joinRecord.orderId = m1.getMessage().orderId;
-    joinRecord.orderTimeMs = m1.getMessage().orderTimeMs;
-    joinRecord.shipTimeMs = m2.getMessage().shipTimeMs;
-    return new FulfilledOrderMessage(joinRecord, null, null);
+  FulFilledOrderRecord myJoinResult(OrderRecord m1, ShipmentRecord m2) {
+    return new FulFilledOrderRecord(m1.getKey(), m1.orderTimeMs, m2.shipTimeMs);
   }
 
 }

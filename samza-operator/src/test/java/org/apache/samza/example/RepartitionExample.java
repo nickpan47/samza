@@ -61,12 +61,12 @@ public class RepartitionExample implements StreamGraphFactory {
   @Override public StreamGraph create(Config config) {
     StreamGraph graph = StreamGraph.fromConfig(config);
 
-    MessageStream<JsonMessageEnvelope> pageViewEvents = graph.createInStream(input1, new StringSerde("UTF-8"), new JsonSerde<>());
+    MessageStream<PageViewEvent> pageViewEvents = graph.createInStream(input1, new StringSerde("UTF-8"), new JsonSerde<>());
     MessageStream<MyStreamOutput> pageViewPerMemberCounters = graph.createOutStream(output, new StringSerde("UTF-8"), new JsonSerde<>());
 
     pageViewEvents.
         partitionBy(m -> m.getMessage().memberId).
-        window(Windows.<JsonMessageEnvelope, String, Integer>keyedTumblingWindow(
+        window(Windows.<PageViewEvent, String, Integer>keyedTumblingWindow(
             msg -> msg.getMessage().memberId, Duration.ofMinutes(5), (m, c) -> c+1)).
         map(MyStreamOutput::new).
         sendTo(pageViewPerMemberCounters);
@@ -102,42 +102,47 @@ public class RepartitionExample implements StreamGraphFactory {
     }
   };
 
-  class PageViewEvent {
+  class PageViewEvent implements MessageEnvelope<String, PageViewEvent> {
     String pageId;
     String memberId;
     long timestamp;
-  }
 
-  class JsonMessageEnvelope extends JsonIncomingSystemMessageEnvelope<PageViewEvent> {
-    JsonMessageEnvelope(String key, PageViewEvent data, Offset offset, SystemStreamPartition partition) {
-      super(key, data, offset, partition);
-    }
-  }
-
-  class MyStreamOutput implements MessageEnvelope<String, MyStreamOutput.OutputRecord> {
-
-    class OutputRecord {
-      String memberId;
-      long timestamp;
-      int count;
-    }
-
-    OutputRecord record;
-
-    MyStreamOutput(WindowPane<String, Integer> m) {
-      this.record.memberId = m.getKey().getKey();
-      this.record.timestamp = Long.valueOf(m.getKey().getPaneId());
-      this.record.count = m.getMessage();
+    PageViewEvent(String pageId, String memberId, long timestamp) {
+      this.pageId = pageId;
+      this.memberId = memberId;
+      this.timestamp = timestamp;
     }
 
     @Override
     public String getKey() {
-      return this.record.memberId;
+      return this.pageId;
     }
 
     @Override
-    public OutputRecord getMessage() {
-      return this.record;
+    public PageViewEvent getMessage() {
+      return this;
+    }
+  }
+
+  class MyStreamOutput implements MessageEnvelope<String, MyStreamOutput> {
+    String memberId;
+    long timestamp;
+    int count;
+
+    MyStreamOutput(WindowPane<String, Integer> m) {
+      this.memberId = m.getKey().getKey();
+      this.timestamp = Long.valueOf(m.getKey().getPaneId());
+      this.count = m.getMessage();
+    }
+
+    @Override
+    public String getKey() {
+      return this.memberId;
+    }
+
+    @Override
+    public MyStreamOutput getMessage() {
+      return this;
     }
   }
 
