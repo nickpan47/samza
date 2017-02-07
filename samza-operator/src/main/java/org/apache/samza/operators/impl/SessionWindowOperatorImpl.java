@@ -20,12 +20,8 @@ package org.apache.samza.operators.impl;
 
 import org.apache.samza.config.Config;
 import org.apache.samza.operators.MessageStreamImpl;
-import org.apache.samza.operators.StateStoreImpl;
-import org.apache.samza.operators.data.MessageEnvelope;
 import org.apache.samza.operators.spec.WindowOperatorSpec;
-import org.apache.samza.operators.windows.WindowOutput;
-import org.apache.samza.operators.windows.WindowState;
-import org.apache.samza.storage.kv.Entry;
+import org.apache.samza.operators.windows.WindowPane;
 import org.apache.samza.task.MessageCollector;
 import org.apache.samza.task.TaskContext;
 import org.apache.samza.task.TaskCoordinator;
@@ -34,27 +30,20 @@ import org.apache.samza.task.TaskCoordinator;
 /**
  * Default implementation class of a {@link WindowOperatorSpec} for a session window.
  *
- * @param <M>  the type of input {@link MessageEnvelope}
+ * @param <M>  the type of input message
  * @param <RK>  the type of window key
- * @param <WS>  the type of window state
- * @param <RM>  the type of aggregated value of the window
+ * @param <WV>  the type of window state
  */
-class SessionWindowOperatorImpl<M extends MessageEnvelope, RK, WS extends WindowState, RM extends WindowOutput<RK, ?>>
-    extends OperatorImpl<M, RM> {
+class SessionWindowOperatorImpl<M, RK, WV> extends OperatorImpl<M, WindowPane<RK, WV>> {
 
-  private final WindowOperatorSpec<M, RK, WS, RM> windowSpec;
-  private final StateStoreImpl<M, RK, WS> stateStore;
+  private final WindowOperatorSpec<M, RK, WV> windowSpec;
 
-  SessionWindowOperatorImpl(WindowOperatorSpec<M, RK, WS, RM> windowSpec, MessageStreamImpl<M> source, Config config, TaskContext context) {
+  SessionWindowOperatorImpl(WindowOperatorSpec<M, RK, WV> windowSpec, MessageStreamImpl<M> source, Config config, TaskContext context) {
     this.windowSpec = windowSpec;
-    this.stateStore = new StateStoreImpl<>(windowSpec.getStoreFns(), windowSpec.getStoreName(source), context);
   }
 
   @Override
   public void onNext(M message, MessageCollector collector, TaskCoordinator coordinator) {
-    Entry<RK, WS> state = this.stateStore.getState(message);
-    this.propagateResult(this.windowSpec.getTransformFn().apply(message, state), collector, coordinator);
-    this.stateStore.updateState(message, state);
   }
 
   public void onTimer(MessageCollector collector, TaskCoordinator coordinator) {

@@ -18,19 +18,19 @@
  */
 package org.apache.samza.example;
 
-import org.apache.samza.application.StreamGraphFactory;
-import org.apache.samza.config.Config;
 import org.apache.samza.operators.MessageStream;
+import org.apache.samza.operators.OutputStream;
+import org.apache.samza.operators.StreamGraphFactory;
+import org.apache.samza.config.Config;
 import org.apache.samza.operators.StreamGraph;
 import org.apache.samza.operators.StreamSpec;
 import org.apache.samza.operators.data.JsonIncomingSystemMessageEnvelope;
 import org.apache.samza.operators.data.MessageEnvelope;
-import org.apache.samza.operators.data.Offset;
+import org.apache.samza.operators.functions.JoinFunction;
 import org.apache.samza.serializers.JsonSerde;
 import org.apache.samza.serializers.StringSerde;
 import org.apache.samza.system.ExecutionEnvironment;
 import org.apache.samza.system.SystemStream;
-import org.apache.samza.system.SystemStreamPartition;
 import org.apache.samza.util.CommandLine;
 
 import java.util.Properties;
@@ -56,9 +56,9 @@ public class OrderShipmentJoinExample implements StreamGraphFactory {
 
     MessageStream<OrderRecord> orders = graph.createInStream(input1, new StringSerde("UTF-8"), new JsonSerde<>());
     MessageStream<ShipmentRecord> shipments = graph.createInStream(input2, new StringSerde("UTF-8"), new JsonSerde<>());
-    MessageStream<FulFilledOrderRecord> fulfilledOrders = graph.createOutStream(output, new StringSerde("UTF-8"), new JsonSerde<>());
+    OutputStream<FulFilledOrderRecord> fulfilledOrders = graph.createOutStream(output, new StringSerde("UTF-8"), new JsonSerde<>());
 
-    orders.join(shipments, this::myJoinResult).sendTo(fulfilledOrders);
+    orders.join(shipments, new MyJoinFunction()).sendTo(fulfilledOrders);
 
     return graph;
   }
@@ -168,4 +168,21 @@ public class OrderShipmentJoinExample implements StreamGraphFactory {
     return new FulFilledOrderRecord(m1.getKey(), m1.orderTimeMs, m2.shipTimeMs);
   }
 
+  class MyJoinFunction implements JoinFunction<String, OrderRecord, ShipmentRecord, FulFilledOrderRecord> {
+
+    @Override
+    public FulFilledOrderRecord apply(OrderRecord message, ShipmentRecord otherMessage) {
+      return OrderShipmentJoinExample.this.myJoinResult(message, otherMessage);
+    }
+
+    @Override
+    public String getFirstKey(OrderRecord message) {
+      return message.getKey();
+    }
+
+    @Override
+    public String getSecondKey(ShipmentRecord message) {
+      return message.getKey();
+    }
+  }
 }

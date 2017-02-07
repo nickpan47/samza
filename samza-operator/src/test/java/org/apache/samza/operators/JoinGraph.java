@@ -19,9 +19,10 @@
 
 package org.apache.samza.operators;
 
-import org.apache.samza.operators.data.IncomingSystemMessageEnvelope;
+import org.apache.samza.operators.data.InputMessageEnvelope;
 import org.apache.samza.operators.data.JsonIncomingSystemMessageEnvelope;
 import org.apache.samza.operators.data.Offset;
+import org.apache.samza.operators.functions.JoinFunction;
 import org.apache.samza.serializers.JsonSerde;
 import org.apache.samza.serializers.StringSerde;
 import org.apache.samza.system.ExecutionEnvironment;
@@ -56,7 +57,7 @@ public class JoinGraph {
     StreamGraphImpl graph = new StreamGraphImpl();
 
     for (SystemStreamPartition input : inputs) {
-      MessageStream<JsonMessageEnvelope> newSource = graph.<Object, Object, IncomingSystemMessageEnvelope>createInStream(
+      MessageStream<JsonMessageEnvelope> newSource = graph.<Object, Object, InputMessageEnvelope>createInStream(
           new StreamSpec() {
             @Override public SystemStream getSystemStream() {
               return input.getSystemStream();
@@ -69,7 +70,7 @@ public class JoinGraph {
       if (joinOutput == null) {
         joinOutput = newSource;
       } else {
-        joinOutput = joinOutput.join(newSource, (m1, m2) -> this.myJoinResult(m1, m2));
+        joinOutput = joinOutput.join(newSource, new MyJoinFunction());
       }
     }
 
@@ -86,7 +87,7 @@ public class JoinGraph {
     return graph;
   }
 
-  private JsonMessageEnvelope getInputMessage(IncomingSystemMessageEnvelope ism) {
+  private JsonMessageEnvelope getInputMessage(InputMessageEnvelope ism) {
     return new JsonMessageEnvelope(
         ((MessageType) ism.getMessage()).joinKey,
         (MessageType) ism.getMessage(),
@@ -94,11 +95,25 @@ public class JoinGraph {
         ism.getSystemStreamPartition());
   }
 
-  JsonMessageEnvelope myJoinResult(JsonMessageEnvelope m1, JsonMessageEnvelope m2) {
-    MessageType newJoinMsg = new MessageType();
-    newJoinMsg.joinKey = m1.getKey();
-    newJoinMsg.joinFields.addAll(m1.getMessage().joinFields);
-    newJoinMsg.joinFields.addAll(m2.getMessage().joinFields);
-    return new JsonMessageEnvelope(m1.getMessage().joinKey, newJoinMsg, null, null);
+  class MyJoinFunction implements JoinFunction<String, JsonMessageEnvelope, JsonMessageEnvelope, JsonMessageEnvelope> {
+
+    @Override
+    public JsonMessageEnvelope apply(JsonMessageEnvelope m1, JsonMessageEnvelope m2) {
+      MessageType newJoinMsg = new MessageType();
+      newJoinMsg.joinKey = m1.getKey();
+      newJoinMsg.joinFields.addAll(m1.getMessage().joinFields);
+      newJoinMsg.joinFields.addAll(m2.getMessage().joinFields);
+      return new JsonMessageEnvelope(m1.getMessage().joinKey, newJoinMsg, null, null);
+    }
+
+    @Override
+    public String getFirstKey(JsonMessageEnvelope message) {
+      return message.getKey();
+    }
+
+    @Override
+    public String getSecondKey(JsonMessageEnvelope message) {
+      return message.getKey();
+    }
   }
 }

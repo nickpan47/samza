@@ -27,20 +27,26 @@ import java.util.Collection;
 
 
 /**
- * A function that transforms a {@link org.apache.samza.operators.data.MessageEnvelope} into a collection of 0 or more {@link org.apache.samza.operators.data.MessageEnvelope}s,
+ * A function that transforms an input message into a collection of 0 or more messages,
  * possibly of a different type.
- * @param <M>  type of the input {@link org.apache.samza.operators.data.MessageEnvelope}
- * @param <OM>  type of the transformed {@link org.apache.samza.operators.data.MessageEnvelope}s
+ * @param <M>  type of the input message
+ * @param <OM>  type of the transformed messages
  */
 @InterfaceStability.Unstable
-public interface FlatMapFunction<M extends MessageEnvelope, OM extends MessageEnvelope>  extends InitFunction {
+public interface FlatMapFunction<M, OM>  extends InitFunction {
 
   /**
-   * Transforms the provided {@link org.apache.samza.operators.data.MessageEnvelope} into a collection of 0 or more {@link org.apache.samza.operators.data.MessageEnvelope}s.
-   * @param message  the {@link org.apache.samza.operators.data.MessageEnvelope} to be transformed
-   * @return  a collection of 0 or more transformed {@link org.apache.samza.operators.data.MessageEnvelope}s
+   * Transforms the provided message into a collection of 0 or more messages.
+   * @param message  the input message to be transformed
+   * @return  a collection of 0 or more transformed messages
    */
   Collection<OM> apply(M message);
 
+  /**
+   * Init method to initialize the context for this {@link FlatMapFunction}. The default implementation is NO-OP.
+   *
+   * @param config  the {@link Config} object for this task
+   * @param context  the {@link TaskContext} object for this task
+   */
   default void init(Config config, TaskContext context) { };
 }

@@ -18,22 +18,25 @@
  */
 package org.apache.samza.operators;
 
-import org.apache.samza.config.Config;
+import java.util.Properties;
+import java.util.function.Function;
 import org.apache.samza.operators.data.MessageEnvelope;
 import org.apache.samza.operators.functions.SinkFunction;
 import org.apache.samza.serializers.Serde;
 import org.apache.samza.system.OutgoingMessageEnvelope;
 import org.apache.samza.system.SystemStream;
 import org.apache.samza.task.MessageCollector;
-import org.apache.samza.task.TaskContext;
+import org.apache.samza.task.StreamOperatorTask;
 import org.apache.samza.task.TaskCoordinator;
 
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.function.Function;
 
-
+/**
+ * The implementation of {@link StreamGraph} interface. This class provides implementation of methods to allow users to
+ * create system input/output/intermediate streams.
+ */
 public class StreamGraphImpl implements StreamGraph {
 
   /**
@@ -42,67 +45,63 @@ public class StreamGraphImpl implements StreamGraph {
    */
   private int opId = 0;
 
-  private class SystemMessageStream<K, V, M extends MessageEnvelope<K, V>> extends MessageStreamImpl<M> {
-    private final StreamSpec spec;
-    private final Serde<K> keySerde;
-    private final Serde<V> msgSerde;
+  private class SystemStreamImpl<PK, K, V, M extends MessageEnvelope<K, V>> extends MessageStreamImpl<M> implements OutputStream<M> {
+    final StreamSpec spec;
+    final Serde<K> keySerde;
+    final Serde<V> msgSerde;
+    final Function<M, PK> parKeyFn;
 
     /**
      * Default constructor
      *
-
      * @param graph the {@link StreamGraphImpl} object that this stream belongs to
      */
-    SystemMessageStream(StreamGraphImpl graph, StreamSpec streamSpec, Serde<K> keySerde, Serde<V> msgSerde) {
+    SystemStreamImpl(StreamGraphImpl graph, StreamSpec streamSpec, Serde<K> keySerde, Serde<V> msgSerde) {
+      this(graph, streamSpec, keySerde, msgSerde, null);
+    }
+
+    SystemStreamImpl(StreamGraphImpl graph, StreamSpec streamSpec, Serde<K> keySerde, Serde<V> msgSerde, Function<M, PK> parKeyFn) {
       super(graph);
       this.spec = streamSpec;
       this.keySerde = keySerde;
       this.msgSerde = msgSerde;
-    }
-
-    <PK> void send(M message, MessageCollector mc, TaskCoordinator tc, Function<M, PK> parKeyFunction) {
-      // TODO: need to find a way to directly pass in the serde class names
-      // mc.send(new OutgoingMessageEnvelope(this.spec.getSystemStream(), this.keySerde.getClass().getName(), this.msgSerde.getClass().getName(),
-      //    message.getKey(), message.getKey(), message.getMessage()));
-      if (parKeyFunction != null) {
-        mc.send(new OutgoingMessageEnvelope(this.spec.getSystemStream(), parKeyFunction.apply(message), message.getKey(), message.getMessage()));
-        return;
-      }
-      mc.send(new OutgoingMessageEnvelope(this.spec.getSystemStream(), message.getKey(), message.getMessage()));
+      this.parKeyFn = parKeyFn;
     }
 
     StreamSpec getStreamSpec() {
       return this.spec;
+    }
+
+    @Override
+    public SinkFunction<M> getSinkFunction() {
+      return (M message, MessageCollector mc, TaskCoordinator tc) -> {
+        // TODO: need to find a way to directly pass in the serde class names
+        // mc.send(new OutgoingMessageEnvelope(this.spec.getSystemStream(), this.keySerde.getClass().getName(), this.msgSerde.getClass().getName(),
+        //    message.getKey(), message.getKey(), message.getMessage()));
+        if (this.parKeyFn == null) {
+          mc.send(new OutgoingMessageEnvelope(this.getStreamSpec().getSystemStream(), message.getKey(), message.getMessage()));
+        } else {
+          // apply partition key function
+          mc.send(new OutgoingMessageEnvelope(this.getStreamSpec().getSystemStream(), this.parKeyFn.apply(message), message.getKey(), message.getMessage()));
+        }
+      };
     }
   }
 
   /**
    * Maps keeping all {@link SystemStream}s that are input and output of operators in {@link StreamGraphImpl}
    */
-  private final Map<SystemStream, SystemMessageStream> inStreams = new HashMap<>();
-  private final Map<SystemStream, SystemMessageStream> outStreams = new HashMap<>();
-  private final Map<SystemStream, SystemMessageStream> intStreams = new HashMap<>();
+  private final Map<SystemStream, MessageStream> inStreams = new HashMap<>();
+  private final Map<SystemStream, OutputStream> outStreams = new HashMap<>();
 
   private ContextManager contextManager = new ContextManager() {};
-
-  /**
-   * Helper function to convert the map to a map of {@link StreamSpec} to {@link MessageStream} that
-   *
-   * @param map  raw maps to be converted
-   * @return  a map keyed by {@link StreamSpec}
-   */
-  private Map<StreamSpec, MessageStream> getStreamSpecMap(Map<SystemStream, SystemMessageStream> map) {
-    Map<StreamSpec, MessageStream> streamSpecMap = new HashMap<>();
-    map.forEach((ss, entry) -> streamSpecMap.put(entry.getStreamSpec(), entry));
-    return Collections.unmodifiableMap(streamSpecMap);
-  }
 
   @Override
   public <K, V, M extends MessageEnvelope<K, V>> MessageStream<M> createInStream(StreamSpec streamSpec, Serde<K> keySerde, Serde<V> msgSerde) {
     if (!this.inStreams.containsKey(streamSpec.getSystemStream())) {
-      this.inStreams.putIfAbsent(streamSpec.getSystemStream(), new SystemMessageStream<K, V, M>(this, streamSpec, keySerde, msgSerde));
+      this.inStreams.putIfAbsent(streamSpec.getSystemStream(), new SystemStreamImpl<K, K, V, M>(this, streamSpec, keySerde, msgSerde));
     }
-    return (MessageStream<M>) this.inStreams.get(streamSpec.getSystemStream());
+    return this.inStreams.get(streamSpec.getSystemStream());
   }
 
   /**
@@ -113,11 +112,11 @@ public class StreamGraphImpl implements StreamGraph {
    * @return  the {@link MessageStreamImpl} object
    */
   @Override
-  public <K, V, M extends MessageEnvelope<K, V>> MessageStream<M> createOutStream(StreamSpec streamSpec, Serde<K> keySerde, Serde<V> msgSerde) {
+  public <K, V, M extends MessageEnvelope<K, V>> OutputStream<M> createOutStream(StreamSpec streamSpec, Serde<K> keySerde, Serde<V> msgSerde) {
     if (!this.outStreams.containsKey(streamSpec.getSystemStream())) {
-      this.outStreams.putIfAbsent(streamSpec.getSystemStream(), new SystemMessageStream<K, V, M>(this, streamSpec, keySerde, msgSerde));
+      this.outStreams.putIfAbsent(streamSpec.getSystemStream(), new SystemStreamImpl<K, K, V, M>(this, streamSpec, keySerde, msgSerde));
     }
-    return (MessageStreamImpl<M>) this.outStreams.get(streamSpec.getSystemStream());
+    return this.outStreams.get(streamSpec.getSystemStream());
   }
 
   /**
@@ -128,77 +127,40 @@ public class StreamGraphImpl implements StreamGraph {
    * @return  the {@link MessageStreamImpl} object
    */
   @Override
-  public <K, V, M extends MessageEnvelope<K, V>> MessageStreamImpl<M> createIntStream(StreamSpec streamSpec, Serde<K> keySerde, Serde<V> msgSerde) {
-    if (!this.intStreams.containsKey(streamSpec.getSystemStream())) {
-      this.intStreams.putIfAbsent(streamSpec.getSystemStream(), new SystemMessageStream<K, V, M>(this, streamSpec, keySerde, msgSerde));
+  public <K, V, M extends MessageEnvelope<K, V>> OutputStream<M> createIntStream(StreamSpec streamSpec, Serde<K> keySerde, Serde<V> msgSerde) {
+    if (!this.inStreams.containsKey(streamSpec.getSystemStream())) {
+      this.inStreams.putIfAbsent(streamSpec.getSystemStream(), new SystemStreamImpl<K, K, V, M>(this, streamSpec, keySerde, msgSerde));
     }
-    return (MessageStreamImpl<M>) this.intStreams.get(streamSpec.getSystemStream());
+    SystemStreamImpl<K, K, V, M> intStream = (SystemStreamImpl<K, K, V, M>) this.inStreams.get(streamSpec.getSystemStream());
+    if (!this.outStreams.containsKey(streamSpec.getSystemStream())) {
+      this.outStreams.putIfAbsent(streamSpec.getSystemStream(), intStream);
+    }
+    return intStream;
   }
 
   @Override public Map<StreamSpec, MessageStream> getInStreams() {
-    return this.getStreamSpecMap(this.inStreams);
+    Map<StreamSpec, MessageStream> inStreamMap = new HashMap<>();
+    this.inStreams.forEach((ss, entry) -> inStreamMap.put(((SystemStreamImpl) entry).getStreamSpec(), entry));
+    return Collections.unmodifiableMap(inStreamMap);
   }
 
-  @Override public Map<StreamSpec, MessageStream> getOutStreams() {
-    return this.getStreamSpecMap(this.outStreams);
-  }
-
-  @Override public Map<StreamSpec, MessageStream> getIntStreams() {
-    return this.getStreamSpecMap(this.intStreams);
+  @Override public Map<StreamSpec, OutputStream> getOutStreams() {
+    Map<StreamSpec, OutputStream> outStreamMap = new HashMap<>();
+    this.outStreams.forEach((ss, entry) -> outStreamMap.put(((SystemStreamImpl) entry).getStreamSpec(), entry));
+    return Collections.unmodifiableMap(outStreamMap);
   }
 
   @Override
-  public StreamGraph withInitializer(ContextManager manager) {
+  public StreamGraph withContextManager(ContextManager manager) {
     this.contextManager = manager;
     return this;
   }
 
-  /**
-   * Helper method to get the {@link SystemMessageStream} corresponding to the input {@code messageStream}
-   *
-   * @param messageStream  the {@link MessageStream} object to be looked up in all output and intermediate {@link SystemMessageStream}s
-   * @param <K>  the type of key in the {@link SystemMessageStream}
-   * @param <V>  the type of message in the {@link SystemMessageStream}
-   * @param <M>  the type of {@link MessageEnvelope} in the {@link SystemMessageStream}
-   * @return  the {@link SystemMessageStream} object
-   */
-  private <K, V, M extends MessageEnvelope<K, V>> SystemMessageStream<K, V, M> getOutputStream(MessageStream<M> messageStream) {
-    if (this.outStreams.containsValue(messageStream)) {
-      return (SystemMessageStream<K, V, M>) messageStream;
-    }
-    if (this.intStreams.containsValue(messageStream)) {
-      return (SystemMessageStream<K, V, M>) messageStream;
-    }
-    return null;
-  }
-
-  /**
-   * Helper method to get the {@link SinkFunction} for a specific output/intermediate {@link SystemMessageStream}
-   *
-   * @param stream  the corresponding {@link MessageStream} to get create the {@link SinkFunction}
-   * @param parKeyFunction  the function to extract partition key from the input {@link MessageEnvelope}, if not null.
-   * @param <K>  the type of key in the {@link MessageEnvelope} in {@code stream}
-   * @param <V>  the type of message in the {@link MessageEnvelope} in {@code stream}
-   * @param <M>  the type of {@link MessageEnvelope} in {@code stream}
-   * @param <PK>  the type of partition key in the {@link MessageEnvelope} in {@code stream}
-   * @return  the {@link SinkFunction} to send a message to the corresponding output {@link SystemMessageStream}
-   */
-  <K, V, M extends MessageEnvelope<K, V>, PK> SinkFunction<M> getSinkFunction(MessageStream<M> stream, Function<M, PK> parKeyFunction) {
-    SystemMessageStream<K, V, M> ostream = this.getOutputStream(stream);
-
-    if (ostream == null) {
-      throw new IllegalArgumentException(String.format("The input parameter: %s is not an system stream defined in the graph", stream));
-    }
-
-    return (M message, MessageCollector messageCollector, TaskCoordinator taskCoordinator) ->
-        ostream.send(message, messageCollector, taskCoordinator, parKeyFunction);
-  }
-
-  int getNextOpId() {
+  public int getNextOpId() {
     return this.opId++;
   }
 
-  ContextManager getContextManager() {
+  public ContextManager getContextManager() {
     return this.contextManager;
   }
 
@@ -208,14 +170,51 @@ public class StreamGraphImpl implements StreamGraph {
    * @param systemStream  the {@link SystemStream}
    * @return  a {@link MessageStreamImpl} object corresponding to the {@code systemStream}
    */
-  public MessageStreamImpl getStreamByName(SystemStream systemStream) {
+  public MessageStreamImpl getInputStream(SystemStream systemStream) {
     if (this.inStreams.containsKey(systemStream)) {
-      return this.inStreams.get(systemStream);
-    }
-    if (this.intStreams.containsKey(systemStream)) {
-      return this.intStreams.get(systemStream);
+      return (MessageStreamImpl) this.inStreams.get(systemStream);
     }
     return null;
+  }
+
+  <M> MessageStreamImpl<M> getIntStream(OutputStream<M> stream) {
+    if (this.inStreams.containsValue(stream)) {
+      return (MessageStreamImpl<M>) stream;
+    }
+    return null;
+  }
+
+  /**
+   * Method to create intermediate topics for {@link MessageStreamImpl#partitionBy(Function)} method.
+   *
+   * @param parKeyFn  the function to extract the partition key from the input message
+   * @param <PK>  the type of partition key
+   * @param <M>  the type of input message
+   * @return  the {@link OutputStream} object for the re-partitioned stream
+   */
+  <PK, M> OutputStream<M> createIntStream(Function<M, PK> parKeyFn) {
+    // TODO: placeholder to auto-generate intermediate streams via {@link StreamSpec}
+    StreamSpec streamSpec = new StreamSpec() {
+      @Override
+      public SystemStream getSystemStream() {
+        // TODO: should auto-generate intermedaite stream name here
+        return new SystemStream("intermediate", String.format("par-%d", StreamGraphImpl.this.opId));
+      }
+
+      @Override
+      public Properties getProperties() {
+        return null;
+      }
+    };
+
+    if (!this.inStreams.containsKey(streamSpec.getSystemStream())) {
+      this.inStreams.putIfAbsent(streamSpec.getSystemStream(), new SystemStreamImpl(this, streamSpec, null, null, parKeyFn));
+    }
+    SystemStreamImpl intStream = (SystemStreamImpl) this.inStreams.get(streamSpec.getSystemStream());
+    if (!this.outStreams.containsKey(streamSpec.getSystemStream())) {
+      this.outStreams.putIfAbsent(streamSpec.getSystemStream(), intStream);
+    }
+    return intStream;
   }
 
 }

@@ -25,18 +25,24 @@ import org.apache.samza.task.TaskContext;
 
 
 /**
- * A function that specifies whether a {@link org.apache.samza.operators.data.MessageEnvelope} should be retained for further processing or filtered out.
- * @param <M>  type of the input {@link org.apache.samza.operators.data.MessageEnvelope}
+ * A function that specifies whether a message should be retained for further processing or filtered out.
+ * @param <M>  type of the input message
  */
 @InterfaceStability.Unstable
-public interface FilterFunction<M extends MessageEnvelope> extends InitFunction {
+public interface FilterFunction<M> extends InitFunction {
 
   /**
-   * Returns a boolean indicating whether this {@link org.apache.samza.operators.data.MessageEnvelope} should be retained or filtered out.
-   * @param message  the {@link org.apache.samza.operators.data.MessageEnvelope} to be checked
-   * @return  true if {@link org.apache.samza.operators.data.MessageEnvelope} should be retained
+   * Returns a boolean indicating whether this message should be retained or filtered out.
+   * @param message  the input message to be checked
+   * @return  true if {@code message} should be retained
    */
   boolean apply(M message);
 
+  /**
+   * Init method to initialize the context for this {@link FilterFunction}. The default implementation is NO-OP.
+   *
+   * @param config  the {@link Config} object for this task
+   * @param context  the {@link TaskContext} object for this task
+   */
   default void init(Config config, TaskContext context) { }
 }

@@ -19,7 +19,7 @@
 
 package org.apache.samza.operators;
 
-import org.apache.samza.operators.data.IncomingSystemMessageEnvelope;
+import org.apache.samza.operators.data.InputMessageEnvelope;
 import org.apache.samza.operators.data.JsonIncomingSystemMessageEnvelope;
 import org.apache.samza.operators.data.MessageEnvelope;
 import org.apache.samza.operators.data.Offset;
@@ -54,7 +54,7 @@ public class WindowGraph {
   public StreamGraphImpl createStreamGraph(ExecutionEnvironment runtimeEnv, Set<SystemStreamPartition> inputs) {
     StreamGraphImpl graph = new StreamGraphImpl();
     BiFunction<JsonMessageEnvelope, Integer, Integer> maxAggregator = (m, c) -> c + 1;
-    inputs.forEach(source -> graph.<Object, Object, IncomingSystemMessageEnvelope>createInStream(new StreamSpec() {
+    inputs.forEach(source -> graph.<Object, Object, InputMessageEnvelope>createInStream(new StreamSpec() {
       @Override public SystemStream getSystemStream() {
         return source.getSystemStream();
       }

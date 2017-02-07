@@ -18,13 +18,15 @@
  */
 package org.apache.samza.system;
 
-import org.apache.samza.application.StreamGraphFactory;
+import org.apache.samza.operators.StreamGraphFactory;
 import org.apache.samza.config.Config;
 import org.apache.samza.operators.StreamGraph;
 import org.apache.samza.operators.StreamGraphImpl;
 import org.apache.samza.task.StreamTask;
 
-
+/**
+ * This class implements the {@link ExecutionEnvironment} that runs the applications in YARN environment
+ */
 public class SingleJobExecutionEnvironment implements ExecutionEnvironment {
 
   @Override public StreamGraph createGraph() {

@@ -18,23 +18,19 @@
  */
 package org.apache.samza.example;
 
-import org.apache.samza.application.StreamApplication;
-import org.apache.samza.application.StreamGraphFactory;
-import org.apache.samza.config.Config;
 import org.apache.samza.operators.MessageStream;
+import org.apache.samza.operators.OutputStream;
+import org.apache.samza.operators.StreamGraphFactory;
+import org.apache.samza.config.Config;
 import org.apache.samza.operators.StreamGraph;
 import org.apache.samza.operators.StreamSpec;
-import org.apache.samza.operators.data.JsonIncomingSystemMessageEnvelope;
 import org.apache.samza.operators.data.MessageEnvelope;
-import org.apache.samza.operators.data.Offset;
 import org.apache.samza.operators.windows.WindowPane;
 import org.apache.samza.operators.windows.Windows;
-import org.apache.samza.serializers.IntegerSerde;
 import org.apache.samza.serializers.JsonSerde;
 import org.apache.samza.serializers.StringSerde;
 import org.apache.samza.system.ExecutionEnvironment;
 import org.apache.samza.system.SystemStream;
-import org.apache.samza.system.SystemStreamPartition;
 import org.apache.samza.util.CommandLine;
 
 import java.time.Duration;
@@ -42,7 +38,7 @@ import java.util.*;
 
 
 /**
- * Example {@link StreamApplication} code to test the API methods
+ * Example {@link StreamGraphFactory} code to test the API methods
  */
 public class RepartitionExample implements StreamGraphFactory {
 
@@ -62,7 +58,7 @@ public class RepartitionExample implements StreamGraphFactory {
     StreamGraph graph = StreamGraph.fromConfig(config);
 
     MessageStream<PageViewEvent> pageViewEvents = graph.createInStream(input1, new StringSerde("UTF-8"), new JsonSerde<>());
-    MessageStream<MyStreamOutput> pageViewPerMemberCounters = graph.createOutStream(output, new StringSerde("UTF-8"), new JsonSerde<>());
+    OutputStream<MyStreamOutput> pageViewPerMemberCounters = graph.createOutStream(output, new StringSerde("UTF-8"), new JsonSerde<>());
 
     pageViewEvents.
         partitionBy(m -> m.getMessage().memberId).

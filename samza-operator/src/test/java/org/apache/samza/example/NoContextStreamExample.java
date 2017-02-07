@@ -18,15 +18,16 @@
  */
 package org.apache.samza.example;
 
-import org.apache.samza.application.StreamApplication;
-import org.apache.samza.application.StreamGraphFactory;
+import org.apache.samza.operators.OutputStream;
+import org.apache.samza.operators.StreamGraphFactory;
 import org.apache.samza.config.Config;
 import org.apache.samza.operators.MessageStream;
 import org.apache.samza.operators.StreamGraph;
 import org.apache.samza.operators.StreamSpec;
-import org.apache.samza.operators.data.IncomingSystemMessageEnvelope;
+import org.apache.samza.operators.data.InputMessageEnvelope;
 import org.apache.samza.operators.data.JsonIncomingSystemMessageEnvelope;
 import org.apache.samza.operators.data.Offset;
+import org.apache.samza.operators.functions.JoinFunction;
 import org.apache.samza.serializers.JsonSerde;
 import org.apache.samza.serializers.StringSerde;
 import org.apache.samza.system.ExecutionEnvironment;
@@ -40,7 +41,7 @@ import java.util.Properties;
 
 
 /**
- * Example {@link StreamApplication} code to test the API methods
+ * Example {@link StreamGraphFactory} code to test the API methods
  */
 public class NoContextStreamExample implements StreamGraphFactory {
 
@@ -95,7 +96,7 @@ public class NoContextStreamExample implements StreamGraphFactory {
     }
   }
 
-  private JsonMessageEnvelope getInputMessage(IncomingSystemMessageEnvelope ism) {
+  private JsonMessageEnvelope getInputMessage(InputMessageEnvelope ism) {
     return new JsonMessageEnvelope(
         ((MessageType) ism.getMessage()).joinKey,
         (MessageType) ism.getMessage(),
@@ -111,6 +112,24 @@ public class NoContextStreamExample implements StreamGraphFactory {
     return new JsonMessageEnvelope(m1.getMessage().joinKey, newJoinMsg, null, null);
   }
 
+  class MyJoinFunction implements JoinFunction<String, JsonMessageEnvelope, JsonMessageEnvelope, JsonIncomingSystemMessageEnvelope<MessageType>> {
+
+    @Override
+    public JsonIncomingSystemMessageEnvelope<MessageType> apply(JsonMessageEnvelope message,
+        JsonMessageEnvelope otherMessage) {
+      return NoContextStreamExample.this.myJoinResult(message, otherMessage);
+    }
+
+    @Override
+    public String getFirstKey(JsonMessageEnvelope message) {
+      return message.getKey();
+    }
+
+    @Override
+    public String getSecondKey(JsonMessageEnvelope message) {
+      return message.getKey();
+    }
+  }
   /**
    * used by remote execution environment to launch the job in remote program. The remote program should follow the similar
    * invoking context as in standalone:
@@ -125,17 +144,15 @@ public class NoContextStreamExample implements StreamGraphFactory {
    */
   @Override public StreamGraph create(Config config) {
     StreamGraph graph = StreamGraph.fromConfig(config);
-    MessageStream<IncomingSystemMessageEnvelope> inputSource1 = graph.<Object, Object, IncomingSystemMessageEnvelope>createInStream(
+    MessageStream<InputMessageEnvelope> inputSource1 = graph.<Object, Object, InputMessageEnvelope>createInStream(
         input1, null, null);
-    MessageStream<IncomingSystemMessageEnvelope> inputSource2 = graph.<Object, Object, IncomingSystemMessageEnvelope>createInStream(
+    MessageStream<InputMessageEnvelope> inputSource2 = graph.<Object, Object, InputMessageEnvelope>createInStream(
         input2, null, null);
-    MessageStream<JsonIncomingSystemMessageEnvelope<MessageType>> intStream = graph.createOutStream(intermediate,
-        new StringSerde("UTF-8"), new JsonSerde<>());
-    MessageStream<JsonIncomingSystemMessageEnvelope<MessageType>> outStream = graph.createOutStream(output,
+    OutputStream<JsonIncomingSystemMessageEnvelope<MessageType>> outStream = graph.createOutStream(output,
         new StringSerde("UTF-8"), new JsonSerde<>());
 
     inputSource1.map(this::getInputMessage).
-        <String, JsonMessageEnvelope, JsonIncomingSystemMessageEnvelope<MessageType>>join(inputSource2.map(this::getInputMessage), this::myJoinResult).
+        join(inputSource2.map(this::getInputMessage), new MyJoinFunction()).
         sendTo(outStream);
 
     return graph;

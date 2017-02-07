@@ -31,7 +31,6 @@ public class SamzaContainerContext {
   public final int id;
   public final Config config;
   public final Collection<TaskName> taskNames;
-  public final Object userDefinedContext;
 
   /**
    * An immutable context object that can passed to tasks to give them information
@@ -48,7 +47,6 @@ public class SamzaContainerContext {
     this.id = id;
     this.config = config;
     this.taskNames = Collections.unmodifiableCollection(taskNames);
-    this.userDefinedContext = userDefinedContext;
   }
 
   public SamzaContainerContext(
@@ -56,9 +54,5 @@ public class SamzaContainerContext {
       Config config,
       Collection<TaskName> taskNames) {
     this(id, config, taskNames, null);
-  }
-
-  public <T> T getUserDefinedContext() {
-    return (T) this.userDefinedContext;
   }
 }

@@ -52,19 +52,20 @@ public class TestOperatorSpecs {
           this.add(new TestMessageEnvelope(m.getKey().toString(), m.getMessage().toString(), 12345L));
         } };
     MessageStreamImpl<TestMessageEnvelope> mockOutput = mock(MessageStreamImpl.class);
-    StreamOperatorSpec<MessageEnvelope, TestMessageEnvelope> strmOp = OperatorSpecs.createStreamOperator(transformFn, mockOutput,
-        OperatorSpec.OpCode.FLAT_MAP, 0);
+    StreamGraphImpl mockGraph = mock(StreamGraphImpl.class);
+    StreamOperatorSpec<MessageEnvelope, TestMessageEnvelope> strmOp = OperatorSpecs.createStreamOperatorSpec(transformFn, mockGraph, mockOutput);
     assertEquals(strmOp.getTransformFn(), transformFn);
-    assertEquals(strmOp.getOutputStream(), mockOutput);
+    assertEquals(strmOp.getNextStream(), mockOutput);
   }
 
   @Test
   public void testGetSinkOperator() {
     SinkFunction<TestMessageEnvelope> sinkFn = (TestMessageEnvelope message, MessageCollector messageCollector,
           TaskCoordinator taskCoordinator) -> { };
-    SinkOperatorSpec<TestMessageEnvelope> sinkOp = OperatorSpecs.createSinkOperator(sinkFn, OperatorSpec.OpCode.SINK, 0);
+    StreamGraphImpl mockGraph = mock(StreamGraphImpl.class);
+    SinkOperatorSpec<TestMessageEnvelope> sinkOp = OperatorSpecs.createSinkOperatorSpec(sinkFn, mockGraph);
     assertEquals(sinkOp.getSinkFn(), sinkFn);
-    assertTrue(sinkOp.getOutputStream() == null);
+    assertTrue(sinkOp.getNextStream() == null);
   }
 
   @Test
@@ -75,9 +76,9 @@ public class TestOperatorSpecs {
     //instantiate a window using reflection
     WindowInternal window = new WindowInternal(null, aggregator, keyExtractor, null);
 
-    MessageStreamImpl<WindowPane<WindowKey<String>, Integer>> mockWndOut = mock(MessageStreamImpl.class);
-    WindowOperatorSpec spec = OperatorSpecs.<TestMessageEnvelope, String, WindowKey<String>, Integer,
-        WindowPane<WindowKey<String>, Integer>>createWindowOperatorSpec(window, mockWndOut, 0);
+    StreamGraphImpl mockGraph = mock(StreamGraphImpl.class);
+    MessageStreamImpl<WindowPane<String, Integer>> mockWndOut = mock(MessageStreamImpl.class);
+    WindowOperatorSpec spec = OperatorSpecs.<TestMessageEnvelope, String, Integer>createWindowOperatorSpec(window, mockGraph, mockWndOut);
     assertEquals(spec.getWindow(), window);
     assertEquals(spec.getWindow().getKeyExtractor(), keyExtractor);
     assertEquals(spec.getWindow().getFoldFunction(), aggregator);
@@ -85,17 +86,32 @@ public class TestOperatorSpecs {
 
   @Test
   public void testGetPartialJoinOperator() {
-    PartialJoinFunction<MessageEnvelope<Object, ?>, MessageEnvelope<Object, ?>, TestMessageEnvelope> merger =
-        (MessageEnvelope<Object, ?> m1, MessageEnvelope<Object, ?> m2) ->
-            new TestMessageEnvelope(m1.getKey().toString(), m2.getMessage().toString(), System.nanoTime());
+    PartialJoinFunction<Object, MessageEnvelope<Object, ?>, MessageEnvelope<Object, ?>, TestMessageEnvelope> merger =
+        new PartialJoinFunction<Object, MessageEnvelope<Object,?>, MessageEnvelope<Object,?>, TestMessageEnvelope>() {
+          @Override
+          public TestMessageEnvelope apply(MessageEnvelope<Object, ?> m1,
+              MessageEnvelope<Object, ?> m2) {
+            return new TestMessageEnvelope(m1.getKey().toString(), m2.getMessage().toString(), System.nanoTime());
+          }
+
+          @Override
+          public Object getKey(MessageEnvelope<Object, ?> message) {
+            return message.getKey();
+          }
+
+          @Override
+          public Object getOtherKey(MessageEnvelope<Object, ?> message) {
+            return message.getKey();
+          }
+        };
 
     StreamGraphImpl mockGraph = mock(StreamGraphImpl.class);
     MessageStreamImpl<TestMessageEnvelope> joinOutput = TestMessageStreamImplUtil
         .<TestMessageEnvelope>getMessageStreamImpl(mockGraph);
     PartialJoinOperatorSpec<MessageEnvelope<Object, ?>, Object, MessageEnvelope<Object, ?>, TestMessageEnvelope> partialJoin =
-        OperatorSpecs.createPartialJoinOperatorSpec(merger, joinOutput, 0);
+        OperatorSpecs.createPartialJoinOperatorSpec(merger, mockGraph, joinOutput);
 
-    assertEquals(partialJoin.getOutputStream(), joinOutput);
+    assertEquals(partialJoin.getNextStream(), joinOutput);
     MessageEnvelope<Object, Object> m = mock(MessageEnvelope.class);
     MessageEnvelope<Object, Object> s = mock(MessageEnvelope.class);
     assertEquals(partialJoin.getTransformFn(), merger);
@@ -105,12 +121,12 @@ public class TestOperatorSpecs {
   public void testGetMergeOperator() {
     StreamGraphImpl mockGraph = mock(StreamGraphImpl.class);
     MessageStreamImpl<TestMessageEnvelope> output = TestMessageStreamImplUtil.<TestMessageEnvelope>getMessageStreamImpl(mockGraph);
-    StreamOperatorSpec<TestMessageEnvelope, TestMessageEnvelope> mergeOp = OperatorSpecs.createMergeOperator(output, 0);
+    StreamOperatorSpec<TestMessageEnvelope, TestMessageEnvelope> mergeOp = OperatorSpecs.createMergeOperatorSpec(mockGraph, output);
     Function<TestMessageEnvelope, Collection<TestMessageEnvelope>> mergeFn = t -> new ArrayList<TestMessageEnvelope>() { {
         this.add(t);
       } };
     TestMessageEnvelope t = mock(TestMessageEnvelope.class);
     assertEquals(mergeOp.getTransformFn().apply(t), mergeFn.apply(t));
-    assertEquals(mergeOp.getOutputStream(), output);
+    assertEquals(mergeOp.getNextStream(), output);
   }
 }

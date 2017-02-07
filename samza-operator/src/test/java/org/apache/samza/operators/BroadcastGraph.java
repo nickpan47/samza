@@ -19,7 +19,7 @@
 
 package org.apache.samza.operators;
 
-import org.apache.samza.operators.data.IncomingSystemMessageEnvelope;
+import org.apache.samza.operators.data.InputMessageEnvelope;
 import org.apache.samza.operators.data.JsonIncomingSystemMessageEnvelope;
 import org.apache.samza.operators.data.Offset;
 import org.apache.samza.operators.triggers.Triggers;
@@ -29,9 +29,7 @@ import org.apache.samza.system.SystemStream;
 import org.apache.samza.system.SystemStreamPartition;
 
 import java.time.Duration;
-import java.util.Map;
 import java.util.function.BiFunction;
-import java.util.Collection;
 import java.util.Properties;
 import java.util.Set;
 
@@ -65,7 +63,7 @@ public class BroadcastGraph {
 
     BiFunction<JsonMessageEnvelope, Integer, Integer> sumAggregator = (m, c) -> c + 1;
     inputs.forEach(entry -> {
-      MessageStream<JsonMessageEnvelope> inputStream = graph.<Object, Object, IncomingSystemMessageEnvelope>createInStream(new StreamSpec() {
+      MessageStream<JsonMessageEnvelope> inputStream = graph.<Object, Object, InputMessageEnvelope>createInStream(new StreamSpec() {
         @Override public SystemStream getSystemStream() {
           return entry.getSystemStream();
         }
@@ -89,7 +87,7 @@ public class BroadcastGraph {
     return graph;
   }
 
-  JsonMessageEnvelope getInputMessage(IncomingSystemMessageEnvelope m1) {
+  JsonMessageEnvelope getInputMessage(InputMessageEnvelope m1) {
     return (JsonMessageEnvelope) m1.getMessage();
   }
 

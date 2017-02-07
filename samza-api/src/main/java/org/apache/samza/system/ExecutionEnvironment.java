@@ -19,7 +19,7 @@
 package org.apache.samza.system;
 
 import org.apache.samza.annotation.InterfaceStability;
-import org.apache.samza.application.StreamGraphFactory;
+import org.apache.samza.operators.StreamGraphFactory;
 import org.apache.samza.config.Config;
 import org.apache.samza.operators.StreamGraph;
 import org.apache.samza.task.StreamTask;

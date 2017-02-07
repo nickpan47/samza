@@ -20,6 +20,7 @@ package org.apache.samza.operators;
 
 import org.apache.samza.Partition;
 import org.apache.samza.system.SystemStreamPartition;
+import org.apache.samza.task.StreamOperatorTask;
 import org.junit.Test;
 
 import java.util.HashSet;

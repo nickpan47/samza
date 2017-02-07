@@ -24,12 +24,11 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 
 
-public class TestWindowOutput {
+public class TestWindowPane {
   @Test
   public void testConstructor() {
     WindowPane<String, Integer> wndOutput = WindowPane.of(new WindowKey("testMsg", null), 10);
     assertEquals(wndOutput.getKey().getKey(), "testMsg");
     assertEquals(wndOutput.getMessage(), Integer.valueOf(10));
-    assertFalse(wndOutput.isDelete());
   }
 }

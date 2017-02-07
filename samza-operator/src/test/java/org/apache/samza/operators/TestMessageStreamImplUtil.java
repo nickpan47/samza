@@ -18,11 +18,9 @@
  */
 package org.apache.samza.operators;
 
-import org.apache.samza.operators.data.MessageEnvelope;
-
 
 public class TestMessageStreamImplUtil {
-  public static <M extends MessageEnvelope> MessageStreamImpl<M> getMessageStreamImpl(StreamGraphImpl graph) {
+  public static <M> MessageStreamImpl<M> getMessageStreamImpl(StreamGraphImpl graph) {
     return new MessageStreamImpl<M>(graph);
   }
 }

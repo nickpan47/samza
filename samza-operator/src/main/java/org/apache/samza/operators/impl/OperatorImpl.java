@@ -18,7 +18,6 @@
  */
 package org.apache.samza.operators.impl;
 
-import org.apache.samza.operators.data.MessageEnvelope;
 import org.apache.samza.task.MessageCollector;
 import org.apache.samza.task.TaskCoordinator;
 
@@ -29,15 +28,15 @@ import java.util.Set;
 /**
  * Abstract base class for all stream operator implementations.
  */
-public abstract class OperatorImpl<M extends MessageEnvelope, RM extends MessageEnvelope> {
+public abstract class OperatorImpl<M, RM> {
 
-  private final Set<OperatorImpl<RM, ? extends MessageEnvelope>> nextOperators = new HashSet<>();
+  private final Set<OperatorImpl<RM, ?>> nextOperators = new HashSet<>();
 
   /**
    * Register the next operator in the chain that this operator should propagate its output to.
    * @param nextOperator  the next operator in the chain.
    */
-  void registerNextOperator(OperatorImpl<RM, ? extends MessageEnvelope> nextOperator) {
+  void registerNextOperator(OperatorImpl<RM, ?> nextOperator) {
     nextOperators.add(nextOperator);
   }
 
@@ -46,7 +45,7 @@ public abstract class OperatorImpl<M extends MessageEnvelope, RM extends Message
    *
    * Must call {@link #propagateResult} to propage the output to registered downstream operators correctly.
    *
-   * @param message  the input {@link MessageEnvelope}
+   * @param message  the input message
    * @param collector  the {@link MessageCollector} in the context
    * @param coordinator  the {@link TaskCoordinator} in the context
    */
@@ -57,7 +56,7 @@ public abstract class OperatorImpl<M extends MessageEnvelope, RM extends Message
    *
    * This method <b>must</b> be called from {@link #onNext} to propagate the operator output correctly.
    *
-   * @param outputMessage  output {@link MessageEnvelope}
+   * @param outputMessage  output message
    * @param collector  the {@link MessageCollector} in the context
    * @param coordinator  the {@link TaskCoordinator} in the context
    */

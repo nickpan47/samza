@@ -20,26 +20,29 @@ package org.apache.samza.operators.functions;
 
 import org.apache.samza.annotation.InterfaceStability;
 import org.apache.samza.config.Config;
-import org.apache.samza.operators.data.MessageEnvelope;
 import org.apache.samza.task.TaskContext;
 
 
 /**
- * A function that transforms a {@link org.apache.samza.operators.data.MessageEnvelope} into another {@link org.apache.samza.operators.data.MessageEnvelope}, possibly of a different type.
- * @param <M>  type of the input {@link org.apache.samza.operators.data.MessageEnvelope}
- * @param <OM>  type of the transformed {@link org.apache.samza.operators.data.MessageEnvelope}
+ * A function that transforms an input message into another message, possibly of a different type.
+ * @param <M>  type of the input message
+ * @param <OM>  type of the transformed message
  */
 @InterfaceStability.Unstable
-public interface MapFunction<M extends MessageEnvelope, OM extends MessageEnvelope>  extends InitFunction, Closeable {
+public interface MapFunction<M, OM>  extends InitFunction {
 
   /**
-   * Transforms the provided {@link org.apache.samza.operators.data.MessageEnvelope} into another {@link org.apache.samza.operators.data.MessageEnvelope}
-   * @param message  the {@link org.apache.samza.operators.data.MessageEnvelope} to be transformed
-   * @return  the transformed {@link org.apache.samza.operators.data.MessageEnvelope}
+   * Transforms the provided message into another message
+   * @param message  the input message to be transformed
+   * @return  the transformed message
    */
   OM apply(M message);
 
+  /**
+   * Init method to initialize the context for this {@link MapFunction}. The default implementation is NO-OP.
+   *
+   * @param config  the {@link Config} object for this task
+   * @param context  the {@link TaskContext} object for this task
+   */
   default void init(Config config, TaskContext context) { }
-
-  default void close();
 }

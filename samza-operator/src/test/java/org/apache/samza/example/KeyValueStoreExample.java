@@ -18,32 +18,23 @@
  */
 package org.apache.samza.example;
 
-import com.sun.org.glassfish.external.statistics.Stats;
 import java.util.concurrent.TimeUnit;
-import org.apache.samza.application.StreamGraphFactory;
-import org.apache.samza.config.Config;
-import org.apache.samza.operators.ContextManager;
 import org.apache.samza.operators.MessageStream;
+import org.apache.samza.operators.OutputStream;
+import org.apache.samza.operators.StreamGraphFactory;
+import org.apache.samza.config.Config;
 import org.apache.samza.operators.StreamGraph;
 import org.apache.samza.operators.StreamSpec;
-import org.apache.samza.application.StreamApplication;
-import org.apache.samza.operators.data.IncomingSystemMessageEnvelope;
-import org.apache.samza.operators.data.JsonIncomingSystemMessageEnvelope;
 import org.apache.samza.operators.data.MessageEnvelope;
-import org.apache.samza.operators.data.Offset;
 import org.apache.samza.operators.functions.MapFunction;
-import org.apache.samza.serializers.IntegerSerde;
 import org.apache.samza.serializers.JsonSerde;
 import org.apache.samza.serializers.StringSerde;
 import org.apache.samza.storage.kv.KeyValueStore;
 import org.apache.samza.system.ExecutionEnvironment;
 import org.apache.samza.system.SystemStream;
-import org.apache.samza.system.SystemStreamPartition;
 import org.apache.samza.task.TaskContext;
 import org.apache.samza.util.CommandLine;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Properties;
 
 
@@ -66,7 +57,7 @@ public class KeyValueStoreExample implements StreamGraphFactory {
     StreamGraph graph = StreamGraph.fromConfig(config);
 
     MessageStream<PageViewEvent> pageViewEvents = graph.createInStream(input1, new StringSerde("UTF-8"), new JsonSerde<>());
-    MessageStream<StatsOutput> pageViewPerMemberCounters = graph.createOutStream(output, new StringSerde("UTF-8"), new JsonSerde<>());
+    OutputStream<StatsOutput> pageViewPerMemberCounters = graph.createOutStream(output, new StringSerde("UTF-8"), new JsonSerde<StatsOutput>());
 
     pageViewEvents.
         partitionBy(m -> m.getMessage().memberId).
@@ -101,8 +92,9 @@ public class KeyValueStoreExample implements StreamGraphFactory {
       String wndKey = String.format("%s-%d", message.getMessage().memberId, wndTimestamp);
       StatsWindowState curState = this.statsStore.get(wndKey);
       curState.newCount++;
-      if (curState.newCount > 0 && curState.timeAtLastOutput + TIMEOUT_MS < System.currentTimeMillis()) {
-        curState.timeAtLastOutput = System.currentTimeMillis();
+      long curTimeMs = System.currentTimeMillis();
+      if (curState.newCount > 0 && curState.timeAtLastOutput + TIMEOUT_MS < curTimeMs) {
+        curState.timeAtLastOutput = curTimeMs;
         curState.lastCount += curState.newCount;
         curState.newCount = 0;
         StatsOutput newStats = new StatsOutput(message.getMessage().memberId, wndTimestamp, curState.lastCount);

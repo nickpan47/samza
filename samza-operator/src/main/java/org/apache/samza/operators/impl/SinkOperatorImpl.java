@@ -19,7 +19,6 @@
 package org.apache.samza.operators.impl;
 
 import org.apache.samza.config.Config;
-import org.apache.samza.operators.data.MessageEnvelope;
 import org.apache.samza.operators.functions.SinkFunction;
 import org.apache.samza.operators.spec.SinkOperatorSpec;
 import org.apache.samza.task.MessageCollector;
@@ -30,7 +29,7 @@ import org.apache.samza.task.TaskCoordinator;
 /**
  * Implementation for {@link SinkOperatorSpec}
  */
-class SinkOperatorImpl<M extends MessageEnvelope> extends OperatorImpl<M, MessageEnvelope> {
+class SinkOperatorImpl<M> extends OperatorImpl<M, M> {
 
   private final SinkFunction<M> sinkFn;
 

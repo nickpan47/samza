@@ -16,21 +16,19 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.samza.operators.triggers;
+package org.apache.samza.operators.internal;
+
+import org.apache.samza.operators.StreamGraph;
+import org.apache.samza.operators.StreamGraphImpl;
+
 
 /**
- * A {@link Trigger} that fires when the number of messages in the {@link org.apache.samza.operators.windows.WindowPane}
- * reaches the specified count.
+ * Internal implementation class for {@link StreamGraphBuilder}.
+ *
  */
-public class CountTrigger<M> implements Trigger {
-
-  private final long count;
-
-  CountTrigger(long count) {
-    this.count = count;
-  }
-
-  public long getCount() {
-    return count;
+public class StreamGraphBuilderImpl implements StreamGraphBuilder {
+  @Override
+  public StreamGraph create() {
+    return new StreamGraphImpl();
   }
 }

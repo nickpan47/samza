@@ -16,29 +16,27 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.samza.application;
+package org.apache.samza.operators;
 
 import org.apache.samza.annotation.InterfaceStability;
-import org.apache.samza.config.Config;
-import org.apache.samza.task.*;
+import org.apache.samza.operators.functions.SinkFunction;
+import org.apache.samza.serializers.Serde;
 
 
 /**
- * This class defines the base class for applications written in {@link org.apache.samza.task.StreamTask} API
+ * The interface class defining the specific {@link SinkFunction} for a system {@link OutputStream}.
+ *
+ * @param <M>  The type of message to be send to this output stream
  */
 @InterfaceStability.Unstable
-public interface StreamTaskApplication extends StreamTask, InitableTask, WindowableTask, ClosableTask {
+public interface OutputStream<M> {
 
-  default void close() throws Exception {
-
-  }
-
-  default void init(Config config, TaskContext context) throws Exception {
-
-  }
-
-  default void window(MessageCollector collector, TaskCoordinator coordinator) throws Exception {
-
-  }
-
+  /**
+   * Returns the specific {@link SinkFunction} for this output stream. The {@link OutputStream} is created
+   * via {@link StreamGraph#createOutStream(StreamSpec, Serde, Serde)} or {@link StreamGraph#createIntStream(StreamSpec, Serde, Serde)}.
+   * Hence, the proper types of serdes for key and value are instantiated and are used in the {@link SinkFunction} returned.
+   *
+   * @return  The pre-defined {@link SinkFunction} to apply proper serdes before sending the message to the output stream.
+   */
+  SinkFunction<M> getSinkFunction();
 }

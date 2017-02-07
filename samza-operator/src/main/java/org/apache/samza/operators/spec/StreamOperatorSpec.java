@@ -20,25 +20,37 @@ package org.apache.samza.operators.spec;
 
 import org.apache.samza.config.Config;
 import org.apache.samza.operators.MessageStreamImpl;
-import org.apache.samza.operators.data.MessageEnvelope;
+import org.apache.samza.operators.StreamGraph;
 import org.apache.samza.operators.functions.FlatMapFunction;
 import org.apache.samza.task.TaskContext;
 
 
 /**
- * The spec for a linear stream operator that outputs 0 or more {@link MessageEnvelope}s for each input {@link MessageEnvelope}.
+ * The spec for a linear stream operator that outputs 0 or more messages for each input message.
  *
- * @param <M>  the type of input {@link MessageEnvelope}
- * @param <OM>  the type of output {@link MessageEnvelope}
+ * @param <M>  the type of input message
+ * @param <OM>  the type of output message
  */
-public class StreamOperatorSpec<M extends MessageEnvelope, OM extends MessageEnvelope> implements OperatorSpec<OM> {
+public class StreamOperatorSpec<M, OM> implements OperatorSpec<OM> {
 
+  /**
+   * {@link OpCode} for this {@link StreamOperatorSpec}
+   */
   private final OperatorSpec.OpCode opCode;
 
+  /**
+   * The unique ID for this operator.
+   */
   private final int opId;
 
-  private final MessageStreamImpl outputStream;
+  /**
+   * The output {@link MessageStreamImpl} from this {@link StreamOperatorSpec}
+   */
+  private final MessageStreamImpl<OM> outputStream;
 
+  /**
+   * Transformation function applied in this {@link StreamOperatorSpec}
+   */
   private final FlatMapFunction<M, OM> transformFn;
 
   /**
@@ -46,6 +58,8 @@ public class StreamOperatorSpec<M extends MessageEnvelope, OM extends MessageEnv
    *
    * @param transformFn  the transformation function
    * @param outputStream  the output {@link MessageStreamImpl}
+   * @param opCode  the {@link OpCode} for this {@link StreamOperatorSpec}
+   * @param opId  the unique id for this {@link StreamOperatorSpec} in a {@link StreamGraph}
    */
   StreamOperatorSpec(FlatMapFunction<M, OM> transformFn, MessageStreamImpl outputStream, OperatorSpec.OpCode opCode, int opId) {
     this.outputStream = outputStream;
@@ -55,7 +69,7 @@ public class StreamOperatorSpec<M extends MessageEnvelope, OM extends MessageEnv
   }
 
   @Override
-  public MessageStreamImpl getOutputStream() {
+  public MessageStreamImpl<OM> getNextStream() {
     return this.outputStream;
   }
 

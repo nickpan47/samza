@@ -21,7 +21,7 @@ package org.apache.samza.operators.windows;
 /**
  * Key for a {@link WindowPane} emitted from a {@link Window}.
  *
- * @param <K> the type of the key in the incoming {@link org.apache.samza.operators.data.MessageEnvelope}.
+ * @param <K> the type of the key in the incoming message.
  *            Windows that are not keyed have a {@link Void} key type.
  *
  */

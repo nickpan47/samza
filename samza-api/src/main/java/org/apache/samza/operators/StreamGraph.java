@@ -20,9 +20,10 @@ package org.apache.samza.operators;
 
 import org.apache.samza.annotation.InterfaceStability;
 import org.apache.samza.config.Config;
+import org.apache.samza.config.ConfigException;
 import org.apache.samza.operators.data.MessageEnvelope;
+import org.apache.samza.operators.internal.StreamGraphBuilder;
 import org.apache.samza.serializers.Serde;
-import org.apache.samza.system.ExecutionEnvironment;
 
 import java.util.Map;
 
@@ -56,7 +57,7 @@ public interface StreamGraph {
    * @param <M>  the type of {@link MessageEnvelope} in the output {@link MessageStream}
    * @return   the output {@link MessageStream} object
    */
-  <K, V, M extends MessageEnvelope<K ,V>> MessageStream<M> createOutStream(StreamSpec streamSpec, Serde<K> keySerde, Serde<V> msgSerde);
+  <K, V, M extends MessageEnvelope<K, V>> OutputStream<M> createOutStream(StreamSpec streamSpec, Serde<K> keySerde, Serde<V> msgSerde);
 
   /**
    * Method to add an intermediate {@link MessageStream} from the system
@@ -69,18 +70,21 @@ public interface StreamGraph {
    * @param <M>  the type of {@link MessageEnvelope} in the intermediate {@link MessageStream}
    * @return   the intermediate {@link MessageStream} object
    */
-  <K, V, M extends MessageEnvelope<K, V>> MessageStream<M> createIntStream(StreamSpec streamSpec, Serde<K> keySerde, Serde<V> msgSerde);
+  <K, V, M extends MessageEnvelope<K, V>> OutputStream<M> createIntStream(StreamSpec streamSpec, Serde<K> keySerde, Serde<V> msgSerde);
 
   /**
    * Place holders for possible access methods needed to get the streams defined in the {@link StreamGraph}
    */
   Map<StreamSpec, MessageStream> getInStreams();
-  Map<StreamSpec, MessageStream> getOutStreams();
-  Map<StreamSpec, MessageStream> getIntStreams();
+  Map<StreamSpec, OutputStream> getOutStreams();
 
-  StreamGraph withInitializer(ContextManager manager);
+  StreamGraph withContextManager(ContextManager manager);
 
   static StreamGraph fromConfig(Config config) {
-    return ExecutionEnvironment.fromConfig(config).createGraph();
+    try {
+      return StreamGraphBuilder.fromConfig(config).create();
+    } catch (Exception e) {
+      throw new ConfigException("Error in config for StreamGraphBuilder", e);
+    }
   }
 }
