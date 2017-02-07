@@ -65,16 +65,6 @@ public class NoContextStreamExample implements StreamGraphFactory {
     }
   };
 
-  StreamSpec intermediate = new StreamSpec() {
-    @Override public SystemStream getSystemStream() {
-      return new SystemStream("kafka", "intermediate");
-    }
-
-    @Override public Properties getProperties() {
-      return null;
-    }
-  };
-
   StreamSpec output = new StreamSpec() {
     @Override public SystemStream getSystemStream() {
       return new SystemStream("kafka", "output");
@@ -104,20 +94,16 @@ public class NoContextStreamExample implements StreamGraphFactory {
         ism.getSystemStreamPartition());
   }
 
-  JsonMessageEnvelope myJoinResult(JsonMessageEnvelope m1, JsonMessageEnvelope m2) {
-    MessageType newJoinMsg = new MessageType();
-    newJoinMsg.joinKey = m1.getKey();
-    newJoinMsg.joinFields.addAll(m1.getMessage().joinFields);
-    newJoinMsg.joinFields.addAll(m2.getMessage().joinFields);
-    return new JsonMessageEnvelope(m1.getMessage().joinKey, newJoinMsg, null, null);
-  }
-
   class MyJoinFunction implements JoinFunction<String, JsonMessageEnvelope, JsonMessageEnvelope, JsonIncomingSystemMessageEnvelope<MessageType>> {
 
     @Override
-    public JsonIncomingSystemMessageEnvelope<MessageType> apply(JsonMessageEnvelope message,
-        JsonMessageEnvelope otherMessage) {
-      return NoContextStreamExample.this.myJoinResult(message, otherMessage);
+    public JsonIncomingSystemMessageEnvelope<MessageType> apply(JsonMessageEnvelope m1,
+        JsonMessageEnvelope m2) {
+      MessageType newJoinMsg = new MessageType();
+      newJoinMsg.joinKey = m1.getKey();
+      newJoinMsg.joinFields.addAll(m1.getMessage().joinFields);
+      newJoinMsg.joinFields.addAll(m2.getMessage().joinFields);
+      return new JsonMessageEnvelope(m1.getMessage().joinKey, newJoinMsg, null, null);
     }
 
     @Override
@@ -130,6 +116,7 @@ public class NoContextStreamExample implements StreamGraphFactory {
       return message.getKey();
     }
   }
+  
   /**
    * used by remote execution environment to launch the job in remote program. The remote program should follow the similar
    * invoking context as in standalone:
