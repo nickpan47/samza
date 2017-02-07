@@ -18,6 +18,9 @@
  */
 package org.apache.samza.example;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 import org.apache.samza.operators.MessageStream;
 import org.apache.samza.operators.OutputStream;
@@ -26,7 +29,7 @@ import org.apache.samza.config.Config;
 import org.apache.samza.operators.StreamGraph;
 import org.apache.samza.operators.StreamSpec;
 import org.apache.samza.operators.data.MessageEnvelope;
-import org.apache.samza.operators.functions.MapFunction;
+import org.apache.samza.operators.functions.FlatMapFunction;
 import org.apache.samza.serializers.JsonSerde;
 import org.apache.samza.serializers.StringSerde;
 import org.apache.samza.storage.kv.KeyValueStore;
@@ -61,7 +64,7 @@ public class KeyValueStoreExample implements StreamGraphFactory {
 
     pageViewEvents.
         partitionBy(m -> m.getMessage().memberId).
-        map(new MyStatsCounter()).
+        flatMap(new MyStatsCounter()).
         sendTo(pageViewPerMemberCounters);
 
     return graph;
@@ -75,7 +78,7 @@ public class KeyValueStoreExample implements StreamGraphFactory {
     standaloneEnv.run(new KeyValueStoreExample(), config);
   }
 
-  class MyStatsCounter implements MapFunction<PageViewEvent, StatsOutput> {
+  class MyStatsCounter implements FlatMapFunction<PageViewEvent, StatsOutput> {
     private final int TIMEOUT_MS = 10*60*1000;
 
     KeyValueStore<String, StatsWindowState> statsStore;
@@ -87,7 +90,8 @@ public class KeyValueStoreExample implements StreamGraphFactory {
     }
 
     @Override
-    public StatsOutput apply(PageViewEvent message) {
+    public Collection<StatsOutput> apply(PageViewEvent message) {
+      List<StatsOutput> outputStats = new ArrayList<>();
       long wndTimestamp = (long) Math.floor(TimeUnit.MILLISECONDS.toMinutes(message.getMessage().timestamp) / 5) * 5;
       String wndKey = String.format("%s-%d", message.getMessage().memberId, wndTimestamp);
       StatsWindowState curState = this.statsStore.get(wndKey);
@@ -97,13 +101,11 @@ public class KeyValueStoreExample implements StreamGraphFactory {
         curState.timeAtLastOutput = curTimeMs;
         curState.lastCount += curState.newCount;
         curState.newCount = 0;
-        StatsOutput newStats = new StatsOutput(message.getMessage().memberId, wndTimestamp, curState.lastCount);
-        this.statsStore.put(wndKey, curState);
-        return newStats;
+        outputStats.add(new StatsOutput(message.getMessage().memberId, wndTimestamp, curState.lastCount));
       }
       // update counter w/o generating output
       this.statsStore.put(wndKey, curState);
-      return null;
+      return outputStats;
     }
 
     @Override
