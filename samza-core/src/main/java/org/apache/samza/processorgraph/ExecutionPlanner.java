@@ -135,9 +135,9 @@ public class ExecutionPlanner {
 
     Multimap<String, StreamEdge> externalStreamsMap = HashMultimap.create();
     allStreams.forEach(streamEdge -> {
-      SystemStream systemStream = streamEdge.getSystemStream();
-      externalStreamsMap.put(systemStream.getSystem(), streamEdge);
-    });
+        SystemStream systemStream = streamEdge.getSystemStream();
+        externalStreamsMap.put(systemStream.getSystem(), streamEdge);
+      });
     for (Map.Entry<String, Collection<StreamEdge>> entry : externalStreamsMap.asMap().entrySet()) {
       String systemName = entry.getKey();
       Collection<StreamEdge> streamEdges = entry.getValue();
