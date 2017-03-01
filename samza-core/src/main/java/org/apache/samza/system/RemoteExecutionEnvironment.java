@@ -20,8 +20,8 @@ package org.apache.samza.system;
 
 import org.apache.samza.SamzaException;
 import org.apache.samza.job.JobRunner;
+import org.apache.samza.operators.StreamApplication;
 import org.apache.samza.operators.StreamGraph;
-import org.apache.samza.operators.StreamGraphBuilder;
 import org.apache.samza.config.Config;
 import org.apache.samza.operators.StreamGraphImpl;
 import org.apache.samza.processorgraph.ExecutionPlanner;
@@ -41,7 +41,7 @@ public class RemoteExecutionEnvironment extends AbstractExecutionEnvironment {
     super(config);
   }
 
-  @Override public void run(StreamGraphBuilder app, Config config) {
+  @Override public void run(StreamApplication app, Config config) {
     // TODO: add description of ProcessContext that is going to create a sub-DAG of the {@code graph}
     // TODO: actually instantiate the tasks and run the job, i.e.
     try {
@@ -65,5 +65,15 @@ public class RemoteExecutionEnvironment extends AbstractExecutionEnvironment {
     } catch (Exception e) {
       throw new SamzaException("fail to run graph", e);
     }
+  }
+
+  @Override
+  public void start(StreamApplication graphBuilder, Config config) {
+
+  }
+
+  @Override
+  public void stop() {
+
   }
 }

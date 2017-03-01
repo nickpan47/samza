@@ -19,13 +19,13 @@
 package org.apache.samza.testUtils;
 
 import org.apache.samza.config.Config;
+import org.apache.samza.operators.StreamApplication;
 import org.apache.samza.operators.StreamGraph;
-import org.apache.samza.operators.StreamGraphBuilder;
 
 /**
- * Test implementation class for {@link StreamGraphBuilder}
+ * Test implementation class for {@link StreamApplication}
  */
-public class TestStreamGraphBuilder implements StreamGraphBuilder {
+public class TestStreamGraphBuilder implements StreamApplication {
   @Override
   public void init(StreamGraph graph, Config config) {
 

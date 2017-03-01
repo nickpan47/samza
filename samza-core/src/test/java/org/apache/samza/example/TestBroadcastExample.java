@@ -31,6 +31,7 @@ import org.apache.samza.system.StreamSpec;
 import org.apache.samza.system.SystemStreamPartition;
 
 import java.time.Duration;
+import java.util.Map;
 import java.util.function.BiFunction;
 import java.util.Set;
 
@@ -41,7 +42,7 @@ import java.util.Set;
  */
 public class TestBroadcastExample extends TestExampleBase {
 
-  TestBroadcastExample(Set<SystemStreamPartition> inputs) {
+  TestBroadcastExample(Map<String, Set<SystemStreamPartition>> inputs) {
     super(inputs);
   }
 
@@ -68,8 +69,10 @@ public class TestBroadcastExample extends TestExampleBase {
   public void init(StreamGraph graph, Config config) {
     BiFunction<JsonMessageEnvelope, Integer, Integer> sumAggregator = (m, c) -> c + 1;
     inputs.keySet().forEach(entry -> {
+        Set<SystemStreamPartition> sspSet = inputs.get(entry);
+        SystemStreamPartition stream = sspSet.stream().findFirst().get();
         MessageStream<JsonMessageEnvelope> inputStream = graph.<Object, Object, InputMessageEnvelope>createInStream(
-                new StreamSpec(entry.toString(), entry.getStream(), entry.getSystem()), null, null).map(this::getInputMessage);
+                new StreamSpec(entry, stream.getStream(), stream.getSystem()), null, null).map(this::getInputMessage);
 
         inputStream.filter(this::myFilter1).window(Windows.tumblingWindow(Duration.ofMillis(100), sumAggregator)
             .setLateTrigger(Triggers.any(Triggers.count(30000), Triggers.timeSinceFirstMessage(Duration.ofMillis(10)))));

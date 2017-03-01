@@ -25,7 +25,7 @@ import org.apache.samza.config.ConfigException;
 import org.apache.samza.config.JobConfig;
 import org.apache.samza.config.MapConfig;
 import org.apache.samza.config.StreamConfig;
-import org.apache.samza.operators.StreamGraphBuilder;
+import org.apache.samza.operators.StreamApplication;
 import org.junit.Test;
 
 import static org.junit.Assert.*;
@@ -322,8 +322,18 @@ public class TestAbstractExecutionEnvironment {
     }
 
     @Override
-    public void run(StreamGraphBuilder graphBuilder, Config config) {
+    public void run(StreamApplication graphBuilder, Config config) {
       // do nothing
+    }
+
+    @Override
+    public void start(StreamApplication graphBuilder, Config config) {
+
+    }
+
+    @Override
+    public void stop() {
+
     }
   }
 }

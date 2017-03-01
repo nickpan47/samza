@@ -26,8 +26,8 @@ import org.apache.samza.config.Config;
  * This interface defines a factory class that user will implement to create user-defined operator DAG in a {@link StreamGraph} object.
  */
 @InterfaceStability.Unstable
-public interface StreamGraphBuilder {
-  static final String BUILDER_CLASS_CONFIG = "job.graph.builder.class";
+public interface StreamApplication {
+  static final String APP_CLASS_CONFIG = "job.graph.builder.class";
 
   /**
    * Users are required to implement this abstract method to initialize the processing logic of the application, in terms

@@ -27,7 +27,9 @@ import org.apache.samza.task.StreamOperatorTask;
 import org.apache.samza.task.TaskContext;
 import org.junit.Test;
 
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
 import static org.junit.Assert.*;
@@ -41,7 +43,17 @@ public class TestBasicStreamGraphs {
 
   private final Set<SystemStreamPartition> inputPartitions = new HashSet<SystemStreamPartition>() { {
       for (int i = 0; i < 4; i++) {
-        this.add(new SystemStreamPartition("my-system", String.format("my-topic%d", i), new Partition(i)));
+          this.add(new SystemStreamPartition("my-system", String.format("my-topic%d", i), new Partition(i)));
+      }
+    } };
+
+  private final Map<String, Set<SystemStreamPartition>> inputsByStreamId = new HashMap<String, Set<SystemStreamPartition>>() { {
+      int index = 0;
+      for (SystemStreamPartition ssp: TestBasicStreamGraphs.this.inputPartitions) {
+          this.put(String.format("stream%d", index), new HashSet<SystemStreamPartition>() { {
+              this.add(ssp);
+            } });
+          index++;
       }
     } };
 
@@ -50,7 +62,7 @@ public class TestBasicStreamGraphs {
     Config mockConfig = mock(Config.class);
     TaskContext mockContext = mock(TaskContext.class);
     when(mockContext.getSystemStreamPartitions()).thenReturn(this.inputPartitions);
-    TestWindowExample userTask = new TestWindowExample(this.inputPartitions);
+    TestWindowExample userTask = new TestWindowExample(this.inputsByStreamId);
     StreamOperatorTask adaptorTask = new StreamOperatorTask(userTask);
     Field pipelineMapFld = StreamOperatorTask.class.getDeclaredField("operatorGraph");
     pipelineMapFld.setAccessible(true);
@@ -67,7 +79,7 @@ public class TestBasicStreamGraphs {
     Config mockConfig = mock(Config.class);
     TaskContext mockContext = mock(TaskContext.class);
     when(mockContext.getSystemStreamPartitions()).thenReturn(this.inputPartitions);
-    TestBroadcastExample splitTask = new TestBroadcastExample(this.inputPartitions);
+    TestBroadcastExample splitTask = new TestBroadcastExample(this.inputsByStreamId);
     StreamOperatorTask adaptorTask = new StreamOperatorTask(splitTask);
     Field pipelineMapFld = StreamOperatorTask.class.getDeclaredField("operatorGraph");
     pipelineMapFld.setAccessible(true);
@@ -84,7 +96,7 @@ public class TestBasicStreamGraphs {
     Config mockConfig = mock(Config.class);
     TaskContext mockContext = mock(TaskContext.class);
     when(mockContext.getSystemStreamPartitions()).thenReturn(this.inputPartitions);
-    TestJoinExample joinTask = new TestJoinExample(this.inputPartitions);
+    TestJoinExample joinTask = new TestJoinExample(this.inputsByStreamId);
     StreamOperatorTask adaptorTask = new StreamOperatorTask(joinTask);
     Field pipelineMapFld = StreamOperatorTask.class.getDeclaredField("operatorGraph");
     pipelineMapFld.setAccessible(true);

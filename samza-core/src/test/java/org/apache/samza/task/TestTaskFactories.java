@@ -21,7 +21,7 @@ package org.apache.samza.task;
 import org.apache.samza.config.Config;
 import org.apache.samza.config.ConfigException;
 import org.apache.samza.config.MapConfig;
-import org.apache.samza.operators.StreamGraphBuilder;
+import org.apache.samza.operators.StreamApplication;
 import org.apache.samza.testUtils.TestAsyncStreamTask;
 import org.apache.samza.testUtils.TestStreamTask;
 import org.junit.Test;
@@ -64,7 +64,7 @@ public class TestTaskFactories {
   public void testStreamOperatorTaskClass() throws ClassNotFoundException {
     Config config = new MapConfig(new HashMap<String, String>() {
       {
-        this.put(StreamGraphBuilder.BUILDER_CLASS_CONFIG, "org.apache.samza.testUtils.TestStreamGraphBuilder");
+        this.put(StreamApplication.APP_CLASS_CONFIG, "org.apache.samza.testUtils.TestStreamGraphBuilder");
       }
     });
     Object retFactory = TaskFactories.fromTaskClassConfig(config);
@@ -73,7 +73,7 @@ public class TestTaskFactories {
 
     config = new MapConfig(new HashMap<String, String>() {
       {
-        this.put(StreamGraphBuilder.BUILDER_CLASS_CONFIG, "org.apache.samza.testUtils.InvalidStreamGraphBuilder");
+        this.put(StreamApplication.APP_CLASS_CONFIG, "org.apache.samza.testUtils.InvalidStreamGraphBuilder");
       }
     });
     try {
@@ -85,7 +85,7 @@ public class TestTaskFactories {
 
     config = new MapConfig(new HashMap<String, String>() {
       {
-        this.put(StreamGraphBuilder.BUILDER_CLASS_CONFIG, "no.such.class");
+        this.put(StreamApplication.APP_CLASS_CONFIG, "no.such.class");
       }
     });
     try {
@@ -97,12 +97,12 @@ public class TestTaskFactories {
 
     config = new MapConfig(new HashMap<String, String>() {
       {
-        this.put(StreamGraphBuilder.BUILDER_CLASS_CONFIG, "");
+        this.put(StreamApplication.APP_CLASS_CONFIG, "");
       }
     });
     try {
       TaskFactories.fromTaskClassConfig(config);
-      fail("Should have failed w/ empty class name for StreamGraphBuilder");
+      fail("Should have failed w/ empty class name for StreamApplication");
     } catch (ConfigException ce) {
       // expected
     }
@@ -110,7 +110,7 @@ public class TestTaskFactories {
     config = new MapConfig(new HashMap<String, String>());
     try {
       TaskFactories.fromTaskClassConfig(config);
-      fail(String.format("Should have failed w/ non-existing entry for %s", StreamGraphBuilder.BUILDER_CLASS_CONFIG));
+      fail(String.format("Should have failed w/ non-existing entry for %s", StreamApplication.APP_CLASS_CONFIG));
     } catch (ConfigException ce) {
       // expected
     }
@@ -121,7 +121,7 @@ public class TestTaskFactories {
     Config config = new MapConfig(new HashMap<String, String>() {
       {
         this.put("task.class", "org.apache.samza.testUtils.TestStreamTask");
-        this.put(StreamGraphBuilder.BUILDER_CLASS_CONFIG, "org.apache.samza.testUtils.TestStreamGraphBuilder");
+        this.put(StreamApplication.APP_CLASS_CONFIG, "org.apache.samza.testUtils.TestStreamGraphBuilder");
       }
     });
     Object retFactory = TaskFactories.fromTaskClassConfig(config);
@@ -131,7 +131,7 @@ public class TestTaskFactories {
     config = new MapConfig(new HashMap<String, String>() {
       {
         this.put("task.class", "org.apache.samza.testUtils.TestAsyncStreamTask");
-        this.put(StreamGraphBuilder.BUILDER_CLASS_CONFIG, "org.apache.samza.testUtils.TestStreamGraphBuilder");
+        this.put(StreamApplication.APP_CLASS_CONFIG, "org.apache.samza.testUtils.TestStreamGraphBuilder");
       }
     });
     retFactory = TaskFactories.fromTaskClassConfig(config);
@@ -141,7 +141,7 @@ public class TestTaskFactories {
     config = new MapConfig(new HashMap<String, String>() {
       {
         this.put("task.class", "no.such.class");
-        this.put(StreamGraphBuilder.BUILDER_CLASS_CONFIG, "org.apache.samza.testUtils.TestStreamGraphBuilder");
+        this.put(StreamApplication.APP_CLASS_CONFIG, "org.apache.samza.testUtils.TestStreamGraphBuilder");
       }
     });
     retFactory = TaskFactories.fromTaskClassConfig(config);
@@ -155,7 +155,7 @@ public class TestTaskFactories {
     Config config = new MapConfig(new HashMap<String, String>() {
       {
         this.put("task.class", "org.apache.samza.testUtils.TestStreamTask");
-        this.put(StreamGraphBuilder.BUILDER_CLASS_CONFIG, "org.apache.samza.testUtils.InvalidStreamGraphBuilder");
+        this.put(StreamApplication.APP_CLASS_CONFIG, "org.apache.samza.testUtils.InvalidStreamGraphBuilder");
       }
     });
     Object retFactory = TaskFactories.fromTaskClassConfig(config);
@@ -165,7 +165,7 @@ public class TestTaskFactories {
     config = new MapConfig(new HashMap<String, String>() {
       {
         this.put("task.class", "org.apache.samza.testUtils.TestStreamTask");
-        this.put(StreamGraphBuilder.BUILDER_CLASS_CONFIG, "");
+        this.put(StreamApplication.APP_CLASS_CONFIG, "");
       }
     });
     retFactory = TaskFactories.fromTaskClassConfig(config);
@@ -175,7 +175,7 @@ public class TestTaskFactories {
     config = new MapConfig(new HashMap<String, String>() {
       {
         this.put("task.class", "org.apache.samza.testUtils.TestStreamTask");
-        this.put(StreamGraphBuilder.BUILDER_CLASS_CONFIG, null);
+        this.put(StreamApplication.APP_CLASS_CONFIG, null);
       }
     });
     retFactory = TaskFactories.fromTaskClassConfig(config);
@@ -185,7 +185,7 @@ public class TestTaskFactories {
     config = new MapConfig(new HashMap<String, String>() {
       {
         this.put("task.class", "");
-        this.put(StreamGraphBuilder.BUILDER_CLASS_CONFIG, "org.apache.samza.testUtils.InvalidStreamGraphBuilder");
+        this.put(StreamApplication.APP_CLASS_CONFIG, "org.apache.samza.testUtils.InvalidStreamGraphBuilder");
       }
     });
     try {
@@ -226,7 +226,7 @@ public class TestTaskFactories {
     Config config = new MapConfig(new HashMap<String, String>() {
       {
         this.put("task.class", "org.apache.samza.testUtils.TestAsyncStreamTask");
-        this.put(StreamGraphBuilder.BUILDER_CLASS_CONFIG, "org.apache.samza.testUtils.InvalidStreamGraphBuilder");
+        this.put(StreamApplication.APP_CLASS_CONFIG, "org.apache.samza.testUtils.InvalidStreamGraphBuilder");
       }
     });
     Object retFactory = TaskFactories.fromTaskClassConfig(config);
@@ -236,7 +236,7 @@ public class TestTaskFactories {
     config = new MapConfig(new HashMap<String, String>() {
       {
         this.put("task.class", "org.apache.samza.testUtils.TestAsyncStreamTask");
-        this.put(StreamGraphBuilder.BUILDER_CLASS_CONFIG, "");
+        this.put(StreamApplication.APP_CLASS_CONFIG, "");
       }
     });
     retFactory = TaskFactories.fromTaskClassConfig(config);
@@ -246,7 +246,7 @@ public class TestTaskFactories {
     config = new MapConfig(new HashMap<String, String>() {
       {
         this.put("task.class", "org.apache.samza.testUtils.TestAsyncStreamTask");
-        this.put(StreamGraphBuilder.BUILDER_CLASS_CONFIG, null);
+        this.put(StreamApplication.APP_CLASS_CONFIG, null);
       }
     });
     retFactory = TaskFactories.fromTaskClassConfig(config);

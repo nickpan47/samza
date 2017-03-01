@@ -28,7 +28,7 @@ import org.apache.samza.coordinator.stream.messages.Delete
 import org.apache.samza.coordinator.stream.messages.SetConfig
 import org.apache.samza.job.ApplicationStatus.Running
 import org.apache.samza.metrics.MetricsRegistryMap
-import org.apache.samza.operators.StreamGraphBuilder
+import org.apache.samza.operators.StreamApplication
 import org.apache.samza.system.ExecutionEnvironment
 import org.apache.samza.util.ClassLoaderHelper
 import org.apache.samza.util.CommandLine
@@ -73,7 +73,7 @@ object JobRunner extends Logging {
     val envClass: String = config.get(ExecutionEnvironment.ENVIRONMENT_CONFIG, "")
     if (!envClass.isEmpty) {
       val env: ExecutionEnvironment = ExecutionEnvironment.fromConfig(config)
-      val graphBuilder: StreamGraphBuilder = Class.forName(config.get(StreamGraphBuilder.BUILDER_CLASS_CONFIG)).newInstance.asInstanceOf[StreamGraphBuilder]
+      val graphBuilder: StreamApplication = Class.forName(config.get(StreamApplication.APP_CLASS_CONFIG)).newInstance.asInstanceOf[StreamApplication]
       env.run(graphBuilder, rewriteConfig(config))
     } else {
       new JobRunner(rewriteConfig(config)).run()

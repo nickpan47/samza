@@ -21,7 +21,7 @@ package org.apache.samza.task;
 import org.apache.samza.config.Config;
 import org.apache.samza.operators.ContextManager;
 import org.apache.samza.operators.MessageStreamImpl;
-import org.apache.samza.operators.StreamGraphBuilder;
+import org.apache.samza.operators.StreamApplication;
 import org.apache.samza.operators.StreamGraphImpl;
 import org.apache.samza.operators.data.InputMessageEnvelope;
 import org.apache.samza.operators.impl.OperatorGraph;
@@ -43,9 +43,9 @@ import java.util.Map;
  * This class brings all the operator API implementation components together and feeds the
  * {@link InputMessageEnvelope}s into the transformation chains.
  * <p>
- * It accepts an instance of the user implemented factory {@link StreamGraphBuilder} as input parameter of the constructor.
+ * It accepts an instance of the user implemented factory {@link StreamApplication} as input parameter of the constructor.
  * When its own {@link #init(Config, TaskContext)} method is called during startup, it instantiate a user-defined {@link StreamGraphImpl}
- * from the {@link StreamGraphBuilder}, calls {@link StreamGraphImpl#getContextManager()} to initialize the task-wide context
+ * from the {@link StreamApplication}, calls {@link StreamGraphImpl#getContextManager()} to initialize the task-wide context
  * for the graph, and creates a {@link MessageStreamImpl} corresponding to each of its input
  * {@link org.apache.samza.system.SystemStreamPartition}s. Each input {@link MessageStreamImpl}
  * will be corresponding to either an input stream or intermediate stream in {@link StreamGraphImpl}.
@@ -67,11 +67,11 @@ public final class StreamOperatorTask implements StreamTask, InitableTask, Windo
    */
   private final OperatorGraph operatorGraph = new OperatorGraph();
 
-  private final StreamGraphBuilder graphBuilder;
+  private final StreamApplication graphBuilder;
 
   private ContextManager contextManager;
 
-  public StreamOperatorTask(StreamGraphBuilder graphBuilder) {
+  public StreamOperatorTask(StreamApplication graphBuilder) {
     this.graphBuilder = graphBuilder;
   }
 

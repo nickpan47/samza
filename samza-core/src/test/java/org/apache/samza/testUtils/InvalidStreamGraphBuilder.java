@@ -19,7 +19,7 @@
 package org.apache.samza.testUtils;
 
 /**
- * Test class. Invalid class to implement {@link org.apache.samza.operators.StreamGraphBuilder}
+ * Test class. Invalid class to implement {@link org.apache.samza.operators.StreamApplication}
  */
 public class InvalidStreamGraphBuilder {
 }

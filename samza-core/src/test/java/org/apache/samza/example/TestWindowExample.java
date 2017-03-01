@@ -30,6 +30,7 @@ import org.apache.samza.system.StreamSpec;
 import org.apache.samza.system.SystemStreamPartition;
 
 import java.time.Duration;
+import java.util.Map;
 import java.util.function.BiFunction;
 import java.util.Set;
 
@@ -44,7 +45,7 @@ public class TestWindowExample extends TestExampleBase {
     String field2;
   }
 
-  TestWindowExample(Set<SystemStreamPartition> inputs) {
+  TestWindowExample(Map<String, Set<SystemStreamPartition>> inputs) {
     super(inputs);
   }
 
@@ -58,11 +59,13 @@ public class TestWindowExample extends TestExampleBase {
   @Override
   public void init(StreamGraph graph, Config config) {
     BiFunction<JsonMessageEnvelope, Integer, Integer> maxAggregator = (m, c) -> c + 1;
-    inputs.keySet().forEach(source -> graph.<Object, Object, InputMessageEnvelope>createInStream(
-            new StreamSpec(source.toString(), source.getStream(), source.getSystem()), null, null).
-        map(m1 -> new JsonMessageEnvelope(this.myMessageKeyFunction(m1), (MessageType) m1.getMessage(), m1.getOffset(),
-            m1.getSystemStreamPartition())).window(Windows.tumblingWindow(Duration.ofMillis(200), maxAggregator)));
-
+    inputs.keySet().forEach(source -> {
+        SystemStreamPartition ssp = inputs.get(source).stream().findFirst().get();
+        graph.<Object, Object, InputMessageEnvelope>createInStream(
+            new StreamSpec(source, ssp.getStream(), ssp.getSystem()), null, null).
+            map(m1 -> new JsonMessageEnvelope(this.myMessageKeyFunction(m1), (MessageType) m1.getMessage(), m1.getOffset(),
+                m1.getSystemStreamPartition())).window(Windows.tumblingWindow(Duration.ofMillis(200), maxAggregator));
+      });
   }
 
   String myMessageKeyFunction(MessageEnvelope<Object, Object> m) {

@@ -29,11 +29,11 @@ import org.apache.samza.operators.functions.JoinFunction;
 import org.apache.samza.serializers.JsonSerde;
 import org.apache.samza.serializers.StringSerde;
 import org.apache.samza.system.StreamSpec;
-import org.apache.samza.system.SystemStream;
 import org.apache.samza.system.SystemStreamPartition;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 
@@ -43,7 +43,7 @@ import java.util.Set;
  */
 public class TestJoinExample  extends TestExampleBase {
 
-  TestJoinExample(Set<SystemStreamPartition> inputs) {
+  TestJoinExample(Map<String, Set<SystemStreamPartition>> inputs) {
     super(inputs);
   }
 
@@ -63,8 +63,9 @@ public class TestJoinExample  extends TestExampleBase {
   @Override
   public void init(StreamGraph graph, Config config) {
 
-    for (SystemStream input : inputs.keySet()) {
-      StreamSpec inputStreamSpec = new StreamSpec(input.toString(), input.getStream(), input.getSystem());
+    for (String input : inputs.keySet()) {
+      SystemStreamPartition ssp = inputs.get(input).stream().findFirst().get();
+      StreamSpec inputStreamSpec = new StreamSpec(input, ssp.getStream(), ssp.getSystem());
       MessageStream<JsonMessageEnvelope> newSource = graph.<Object, Object, InputMessageEnvelope>createInStream(
           inputStreamSpec, null, null).map(this::getInputMessage);
       if (joinOutput == null) {

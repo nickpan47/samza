@@ -20,7 +20,7 @@ package org.apache.samza.task;
 
 import org.apache.samza.config.Config;
 import org.apache.samza.config.ConfigException;
-import org.apache.samza.operators.StreamGraphBuilder;
+import org.apache.samza.operators.StreamApplication;
 import org.apache.samza.config.TaskConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -76,19 +76,19 @@ public class TaskFactories {
   }
 
   private static StreamTask createStreamOperatorTask(Config config) throws Exception {
-    StreamGraphBuilder graphBuilder = (StreamGraphBuilder) Class.forName(config.get(StreamGraphBuilder.BUILDER_CLASS_CONFIG)).newInstance();
+    StreamApplication graphBuilder = (StreamApplication) Class.forName(config.get(StreamApplication.APP_CLASS_CONFIG)).newInstance();
     return new StreamOperatorTask(graphBuilder);
   }
 
   private static boolean isStreamOperatorTask(Config config) {
     try {
-      if (config.get(StreamGraphBuilder.BUILDER_CLASS_CONFIG) != null && config.get(StreamGraphBuilder.BUILDER_CLASS_CONFIG) != "") {
-        return StreamGraphBuilder.class.isAssignableFrom(Class.forName(config.get(StreamGraphBuilder.BUILDER_CLASS_CONFIG)));
+      if (config.get(StreamApplication.APP_CLASS_CONFIG) != null && config.get(StreamApplication.APP_CLASS_CONFIG) != "") {
+        return StreamApplication.class.isAssignableFrom(Class.forName(config.get(StreamApplication.APP_CLASS_CONFIG)));
       }
       return false;
     } catch (Exception e) {
-      log.error("Failed to validate StreamGraphBuilder class from the config. {}={}",
-          StreamGraphBuilder.BUILDER_CLASS_CONFIG, config.get(StreamGraphBuilder.BUILDER_CLASS_CONFIG));
+      log.error("Failed to validate StreamApplication class from the config. {}={}",
+          StreamApplication.APP_CLASS_CONFIG, config.get(StreamApplication.APP_CLASS_CONFIG));
       return false;
     }
   }
