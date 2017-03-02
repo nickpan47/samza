@@ -45,7 +45,7 @@ public class StreamGraphImpl implements StreamGraph {
   private int opId = 0;
 
   // TODO: SAMZA-1101: the instantiation of physical streams and the physical sink functions should be delayed
-  // after physical deployment. The input/output/intermediate stream creation should also be delegated to {@link ExecutionEnvironment}
+  // after physical deployment. The input/output/intermediate stream creation should also be delegated to {@link ApplicationRunner}
   // s.t. we can allow different physical instantiation of stream under different execution environment w/o code change.
   private class InputStreamImpl<K, V, M extends MessageEnvelope<K, V>> extends MessageStreamImpl<M> {
     final StreamSpec spec;

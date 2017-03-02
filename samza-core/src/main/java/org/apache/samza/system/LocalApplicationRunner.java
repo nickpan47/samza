@@ -19,36 +19,30 @@
 
 package org.apache.samza.system;
 
-import org.apache.samza.operators.StreamApplication;
+import org.apache.samza.config.StreamProcessorConfig;
+import org.apache.samza.application.StreamApplication;
 import org.apache.samza.operators.StreamGraph;
 import org.apache.samza.config.Config;
 import org.apache.samza.operators.StreamGraphImpl;
+import org.apache.samza.processor.StreamProcessor;
+import org.apache.samza.task.TaskFactory;
 
 
 /**
- * This class implements the {@link ExecutionEnvironment} that runs the applications in standalone environment
+ * This class implements the {@link ApplicationRunner} that runs the applications in standalone environment
  */
-public class LocalExecutionEnvironment extends AbstractExecutionEnvironment {
+public class LocalApplicationRunner extends AbstractApplicationRunner {
+  private StreamProcessor streamProcessor = null;
 
-  public LocalExecutionEnvironment(Config config) {
+  public LocalApplicationRunner(Config config) {
     super(config);
   }
 
-  // TODO: may want to move this to a common base class for all {@link ExecutionEnvironment}
+  // TODO: may want to move this to a common base class for all {@link ApplicationRunner}
   StreamGraph createGraph(StreamApplication app, Config config) {
     StreamGraphImpl graph = new StreamGraphImpl();
     app.init(graph, config);
     return graph;
-  }
-
-  @Override public void run(StreamApplication app, Config config) {
-    // 1. get logic graph for optimization
-    // StreamGraph logicGraph = this.createGraph(app, config);
-    // 2. potential optimization....
-    // 3. create new instance of StreamApplication that would generate the optimized graph
-    // 4. create all input/output/intermediate topics
-    // 5. create the configuration for StreamProcessor
-    // 6. start the StreamProcessor w/ optimized instance of StreamApplication
   }
 
   @Override
@@ -57,8 +51,19 @@ public class LocalExecutionEnvironment extends AbstractExecutionEnvironment {
   }
 
   @Override
-  public void stop() {
+  public <T> void start(TaskFactory<T> taskFactory, Config config) {
+    StreamProcessorConfig spConf = new StreamProcessorConfig(config);
+    this.streamProcessor = new StreamProcessor(spConf.getProcessorId(), config, null, taskFactory);
+  }
 
+  @Override
+  public void stop() {
+    this.streamProcessor.stop();
+  }
+
+  @Override
+  public boolean isRunning() throws Exception {
+    return false;
   }
 
 }

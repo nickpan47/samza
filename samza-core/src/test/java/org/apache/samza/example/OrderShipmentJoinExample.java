@@ -20,14 +20,14 @@ package org.apache.samza.example;
 
 import org.apache.samza.operators.MessageStream;
 import org.apache.samza.operators.OutputStream;
-import org.apache.samza.operators.StreamApplication;
+import org.apache.samza.application.StreamApplication;
 import org.apache.samza.config.Config;
 import org.apache.samza.operators.StreamGraph;
 import org.apache.samza.operators.data.MessageEnvelope;
 import org.apache.samza.operators.functions.JoinFunction;
 import org.apache.samza.serializers.JsonSerde;
 import org.apache.samza.serializers.StringSerde;
-import org.apache.samza.system.ExecutionEnvironment;
+import org.apache.samza.system.ApplicationRunner;
 import org.apache.samza.system.StreamSpec;
 import org.apache.samza.util.CommandLine;
 
@@ -44,7 +44,7 @@ public class OrderShipmentJoinExample implements StreamApplication {
    *   public static void main(String args[]) throws Exception {
    *     CommandLine cmdLine = new CommandLine();
    *     Config config = cmdLine.loadConfig(cmdLine.parser().parse(args));
-   *     ExecutionEnvironment remoteEnv = ExecutionEnvironment.getRemoteEnvironment(config);
+   *     ApplicationRunner remoteEnv = ApplicationRunner.getRemoteEnvironment(config);
    *     UserMainExample runnableApp = new UserMainExample();
    *     runnableApp.run(remoteEnv, config);
    *   }
@@ -64,8 +64,8 @@ public class OrderShipmentJoinExample implements StreamApplication {
   public static void main(String[] args) throws Exception {
     CommandLine cmdLine = new CommandLine();
     Config config = cmdLine.loadConfig(cmdLine.parser().parse(args));
-    ExecutionEnvironment standaloneEnv = ExecutionEnvironment.getLocalEnvironment(config);
-    standaloneEnv.run(new OrderShipmentJoinExample(), config);
+    ApplicationRunner standaloneEnv = ApplicationRunner.getLocalRunner(config);
+    standaloneEnv.start(new OrderShipmentJoinExample(), config);
   }
 
   StreamSpec input1 = new StreamSpec("orderStream", "OrderEvent", "kafka");

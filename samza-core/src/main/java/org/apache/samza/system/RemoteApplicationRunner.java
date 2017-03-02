@@ -20,28 +20,29 @@ package org.apache.samza.system;
 
 import org.apache.samza.SamzaException;
 import org.apache.samza.job.JobRunner;
-import org.apache.samza.operators.StreamApplication;
+import org.apache.samza.application.StreamApplication;
 import org.apache.samza.operators.StreamGraph;
 import org.apache.samza.config.Config;
 import org.apache.samza.operators.StreamGraphImpl;
 import org.apache.samza.processorgraph.ExecutionPlanner;
 import org.apache.samza.processorgraph.ProcessorGraph;
+import org.apache.samza.task.TaskFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 
 /**
- * This class implements the {@link ExecutionEnvironment} that runs the applications in YARN environment
+ * This class implements the {@link ApplicationRunner} that runs the applications in YARN environment
  */
-public class RemoteExecutionEnvironment extends AbstractExecutionEnvironment {
+public class RemoteApplicationRunner extends AbstractApplicationRunner {
   
-  private static final Logger log = LoggerFactory.getLogger(RemoteExecutionEnvironment.class);
+  private static final Logger log = LoggerFactory.getLogger(RemoteApplicationRunner.class);
 
-  public RemoteExecutionEnvironment(Config config) {
+  public RemoteApplicationRunner(Config config) {
     super(config);
   }
 
-  @Override public void run(StreamApplication app, Config config) {
+  @Override public void start(StreamApplication app, Config config) {
     // TODO: add description of ProcessContext that is going to create a sub-DAG of the {@code graph}
     // TODO: actually instantiate the tasks and run the job, i.e.
     try {
@@ -68,12 +69,17 @@ public class RemoteExecutionEnvironment extends AbstractExecutionEnvironment {
   }
 
   @Override
-  public void start(StreamApplication graphBuilder, Config config) {
+  public <T> void start(TaskFactory<T> taskFactory, Config config) {
 
   }
 
   @Override
   public void stop() {
 
+  }
+
+  @Override
+  public boolean isRunning() throws Exception {
+    return false;
   }
 }

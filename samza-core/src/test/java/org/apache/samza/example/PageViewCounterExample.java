@@ -19,7 +19,7 @@
 package org.apache.samza.example;
 
 import org.apache.samza.operators.*;
-import org.apache.samza.operators.StreamApplication;
+import org.apache.samza.application.StreamApplication;
 import org.apache.samza.config.Config;
 import org.apache.samza.operators.data.MessageEnvelope;
 import org.apache.samza.operators.triggers.Triggers;
@@ -28,7 +28,7 @@ import org.apache.samza.operators.windows.WindowPane;
 import org.apache.samza.operators.windows.Windows;
 import org.apache.samza.serializers.JsonSerde;
 import org.apache.samza.serializers.StringSerde;
-import org.apache.samza.system.ExecutionEnvironment;
+import org.apache.samza.system.ApplicationRunner;
 import org.apache.samza.system.StreamSpec;
 import org.apache.samza.util.CommandLine;
 
@@ -57,8 +57,17 @@ public class PageViewCounterExample implements StreamApplication {
   public static void main(String[] args) {
     CommandLine cmdLine = new CommandLine();
     Config config = cmdLine.loadConfig(cmdLine.parser().parse(args));
-    ExecutionEnvironment standaloneEnv = ExecutionEnvironment.getLocalEnvironment(config);
-    standaloneEnv.run(new PageViewCounterExample(), config);
+    ApplicationRunner localRunner = ApplicationRunner.getLocalRunner(config);
+    try {
+      localRunner.start(new PageViewCounterExample(), config);
+      while(localRunner.isRunning()) {
+        Thread.sleep(10000);
+      }
+    } catch (Throwable t) {
+      t.printStackTrace();
+    } finally {
+      localRunner.stop();
+    }
   }
 
   StreamSpec input1 = new StreamSpec("pageViewEventStream", "PageViewEvent", "kafka");

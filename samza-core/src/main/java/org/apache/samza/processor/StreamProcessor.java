@@ -26,8 +26,7 @@ import org.apache.samza.config.TaskConfigJava;
 import org.apache.samza.coordinator.JobCoordinator;
 import org.apache.samza.coordinator.JobCoordinatorFactory;
 import org.apache.samza.metrics.MetricsReporter;
-import org.apache.samza.task.AsyncStreamTaskFactory;
-import org.apache.samza.task.StreamTaskFactory;
+import org.apache.samza.task.*;
 import org.apache.samza.util.Util;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -91,7 +90,7 @@ public class StreamProcessor {
    */
   public StreamProcessor(int processorId, Config config, Map<String, MetricsReporter> customMetricsReporters,
                          AsyncStreamTaskFactory asyncStreamTaskFactory) {
-    this(processorId, config, customMetricsReporters, (Object) asyncStreamTaskFactory);
+    this(processorId, config, customMetricsReporters, (TaskFactory<AsyncStreamTask>) asyncStreamTaskFactory);
   }
 
 
@@ -105,7 +104,7 @@ public class StreamProcessor {
    */
   public StreamProcessor(int processorId, Config config, Map<String, MetricsReporter> customMetricsReporters,
                          StreamTaskFactory streamTaskFactory) {
-    this(processorId, config, customMetricsReporters, (Object) streamTaskFactory);
+    this(processorId, config, customMetricsReporters, (TaskFactory<StreamTask>) streamTaskFactory);
   }
 
   /**
@@ -116,11 +115,17 @@ public class StreamProcessor {
    * @param customMetricsReporters metrics
    */
   public StreamProcessor(int processorId, Config config, Map<String, MetricsReporter> customMetricsReporters) {
-    this(processorId, config, customMetricsReporters, (Object) null);
+    this(processorId, config, customMetricsReporters, (TaskFactory) null);
   }
 
-  private StreamProcessor(int processorId, Config config, Map<String, MetricsReporter> customMetricsReporters,
-                          Object taskFactory) {
+  /**
+   * Same as {@link #StreamProcessor(int, Config, Map, AsyncStreamTaskFactory)}, except task instances are created
+   * using the "task.class" configuration instead of a task factory.
+   * @param processorId - this processor Id
+   * @param config - config
+   * @param customMetricsReporters metrics
+   */
+  public <T> StreamProcessor(int processorId, Config config, Map<String, MetricsReporter> customMetricsReporters, TaskFactory<T> factory) {
     this.processorId = processorId;
 
     Map<String, String> updatedConfigMap = new HashMap<>();
@@ -130,7 +135,7 @@ public class StreamProcessor {
 
 
     SamzaContainerController containerController = new SamzaContainerController(
-        taskFactory,
+        factory,
         new TaskConfigJava(updatedConfig).getShutdownMs(),
         String.valueOf(processorId),
         customMetricsReporters);

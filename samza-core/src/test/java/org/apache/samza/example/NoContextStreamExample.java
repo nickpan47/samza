@@ -19,7 +19,7 @@
 package org.apache.samza.example;
 
 import org.apache.samza.operators.*;
-import org.apache.samza.operators.StreamApplication;
+import org.apache.samza.application.StreamApplication;
 import org.apache.samza.config.Config;
 import org.apache.samza.operators.data.InputMessageEnvelope;
 import org.apache.samza.operators.data.JsonIncomingSystemMessageEnvelope;
@@ -27,7 +27,7 @@ import org.apache.samza.operators.data.Offset;
 import org.apache.samza.operators.functions.JoinFunction;
 import org.apache.samza.serializers.JsonSerde;
 import org.apache.samza.serializers.StringSerde;
-import org.apache.samza.system.ExecutionEnvironment;
+import org.apache.samza.system.ApplicationRunner;
 import org.apache.samza.system.StreamSpec;
 import org.apache.samza.system.SystemStreamPartition;
 import org.apache.samza.util.CommandLine;
@@ -40,6 +40,49 @@ import java.util.List;
  * Example {@link StreamApplication} code to test the API methods
  */
 public class NoContextStreamExample implements StreamApplication {
+
+  /**
+   * used by remote execution environment to launch the job in remote program. The remote program should follow the similar
+   * invoking context as in standalone:
+   *
+   *   public static void main(String args[]) throws Exception {
+   *     CommandLine cmdLine = new CommandLine();
+   *     Config config = cmdLine.loadConfig(cmdLine.parser().parse(args));
+   *     ApplicationRunner remoteEnv = ApplicationRunner.fromConfig(config);
+   *     remoteEnv.run(new NoContextStreamExample(), config);
+   *   }
+   *
+   */
+  @Override public void init(StreamGraph graph, Config config) {
+    MessageStream<InputMessageEnvelope> inputSource1 = graph.<Object, Object, InputMessageEnvelope>createInStream(
+        input1, null, null);
+    MessageStream<InputMessageEnvelope> inputSource2 = graph.<Object, Object, InputMessageEnvelope>createInStream(
+        input2, null, null);
+    OutputStream<JsonIncomingSystemMessageEnvelope<MessageType>> outStream = graph.createOutStream(output,
+        new StringSerde("UTF-8"), new JsonSerde<>());
+
+    inputSource1.map(this::getInputMessage).
+        join(inputSource2.map(this::getInputMessage), new MyJoinFunction()).
+        sendTo(outStream);
+
+  }
+
+  // standalone local program model
+  public static void main(String[] args) throws Exception {
+    CommandLine cmdLine = new CommandLine();
+    Config config = cmdLine.loadConfig(cmdLine.parser().parse(args));
+    ApplicationRunner localRunner = ApplicationRunner.getLocalRunner(config);
+    try {
+      localRunner.start(new NoContextStreamExample(), config);
+      while(localRunner.isRunning()) {
+        Thread.sleep(10000);
+      }
+    } catch (Throwable t) {
+      t.printStackTrace();
+    } finally {
+      localRunner.stop();
+    }
+  }
 
   StreamSpec input1 = new StreamSpec("inputStreamA", "PageViewEvent", "kafka");
 
@@ -87,40 +130,6 @@ public class NoContextStreamExample implements StreamApplication {
     public String getSecondKey(JsonMessageEnvelope message) {
       return message.getKey();
     }
-  }
-
-  /**
-   * used by remote execution environment to launch the job in remote program. The remote program should follow the similar
-   * invoking context as in standalone:
-   *
-   *   public static void main(String args[]) throws Exception {
-   *     CommandLine cmdLine = new CommandLine();
-   *     Config config = cmdLine.loadConfig(cmdLine.parser().parse(args));
-   *     ExecutionEnvironment remoteEnv = ExecutionEnvironment.fromConfig(config);
-   *     remoteEnv.run(new NoContextStreamExample(), config);
-   *   }
-   *
-   */
-  @Override public void init(StreamGraph graph, Config config) {
-    MessageStream<InputMessageEnvelope> inputSource1 = graph.<Object, Object, InputMessageEnvelope>createInStream(
-        input1, null, null);
-    MessageStream<InputMessageEnvelope> inputSource2 = graph.<Object, Object, InputMessageEnvelope>createInStream(
-        input2, null, null);
-    OutputStream<JsonIncomingSystemMessageEnvelope<MessageType>> outStream = graph.createOutStream(output,
-        new StringSerde("UTF-8"), new JsonSerde<>());
-
-    inputSource1.map(this::getInputMessage).
-        join(inputSource2.map(this::getInputMessage), new MyJoinFunction()).
-        sendTo(outStream);
-
-  }
-
-  // standalone local program model
-  public static void main(String[] args) throws Exception {
-    CommandLine cmdLine = new CommandLine();
-    Config config = cmdLine.loadConfig(cmdLine.parser().parse(args));
-    ExecutionEnvironment standaloneEnv = ExecutionEnvironment.getLocalEnvironment(config);
-    standaloneEnv.run(new NoContextStreamExample(), config);
   }
 
 }

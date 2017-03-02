@@ -18,7 +18,7 @@
  */
 package org.apache.samza.example;
 
-import org.apache.samza.operators.StreamApplication;
+import org.apache.samza.application.StreamApplication;
 import org.apache.samza.system.SystemStreamPartition;
 
 import java.util.Map;

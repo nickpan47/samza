@@ -20,27 +20,26 @@ package org.apache.samza.system;
 
 import java.lang.reflect.Constructor;
 import org.apache.samza.annotation.InterfaceStability;
+import org.apache.samza.config.AppConfig;
 import org.apache.samza.config.ConfigException;
-import org.apache.samza.operators.StreamApplication;
+import org.apache.samza.application.StreamApplication;
 import org.apache.samza.config.Config;
+import org.apache.samza.task.TaskFactory;
 
 
 /**
  * Interface to be implemented by physical execution engine to deploy the config and jobs to run the {@link org.apache.samza.operators.StreamGraph}
  */
 @InterfaceStability.Unstable
-public interface ExecutionEnvironment extends StreamProvider {
-
-  String ENVIRONMENT_CONFIG = "job.execution.environment.class";
-  String DEFAULT_ENVIRONMENT_CLASS = "org.apache.samza.system.AbstractExecutionEnvironment";
+public interface ApplicationRunner extends StreamProvider {
 
   /**
    * Static method to load the local standalone environment
    *
    * @param config  configuration passed in to initialize the Samza standalone process
-   * @return  the standalone {@link ExecutionEnvironment} to run the user-defined stream applications
+   * @return  the standalone {@link ApplicationRunner} to run the user-defined stream applications
    */
-  static ExecutionEnvironment getLocalEnvironment(Config config) {
+  static ApplicationRunner getLocalRunner(Config config) {
     return null;
   }
 
@@ -48,39 +47,45 @@ public interface ExecutionEnvironment extends StreamProvider {
    * Static method to load the non-standalone environment.
    *
    * @param config  configuration passed in to initialize the Samza processes
-   * @return  the configure-driven {@link ExecutionEnvironment} to run the user-defined stream applications
+   * @return  the configure-driven {@link ApplicationRunner} to run the user-defined stream applications
    */
-  static ExecutionEnvironment fromConfig(Config config) {
+  static ApplicationRunner fromConfig(Config config) {
+    AppConfig appConfig = new AppConfig(config);
     try {
-      Class<?> environmentClass = Class.forName(config.get(ENVIRONMENT_CONFIG, DEFAULT_ENVIRONMENT_CLASS));
-      if (ExecutionEnvironment.class.isAssignableFrom(environmentClass)) {
+      Class<?> environmentClass = Class.forName(appConfig.getAppRunnerClass());
+      if (ApplicationRunner.class.isAssignableFrom(environmentClass)) {
         Constructor<?> constructor = environmentClass.getConstructor(Config.class); // *sigh*
-        return (ExecutionEnvironment) constructor.newInstance(config);
+        return (ApplicationRunner) constructor.newInstance(config);
       }
     } catch (Exception e) {
-      throw new ConfigException(String.format("Problem in loading ExecutionEnvironment class %s", config.get(ENVIRONMENT_CONFIG)), e);
+      throw new ConfigException(String.format("Problem in loading ApplicationRunner class %s", appConfig.getAppRunnerClass()), e);
     }
     throw new ConfigException(String.format(
-        "Class %s does not implement interface ExecutionEnvironment properly",
-        config.get(ENVIRONMENT_CONFIG)));
+        "Class %s does not implement interface ApplicationRunner properly",
+        appConfig.getAppRunnerClass()));
   }
 
   /**
-   * Method to be invoked to deploy and run the actual Samza jobs to execute {@link org.apache.samza.operators.StreamGraph}
-   *
-   * @param graphBuilder  the user-defined {@link StreamApplication} object
-   * @param config  the {@link Config} object for this job
+   * Method to start an {@link StreamApplication}
    */
-  void run(StreamApplication graphBuilder, Config config);
+  void start(StreamApplication streamApplication, Config config);
 
   /**
+   * Method to start a Samza job w/ specified {@link TaskFactory}
    *
+   * @param taskFactory  the {@link TaskFactory} to create actual task instances in a Samza job
+   * @param config  the configuration object for the Samza job
+   * @param <T>  the type of task to be instantiated
    */
-  void start(StreamApplication graphBuilder, Config config);
+  <T> void start(TaskFactory<T> taskFactory, Config config);
 
   /**
-   *
+   * Method to stop the current running application.
    */
   void stop();
 
+  /**
+   * Method to check whether the application is still running
+   */
+  boolean isRunning() throws Exception;
 }

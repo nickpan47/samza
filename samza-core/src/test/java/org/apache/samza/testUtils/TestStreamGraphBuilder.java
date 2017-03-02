@@ -19,7 +19,7 @@
 package org.apache.samza.testUtils;
 
 import org.apache.samza.config.Config;
-import org.apache.samza.operators.StreamApplication;
+import org.apache.samza.application.StreamApplication;
 import org.apache.samza.operators.StreamGraph;
 
 /**

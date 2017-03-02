@@ -23,11 +23,11 @@ import org.apache.samza.config.Config;
 import org.apache.samza.config.StreamConfig;
 
 
-public abstract class AbstractExecutionEnvironment implements ExecutionEnvironment {
+public abstract class AbstractApplicationRunner implements ApplicationRunner {
 
   private final Config config;
 
-  public AbstractExecutionEnvironment(Config config) {
+  public AbstractApplicationRunner(Config config) {
     if (config == null) {
       throw new NullPointerException();
     }

@@ -20,7 +20,7 @@ package org.apache.samza.task;
 
 import org.apache.samza.config.Config;
 import org.apache.samza.config.ConfigException;
-import org.apache.samza.operators.StreamApplication;
+import org.apache.samza.application.StreamApplication;
 import org.apache.samza.config.TaskConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
