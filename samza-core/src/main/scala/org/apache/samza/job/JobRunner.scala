@@ -20,6 +20,7 @@
 package org.apache.samza.job
 
 import org.apache.samza.SamzaException
+import org.apache.samza.application.StreamApplication
 import org.apache.samza.config.JobConfig.Config2Job
 import org.apache.samza.config.Config
 import org.apache.samza.config.ConfigRewriter
@@ -28,8 +29,7 @@ import org.apache.samza.coordinator.stream.messages.Delete
 import org.apache.samza.coordinator.stream.messages.SetConfig
 import org.apache.samza.job.ApplicationStatus.Running
 import org.apache.samza.metrics.MetricsRegistryMap
-import org.apache.samza.operators.StreamApplication
-import org.apache.samza.system.ExecutionEnvironment
+import org.apache.samza.system.ApplicationRunner
 import org.apache.samza.util.ClassLoaderHelper
 import org.apache.samza.util.CommandLine
 import org.apache.samza.util.Logging
@@ -70,11 +70,11 @@ object JobRunner extends Logging {
     val config = cmdline.loadConfig(options)
 
     // start execution env if it's defined
-    val envClass: String = config.get(ExecutionEnvironment.ENVIRONMENT_CONFIG, "")
+    val envClass: String = config.get(ApplicationRunner.ENVIRONMENT_CONFIG, "")
     if (!envClass.isEmpty) {
-      val env: ExecutionEnvironment = ExecutionEnvironment.fromConfig(config)
+      val env: ApplicationRunner = ApplicationRunner.fromConfig(config)
       val graphBuilder: StreamApplication = Class.forName(config.get(StreamApplication.APP_CLASS_CONFIG)).newInstance.asInstanceOf[StreamApplication]
-      env.run(graphBuilder, rewriteConfig(config))
+      env.start(graphBuilder, rewriteConfig(config))
     } else {
       new JobRunner(rewriteConfig(config)).run()
     }

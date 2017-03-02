@@ -68,7 +68,7 @@ public interface ApplicationRunner extends StreamProvider {
   /**
    * Method to start an {@link StreamApplication}
    */
-  void start(StreamApplication streamApplication, Config config);
+  void start(StreamApplication streamApplication, Config config) throws Exception;
 
   /**
    * Method to start a Samza job w/ specified {@link TaskFactory}
@@ -77,12 +77,12 @@ public interface ApplicationRunner extends StreamProvider {
    * @param config  the configuration object for the Samza job
    * @param <T>  the type of task to be instantiated
    */
-  <T> void start(TaskFactory<T> taskFactory, Config config);
+  <T> void start(TaskFactory<T> taskFactory, Config config) throws Exception;
 
   /**
    * Method to stop the current running application.
    */
-  void stop();
+  void stop() throws Exception;
 
   /**
    * Method to check whether the application is still running

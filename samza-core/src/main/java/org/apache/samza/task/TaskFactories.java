@@ -30,7 +30,7 @@ import static org.apache.samza.util.ScalaToJavaUtils.defaultValue;
 public class TaskFactories {
   private static final Logger log = LoggerFactory.getLogger(TaskFactories.class);
 
-  public static Object fromTaskClassConfig(Config config) throws ClassNotFoundException {
+  public static TaskFactory fromTaskClassConfig(Config config) throws ClassNotFoundException {
 
     String taskClassName;
 

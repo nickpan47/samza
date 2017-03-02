@@ -25,6 +25,7 @@ import org.apache.samza.operators.StreamGraph;
 import org.apache.samza.config.Config;
 import org.apache.samza.operators.StreamGraphImpl;
 import org.apache.samza.processor.StreamProcessor;
+import org.apache.samza.task.TaskFactories;
 import org.apache.samza.task.TaskFactory;
 
 
@@ -46,24 +47,25 @@ public class LocalApplicationRunner extends AbstractApplicationRunner {
   }
 
   @Override
-  public void start(StreamApplication graphBuilder, Config config) {
-
+  public void start(StreamApplication graphBuilder, Config config) throws Exception {
+    StreamProcessorConfig spConf = new StreamProcessorConfig(config);
+    this.streamProcessor = new StreamProcessor(spConf.getProcessorId(), config, null, TaskFactories.fromTaskClassConfig(config));
   }
 
   @Override
-  public <T> void start(TaskFactory<T> taskFactory, Config config) {
+  public <T> void start(TaskFactory<T> taskFactory, Config config) throws Exception {
     StreamProcessorConfig spConf = new StreamProcessorConfig(config);
     this.streamProcessor = new StreamProcessor(spConf.getProcessorId(), config, null, taskFactory);
   }
 
   @Override
-  public void stop() {
+  public void stop()throws Exception {
     this.streamProcessor.stop();
   }
 
   @Override
   public boolean isRunning() throws Exception {
-    return false;
+    return this.streamProcessor.awaitStart(99999999);
   }
 
 }
