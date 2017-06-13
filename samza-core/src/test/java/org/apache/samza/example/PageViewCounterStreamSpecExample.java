@@ -55,14 +55,14 @@ public class PageViewCounterStreamSpecExample {
 
     StreamIO.Input input = StreamIO.<String, PageViewEvent>read("myPageViewEvent")
         .withKeySerde(new StringSerde("UTF-8"))
-        .withMsgSerde(new JsonSerde<>())
+        .withMsgSerde(new JsonSerde<PageViewEvent>())
         .from(kafkaSystem);
     StreamIO.Output output = StreamIO.<String, PageViewCount>write("pageViewEventPerMemberStream")
         .withKeySerde(new StringSerde("UTF-8"))
-        .withMsgSerde(new JsonSerde<>()).
+        .withMsgSerde(new JsonSerde<PageViewCount>()).
         to(kafkaSystem);
 
-    app.<String, PageViewEvent, PageViewEvent>input(input, (k, m) -> m)
+    app.<String, Object, PageViewEvent>input(input, (k, m) -> (PageViewEvent) m)
         .window(Windows.<PageViewEvent, String, Integer>keyedTumblingWindow(m -> m.memberId, Duration.ofSeconds(10),
             () -> 0, (m, c) -> c + 1)
             .setEarlyTrigger(Triggers.repeat(Triggers.count(5)))
