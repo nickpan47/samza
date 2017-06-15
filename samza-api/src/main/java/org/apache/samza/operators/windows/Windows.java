@@ -125,6 +125,16 @@ public final class Windows {
    */
   public static <M, K, WV> Window<M, K, WV> keyedTumblingWindow(
       Function<? super M, ? extends K> keyFn, Duration interval,
+      Supplier<? extends WV> initialValue, FoldLeftFunction<? super M, WV> aggregator,
+      Class<K> keyClass, Class<WV> wvClass) {
+
+    Trigger<M> defaultTrigger = new TimeTrigger<>(interval);
+    return new WindowInternal<>(defaultTrigger, (Supplier<WV>) initialValue, (FoldLeftFunction<M, WV>) aggregator,
+        (Function<M, K>) keyFn, null, WindowType.TUMBLING);
+  }
+
+  public static <M, K, WV> Window<M, K, WV> keyedTumblingWindow(
+      Function<? super M, ? extends K> keyFn, Duration interval,
       Supplier<? extends WV> initialValue, FoldLeftFunction<? super M, WV> aggregator) {
 
     Trigger<M> defaultTrigger = new TimeTrigger<>(interval);

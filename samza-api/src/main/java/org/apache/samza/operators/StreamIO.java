@@ -12,7 +12,15 @@ public class StreamIO {
     return new Input<K, V>();
   }
 
+  public static <K, V> Input<K, V> read(String streamId, Class<K> keyClass, Class<V> valueClass) {
+    return new Input<K, V>();
+  }
+
   public static <K, V> Output<K, V> write(String streamId) {
+    return new Output<K, V>();
+  }
+
+  public static <K, V> Output<K, V> write(String streamId, Class<K> keyClass, Class<V> valueClass) {
     return new Output<K, V>();
   }
 
@@ -31,7 +39,7 @@ public class StreamIO {
       return this;
     }
 
-    public Input from(IOSystem system) {
+    public Input<K, V> from(IOSystem system) {
       this.inputSystem = system;
       return this;
     }
@@ -40,10 +48,17 @@ public class StreamIO {
   public static class Output<K, V> extends StreamSpec {
     private IOSystem outputSystem;
     private Serde<K> keySerde;
+    private Class<K> keyType;
     private Serde<V> msgSerde;
+    private Class<V> msgType;
 
     public Output<K, V> withKeySerde(Serde<K> keySerde) {
       this.keySerde = keySerde;
+      return this;
+    }
+
+    public Output<K, V> withKeyType(Class<K> keyType) {
+      this.keyType = keyType;
       return this;
     }
 
@@ -52,7 +67,12 @@ public class StreamIO {
       return this;
     }
 
-    public Output to(IOSystem system) {
+    public Output<K, V> withMsgType(Class<V> msgType) {
+      this.msgType = msgType;
+      return this;
+    }
+
+    public Output<K, V> to(IOSystem system) {
       this.outputSystem = system;
       return this;
     }

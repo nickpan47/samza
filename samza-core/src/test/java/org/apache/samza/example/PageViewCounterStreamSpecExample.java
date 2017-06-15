@@ -20,17 +20,18 @@ package org.apache.samza.example;
 
 import org.apache.samza.application.StreamApplication;
 import org.apache.samza.config.Config;
-import org.apache.samza.config.MapConfig;
-import org.apache.samza.operators.IOSystem;
 import org.apache.samza.operators.KafkaSystem;
 import org.apache.samza.operators.StreamIO;
+import org.apache.samza.operators.StreamIO.Input;
+import org.apache.samza.operators.StreamIO.Output;
 import org.apache.samza.operators.triggers.Triggers;
 import org.apache.samza.operators.windows.AccumulationMode;
 import org.apache.samza.operators.windows.WindowPane;
 import org.apache.samza.operators.windows.Windows;
 import org.apache.samza.serializers.JsonSerde;
+import org.apache.samza.serializers.JsonSerdeFactory;
 import org.apache.samza.serializers.StringSerde;
-import org.apache.samza.system.StreamSpec;
+import org.apache.samza.serializers.StringSerdeFactory;
 import org.apache.samza.util.CommandLine;
 
 import java.time.Duration;
@@ -67,6 +68,41 @@ public class PageViewCounterStreamSpecExample {
             () -> 0, (m, c) -> c + 1)
             .setEarlyTrigger(Triggers.repeat(Triggers.count(5)))
             .setAccumulationMode(AccumulationMode.DISCARDING))
+        .map(PageViewCount::new)
+        .sendTo(app.output(output, m -> m.memberId, m -> m));
+
+    app.run();
+    app.waitForFinish();
+  }
+
+  // with serde registry
+  public static void mainWithSerdeRegistry(String[] args) {
+    CommandLine cmdLine = new CommandLine();
+    Config config = cmdLine.loadConfig(cmdLine.parser().parse(args));
+
+    StreamApplication app = StreamApplication.create(config)
+        .registerDefaultKeySerde(StringSerdeFactory.class)
+        .registerDefaultValueSerde(JsonSerdeFactory.class)
+        .registerSerde(PageViewEvent.class, JsonSerdeFactory.class);
+
+    KafkaSystem kafkaSystem = KafkaSystem.create("kafka")
+        .withBootstrapServers("localhost:9192")
+        .withConsumerProperties(config)
+        .withProducerProperties(config);
+
+    Input<String, PageViewEvent> input =
+        StreamIO.read("PageViewEvent", String.class, PageViewEvent.class)
+          .from(kafkaSystem);
+
+    Output<String, PageViewEvent> output =
+        StreamIO.write("PageViewEventsPerMember", String.class, PageViewEvent.class)
+          .to(kafkaSystem);
+
+    app.input(input, (k, m) -> m)
+        .window(Windows.<PageViewEvent, String, Integer>keyedTumblingWindow(
+                    m -> m.memberId, Duration.ofSeconds(10), () -> 0, (m, c) -> c + 1, String.class, Integer.class)
+                .setEarlyTrigger(Triggers.repeat(Triggers.count(5)))
+                .setAccumulationMode(AccumulationMode.DISCARDING))
         .map(PageViewCount::new)
         .sendTo(app.output(output, m -> m.memberId, m -> m));
 

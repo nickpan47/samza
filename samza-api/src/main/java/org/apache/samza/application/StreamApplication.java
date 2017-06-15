@@ -24,9 +24,12 @@ import org.apache.samza.job.ApplicationStatus;
 import org.apache.samza.operators.*;
 import org.apache.samza.operators.functions.InitableFunction;
 import org.apache.samza.runtime.ApplicationRunner;
+import org.apache.samza.serializers.SerdeFactory;
 import org.apache.samza.system.StreamSpec;
 import org.apache.samza.task.StreamTask;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
@@ -79,6 +82,10 @@ public class StreamApplication {
   private final StreamGraph graph;
   private final ApplicationRunner runner;
 
+  private Class<? extends SerdeFactory> defaultKeySerdeFactoryClass;
+  private Class<? extends SerdeFactory> defaultValueSerdeFactoryClass;
+  private final Map<Class, Class<? extends SerdeFactory>> serdeRegistry = new HashMap<>();
+
   public static StreamApplication create(Config config) {
     StreamGraph graph = new StreamGraph() {
       @Override
@@ -101,6 +108,21 @@ public class StreamApplication {
 
     return new StreamApplication(graph, runner);
 
+  }
+
+  public StreamApplication registerDefaultKeySerde(Class<? extends SerdeFactory> serdeFactoryClass) {
+    this.defaultKeySerdeFactoryClass = serdeFactoryClass;
+    return this;
+  }
+
+  public StreamApplication registerDefaultValueSerde(Class<? extends SerdeFactory> serdeFactoryClass) {
+    this.defaultValueSerdeFactoryClass = serdeFactoryClass;
+    return this;
+  }
+
+  public <T> StreamApplication registerSerde(Class dataClass, Class<? extends SerdeFactory> serdeFactory) {
+    serdeRegistry.put(dataClass, serdeFactory);
+    return this;
   }
 
   private StreamApplication(StreamGraph graph, ApplicationRunner runner) {
@@ -126,7 +148,7 @@ public class StreamApplication {
     return this.graph.getInputStream(streamId, msgBuilder);
   }
 
-  public <K, V, M> MessageStream<M> input(StreamIO.Input input, BiFunction<? super K, ? super V, ? extends M> msgBuilder) {
+  public <K, V, M> MessageStream<M> input(StreamIO.Input<K, V> input, BiFunction<? super K, ? super V, ? extends M> msgBuilder) {
     return this.graph.getInputStream(input.getId(), msgBuilder);
   }
 
@@ -220,5 +242,4 @@ public class StreamApplication {
   public StreamSpec getStreamSpec(String streamId) {
     return this.runner.getStreamSpec(streamId);
   }
-
 }

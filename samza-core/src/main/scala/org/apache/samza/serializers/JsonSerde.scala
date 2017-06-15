@@ -47,6 +47,6 @@ class JsonSerde[T] extends Serde[T] {
 
 }
 
-class JsonSerdeFactory extends SerdeFactory[Object] {
-  def getSerde(name: String, config: Config) = new JsonSerde
+class JsonSerdeFactory[T] extends SerdeFactory[T] {
+  def getSerde(name: String, config: Config) : Serde[T] = new JsonSerde[T]
 }
