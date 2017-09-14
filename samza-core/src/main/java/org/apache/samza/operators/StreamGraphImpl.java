@@ -19,7 +19,9 @@
 package org.apache.samza.operators;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import org.apache.samza.config.Config;
 import org.apache.samza.config.JobConfig;
 import org.apache.samza.operators.functions.MapFunction;
@@ -68,15 +70,19 @@ public class StreamGraphImpl implements StreamGraph {
                                                    OperatorBiFunction<? super K, ? super V, ? extends M> msgBuilder)
       throws IOException {
 
-    if (inputOperators.containsKey(inputDescriptor.getStreamSpec())) {
-      throw new IllegalStateException("getInputStream() invoked multiple times "
-          + "with the same streamId: " + inputDescriptor.getStreamId());
-    }
+    List<MessageStream<M>> inputs = new ArrayList<>();
+    inputDescriptor.getStreamSpecs().forEach(spec -> {
+      if (inputOperators.containsKey(spec)) {
+        throw new IllegalStateException("getInputStream() invoked multiple times " + "with the same streamId: " + inputDescriptor.getStreamId());
+      }
 
-    StreamSpec streamSpec = inputDescriptor.getStreamSpec();
-    InputOperatorSpec<K, V, M> opSpec = new InputOperatorSpec<K, V, M>(streamSpec, msgBuilder, this.getNextOpId());
-    inputOperators.put(streamSpec, opSpec);
-    return new MessageStreamImpl<>(this, opSpec);
+      StreamSpec streamSpec = spec;
+      InputOperatorSpec<K, V, M> opSpec = new InputOperatorSpec<K, V, M>(streamSpec, inputDescriptor.getReader(), msgBuilder, this.getNextOpId());
+      inputOperators.put(streamSpec, opSpec);
+      inputs.add(new MessageStreamImpl<>(this, opSpec));
+    });
+
+    return MessageStream.mergeAll(inputs);
   }
 
   @Override
@@ -132,7 +138,8 @@ public class StreamGraphImpl implements StreamGraph {
     StreamDescriptor.Output<K, V> outStrm = StreamDescriptor.<K, V>output(streamId)
         .from(this.defaultSystem);
 
-    StreamSpec streamSpec = inStrm.getStreamSpec();
+    // intermediate stream should only have one StreamSpec
+    StreamSpec streamSpec = inStrm.getStreamSpecs().iterator().next();
     if (inputOperators.containsKey(streamSpec) || outputStreams.containsKey(streamSpec)) {
       throw new IllegalStateException("getIntermediateStream() invoked multiple times "
           + "with the same streamId: " + streamId);

@@ -19,12 +19,11 @@
 package org.apache.samza.example;
 
 import java.io.IOException;
+import java.time.Duration;
 import java.util.ArrayList;
 import org.apache.samza.application.StreamApplication;
 import org.apache.samza.application.StreamApplications;
 import org.apache.samza.config.Config;
-import org.apache.samza.system.IncomingMessageEnvelope;
-import org.apache.samza.system.kafka.KafkaSystem;
 import org.apache.samza.operators.StreamDescriptor;
 import org.apache.samza.operators.triggers.Triggers;
 import org.apache.samza.operators.windows.AccumulationMode;
@@ -32,37 +31,31 @@ import org.apache.samza.operators.windows.WindowPane;
 import org.apache.samza.operators.windows.Windows;
 import org.apache.samza.serializers.JsonSerde;
 import org.apache.samza.serializers.StringSerde;
+import org.apache.samza.system.IncomingMessageEnvelope;
+import org.apache.samza.system.dali.DaliStreamFactory;
+import org.apache.samza.system.kafka.KafkaStreamFactory;
 import org.apache.samza.util.CommandLine;
-
-import java.time.Duration;
 
 
 /**
  * Example code to implement window-based counter
  */
-public class PageViewCounterExample {
+public class DaliViewExample {
 
   // local execution mode
   public static void main(String[] args) throws IOException {
     CommandLine cmdLine = new CommandLine();
     Config config = cmdLine.loadConfig(cmdLine.parser().parse(args));
 
-    KafkaSystem kafkaSystem = KafkaSystem.create("kafka")
-        .withBootstrapServers("localhost:9192")
-        .withConsumerProperties(config)
-        .withProducerProperties(config);
+    DaliStreamFactory daliFactory = DaliStreamFactory.create("dali").withViewMetadata("url://viewmetastore");
+    KafkaStreamFactory kafkaFactory = KafkaStreamFactory.create("kafka").withBootstrapServers("localhost:9092");
 
-    StreamDescriptor.Input<String, PageViewEvent> input = StreamDescriptor.<String, PageViewEvent>input("myPageViewEevent")
+    StreamDescriptor.Input<String, PageViewEvent> input =
+        daliFactory.<String, PageViewEvent>getInputStreamDescriptor("DaliPageViewEevent");
+    StreamDescriptor.Output<String, PageViewCount> output =
+        kafkaFactory.<String, PageViewCount>getOutputStreamDescriptor("pageViewEventPerMemberStream")
         .withKeySerde(new StringSerde("UTF-8"))
-        .withMsgSerde(new JsonSerde<>())
-        .withReader(ime -> new ArrayList<IncomingMessageEnvelope>() {{
-          new IncomingMessageEnvelope(ime.getSystemStreamPartition(), ime.getOffset(), (String) ime.getKey(), (PageViewEvent) ime.getMessage());
-        }})
-        .from(kafkaSystem);
-    StreamDescriptor.Output<String, PageViewCount> output = StreamDescriptor.<String, PageViewCount>output("pageViewEventPerMemberStream")
-        .withKeySerde(new StringSerde("UTF-8"))
-        .withMsgSerde(new JsonSerde<>())
-        .from(kafkaSystem);
+        .withMsgSerde(new JsonSerde<>());
 
     StreamApplication app = StreamApplications.createStreamApp(config);
     app.openInput(input)

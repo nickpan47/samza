@@ -37,6 +37,8 @@ public class TaskApplication<T> extends ApplicationBase {
   }
 
   public TaskApplication<T> addInputs(List<StreamDescriptor.Input> inputs) {
+    // 1. for Dali inputs, get the physical StreamSpecs and add into taskInputs
+    // 2. create a wrapper task to apply StreamReader function
     this.taskInputs.addAll(inputs);
     return this;
   }

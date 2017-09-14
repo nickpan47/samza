@@ -21,6 +21,8 @@ package org.apache.samza.example;
 import org.apache.samza.application.StreamApplications;
 import org.apache.samza.application.StreamTaskApplication;
 import org.apache.samza.config.Config;
+import org.apache.samza.system.dali.DaliStreamFactory;
+import org.apache.samza.system.kafka.KafkaStreamFactory;
 import org.apache.samza.system.kafka.KafkaSystem;
 import org.apache.samza.operators.StreamDescriptor;
 import org.apache.samza.serializers.JsonSerde;
@@ -49,19 +51,13 @@ public class TaskApplicationExample {
     CommandLine cmdLine = new CommandLine();
     Config config = cmdLine.loadConfig(cmdLine.parser().parse(args));
 
-    KafkaSystem kafkaSystem = KafkaSystem.create("kafka")
-        .withBootstrapServers("localhost:9192")
-        .withConsumerProperties(config)
-        .withProducerProperties(config);
-
-    StreamDescriptor.Input<String, PageViewEvent> input = StreamDescriptor.<String, PageViewEvent>input("myPageViewEvent")
+    DaliStreamFactory daliViewFactory = DaliStreamFactory.create("dali").withViewMetadata("url://daliviewrepo");
+    KafkaStreamFactory kafkaFactory = KafkaStreamFactory.create("kafka").withBootstrapServers("localhost:9092");
+    StreamDescriptor.Input<String, PageViewEvent> input = daliViewFactory.getInputStreamDescriptor("daliView");
+    StreamDescriptor.Output<String, PageViewCount> output = kafkaFactory
+        .<String, PageViewCount>getOutputStreamDescriptor("pageViewEventPerMemberStream")
         .withKeySerde(new StringSerde("UTF-8"))
-        .withMsgSerde(new JsonSerde<>())
-        .from(kafkaSystem);
-    StreamDescriptor.Output<String, PageViewCount> output = StreamDescriptor.<String, PageViewCount>output("pageViewEventPerMemberStream")
-        .withKeySerde(new StringSerde("UTF-8"))
-        .withMsgSerde(new JsonSerde<>())
-        .from(kafkaSystem);
+        .withMsgSerde(new JsonSerde<>());
 
     StreamTaskApplication app = StreamApplications.createStreamTaskApp(config, new MyStreamTaskFactory());
 

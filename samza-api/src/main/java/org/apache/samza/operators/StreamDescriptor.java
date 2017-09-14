@@ -19,7 +19,10 @@
 package org.apache.samza.operators;
 
 import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.Collection;
 import org.apache.samza.serializers.Serde;
+import org.apache.samza.system.IncomingMessageEnvelope;
 import org.apache.samza.system.StreamSpec;
 
 public class StreamDescriptor {
@@ -49,19 +52,23 @@ public class StreamDescriptor {
       return this.msgSerde;
     }
 
-    public StreamSpec getStreamSpec() {
-      return new StreamSpec(this.streamId, this.streamId, system.getSystemName());
-    }
-
     IOSystem getIOSystem() {
       return this.system;
     }
   }
 
   public static class Input<K, V> extends StreamIO<K, V> implements Serializable {
+    private final StreamReader reader;
 
     private Input(String streamId, IOSystem system, Serde<K> keySerde, Serde<V> msgSerde) {
+      this(streamId, system, keySerde, msgSerde, ime -> new ArrayList<IncomingMessageEnvelope>() {{
+        this.add(ime);
+      }});
+    }
+
+    private Input(String streamId, IOSystem system, Serde<K> keySerde, Serde<V> msgSerde, StreamReader reader) {
       super(streamId, system, keySerde, msgSerde);
+      this.reader = reader;
     }
 
     public Input<K, V> withKeySerde(Serde<K> keySerde) {
@@ -76,6 +83,20 @@ public class StreamDescriptor {
       return this.toBuilder().setSystem(system).build();
     }
 
+    public Input<K, V> withReader(StreamReader reader) {
+      return this.toBuilder().setReader(reader).build();
+    }
+
+    public StreamReader getReader() {
+      return this.reader;
+    }
+
+    public Collection<StreamSpec> getStreamSpecs() {
+      return new ArrayList<StreamSpec>() { {
+        this.add(new StreamSpec(Input.this.getStreamId(), Input.this.getStreamId(), Input.this.getIOSystem().getSystemName()));
+      } };
+    }
+
     Builder toBuilder() {
       return new Builder(this);
     }
@@ -85,6 +106,7 @@ public class StreamDescriptor {
       private Serde<K> keySerde;
       private Serde<V> msgSerde;
       private IOSystem system;
+      private StreamReader reader;
 
       Builder(Input<K, V> kvstream) {
         this.streamId = kvstream.getStreamId();
@@ -108,8 +130,13 @@ public class StreamDescriptor {
         return this;
       }
 
+      Builder setReader(StreamReader reader) {
+        this.reader = reader;
+        return this;
+      }
+
       Input<K, V> build() {
-        return new Input<K, V>(this.streamId, this.system, this.keySerde, this.msgSerde);
+        return new Input<K, V>(this.streamId, this.system, this.keySerde, this.msgSerde, reader);
       }
     }
   }
@@ -134,6 +161,10 @@ public class StreamDescriptor {
 
     public Output<K, V> from(IOSystem system) {
       return this.toBuilder().setSystem(system).build();
+    }
+
+    public StreamSpec getStreamSpec() {
+      return new StreamSpec(Output.super.streamId, Output.super.streamId, Output.super.system.getSystemName());
     }
 
     Builder toBuilder() {

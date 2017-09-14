@@ -20,6 +20,7 @@ package org.apache.samza.operators.spec;
 
 import java.io.IOException;
 import org.apache.commons.lang3.tuple.Pair;
+import org.apache.samza.operators.StreamReader;
 import org.apache.samza.operators.functions.OperatorBiFunction;
 import org.apache.samza.system.StreamSpec;
 
@@ -34,16 +35,22 @@ import org.apache.samza.system.StreamSpec;
 public class InputOperatorSpec<K, V, M> extends OperatorSpec<Pair<K, V>, M> {
 
   private final StreamSpec streamSpec;
+  private final StreamReader streamReader;
   private final OperatorBiFunction<? super K, ? super V, ? extends M> msgBuilder;
 
-  public InputOperatorSpec(StreamSpec streamSpec, OperatorBiFunction<? super K, ? super V, ? extends M> msgBuilder, int opId) {
+  public InputOperatorSpec(StreamSpec streamSpec, StreamReader reader, OperatorBiFunction<? super K, ? super V, ? extends M> msgBuilder, int opId) {
     super(OpCode.INPUT, opId);
     this.streamSpec = streamSpec;
     this.msgBuilder = msgBuilder;
+    this.streamReader= reader;
   }
 
   public StreamSpec getStreamSpec() {
     return this.streamSpec;
+  }
+
+  public StreamReader getStreamReader() {
+    return this.streamReader;
   }
 
   public OperatorBiFunction<? super K, ? super V, ? extends M> getMsgBuilder() {
