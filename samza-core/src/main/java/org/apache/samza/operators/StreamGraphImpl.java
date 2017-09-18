@@ -77,7 +77,7 @@ public class StreamGraphImpl implements StreamGraph {
       }
 
       StreamSpec streamSpec = spec;
-      InputOperatorSpec<K, V, M> opSpec = new InputOperatorSpec<K, V, M>(streamSpec, inputDescriptor.getReader(), msgBuilder, this.getNextOpId());
+      InputOperatorSpec<K, V, M> opSpec = new InputOperatorSpec<K, V, M>(streamSpec, inputDescriptor.getReader(spec), msgBuilder, this.getNextOpId());
       inputOperators.put(streamSpec, opSpec);
       inputs.add(new MessageStreamImpl<>(this, opSpec));
     });
@@ -144,7 +144,7 @@ public class StreamGraphImpl implements StreamGraph {
       throw new IllegalStateException("getIntermediateStream() invoked multiple times "
           + "with the same streamId: " + streamId);
     }
-    inputOperators.put(streamSpec, new InputOperatorSpec<>(streamSpec, msgBuilder, this.getNextOpId()));
+    inputOperators.put(streamSpec, new InputOperatorSpec<>(streamSpec, inStrm.getReader(streamSpec), msgBuilder, this.getNextOpId()));
     outputStreams.put(streamSpec, new OutputStreamImpl<>(outStrm, keyExtractor, msgExtractor));
     return new IntermediateMessageStreamImpl<K, V, M>(this, inputOperators.get(streamSpec), outputStreams.get(streamSpec));
   }

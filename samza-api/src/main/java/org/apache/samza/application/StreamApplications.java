@@ -20,9 +20,12 @@ package org.apache.samza.application;
 
 import java.util.HashMap;
 import java.util.Map;
+import org.apache.samza.SamzaException;
 import org.apache.samza.config.Config;
 import org.apache.samza.runtime.ApplicationRunner;
+import org.apache.samza.task.AsyncStreamTask;
 import org.apache.samza.task.AsyncStreamTaskFactory;
+import org.apache.samza.task.StreamTask;
 import org.apache.samza.task.StreamTaskFactory;
 
 /**
@@ -44,16 +47,28 @@ public class StreamApplications {
     return app;
   }
 
-  public static StreamTaskApplication createStreamTaskApp(Config config, StreamTaskFactory streamTaskFactory) {
+  public static StreamTaskApplication createStreamTaskApp(Config config, Class<? extends StreamTask> streamTaskClass) {
     ApplicationRunner runner = ApplicationRunner.fromConfig(config);
-    StreamTaskApplication app = new StreamTaskApplication(streamTaskFactory, runner, config);
+    StreamTaskApplication app = new StreamTaskApplication(() -> {
+      try {
+        return streamTaskClass.newInstance();
+      } catch (InstantiationException | IllegalAccessException e) {
+        throw new SamzaException("Failed to instantiate StreamTask", e);
+      }
+    }, runner, config);
     USER_APPS.put(app.getGlobalAppId(), app);
     return app;
   }
 
-  public static AsyncStreamTaskApplication createAsyncStreamTaskApp(Config config, AsyncStreamTaskFactory asyncStreamTaskFactory) {
+  public static AsyncStreamTaskApplication createAsyncStreamTaskApp(Config config, Class<? extends AsyncStreamTask> asyncStreamTaskClass) {
     ApplicationRunner runner = ApplicationRunner.fromConfig(config);
-    AsyncStreamTaskApplication app = new AsyncStreamTaskApplication(asyncStreamTaskFactory, runner, config);
+    AsyncStreamTaskApplication app = new AsyncStreamTaskApplication(() -> {
+      try {
+        return asyncStreamTaskClass.newInstance();
+      } catch (InstantiationException | IllegalAccessException e) {
+        throw new SamzaException("Failed to instantiate AsyncStreamTask", e);
+      }
+    }, runner, config);
     USER_APPS.put(app.getGlobalAppId(), app);
     return app;
   }

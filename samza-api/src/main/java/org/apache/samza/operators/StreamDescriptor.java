@@ -21,6 +21,8 @@ package org.apache.samza.operators;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
 import org.apache.samza.serializers.Serde;
 import org.apache.samza.system.IncomingMessageEnvelope;
 import org.apache.samza.system.StreamSpec;
@@ -58,17 +60,16 @@ public class StreamDescriptor {
   }
 
   public static class Input<K, V> extends StreamIO<K, V> implements Serializable {
-    private final StreamReader reader;
+    private final Map<StreamSpec, StreamReader> readers;
 
     private Input(String streamId, IOSystem system, Serde<K> keySerde, Serde<V> msgSerde) {
-      this(streamId, system, keySerde, msgSerde, ime -> new ArrayList<IncomingMessageEnvelope>() {{
-        this.add(ime);
-      }});
+      super(streamId, system, keySerde, msgSerde);
+      this.readers = new HashMap<>();
     }
 
-    private Input(String streamId, IOSystem system, Serde<K> keySerde, Serde<V> msgSerde, StreamReader reader) {
+    private Input(String streamId, IOSystem system, Serde<K> keySerde, Serde<V> msgSerde, Map<StreamSpec, StreamReader> readers) {
       super(streamId, system, keySerde, msgSerde);
-      this.reader = reader;
+      this.readers = readers;
     }
 
     public Input<K, V> withKeySerde(Serde<K> keySerde) {
@@ -83,12 +84,13 @@ public class StreamDescriptor {
       return this.toBuilder().setSystem(system).build();
     }
 
-    public Input<K, V> withReader(StreamReader reader) {
-      return this.toBuilder().setReader(reader).build();
+    public Input<K, V> withReader(StreamSpec stream, StreamReader reader) {
+      this.readers.put(stream, reader);
+      return this;
     }
 
-    public StreamReader getReader() {
-      return this.reader;
+    public StreamReader getReader(StreamSpec input) {
+      return this.readers.get(input);
     }
 
     public Collection<StreamSpec> getStreamSpecs() {
@@ -106,13 +108,14 @@ public class StreamDescriptor {
       private Serde<K> keySerde;
       private Serde<V> msgSerde;
       private IOSystem system;
-      private StreamReader reader;
+      private Map<StreamSpec, StreamReader> readers;
 
       Builder(Input<K, V> kvstream) {
         this.streamId = kvstream.getStreamId();
         this.keySerde = kvstream.getKeySerde();
         this.msgSerde = kvstream.getMsgSerde();
         this.system = kvstream.getIOSystem();
+        this.readers = kvstream.readers;
       }
 
       Builder setKeySerde(Serde<K> serde) {
@@ -130,13 +133,8 @@ public class StreamDescriptor {
         return this;
       }
 
-      Builder setReader(StreamReader reader) {
-        this.reader = reader;
-        return this;
-      }
-
       Input<K, V> build() {
-        return new Input<K, V>(this.streamId, this.system, this.keySerde, this.msgSerde, reader);
+        return new Input<K, V>(this.streamId, this.system, this.keySerde, this.msgSerde, this.readers);
       }
     }
   }

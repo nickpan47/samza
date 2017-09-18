@@ -26,8 +26,11 @@ public class DaliStreamFactory implements StreamFactory {
 
   @Override
   public <K, V> StreamDescriptor.Input<K, V> getInputStreamDescriptor(String streamId) {
-    // Find StreamSpecs and Reader function from view metadata store
-    // set it to the StreamDescriptor.Input
+    // Find StreamSpecs and StreamReader functions from view metadata store
+    // set all to the StreamDescriptor.Input
+    // e.g. inputStreamDescriptor = StreamDescriptor.input(streamId);
+    // inputStreamDescriptor.addStreamSpec(streamSpec);
+    // inputStreamDescriptor.withReader(streamSpec, readerFunctions);
     return StreamDescriptor.<K, V>input(streamId);
   }
 
