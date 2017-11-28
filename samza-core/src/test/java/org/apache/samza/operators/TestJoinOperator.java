@@ -19,6 +19,7 @@
 package org.apache.samza.operators;
 
 import com.google.common.collect.ImmutableSet;
+import java.util.Map;
 import org.apache.samza.Partition;
 import org.apache.samza.SamzaException;
 import org.apache.samza.application.StreamApplication;
@@ -27,6 +28,7 @@ import org.apache.samza.config.JobConfig;
 import org.apache.samza.container.TaskContextImpl;
 import org.apache.samza.metrics.MetricsRegistryMap;
 import org.apache.samza.operators.functions.JoinFunction;
+import org.apache.samza.operators.functions.KeyedStreamTableJoinFunction;
 import org.apache.samza.operators.impl.store.TestInMemoryStore;
 import org.apache.samza.operators.impl.store.TimestampedValueSerde;
 import org.apache.samza.runtime.ApplicationRunner;
@@ -37,6 +39,10 @@ import org.apache.samza.system.OutgoingMessageEnvelope;
 import org.apache.samza.system.StreamSpec;
 import org.apache.samza.system.SystemStream;
 import org.apache.samza.system.SystemStreamPartition;
+import org.apache.samza.table.Table;
+import org.apache.samza.table.TableProvider;
+import org.apache.samza.table.TableProviderFactory;
+import org.apache.samza.table.TableSpec;
 import org.apache.samza.task.MessageCollector;
 import org.apache.samza.task.StreamOperatorTask;
 import org.apache.samza.task.TaskContext;
@@ -381,6 +387,71 @@ public class TestJoinOperator {
   private static class SecondStreamIME extends IncomingMessageEnvelope {
     SecondStreamIME(Integer key, Integer value) {
       super(new SystemStreamPartition("insystem2", "instream2", new Partition(0)), "1", key, value);
+    }
+  }
+
+  private static class TestTableDescriptor<K, V> extends TableDescriptor<K,V,TestTableDescriptor<K,V>> {
+
+    /**
+     * Constructs a table descriptor instance
+
+     * @param tableId Id of the table
+     */
+    protected TestTableDescriptor(String tableId) {
+      super(tableId);
+    }
+
+    @Override
+    public TableSpec getTableSpec() {
+      return null;
+    }
+  }
+
+  private static class TestTableProviderFactory implements TableProviderFactory {
+
+    @Override
+    public TableProvider getTableProvider(TableSpec tableSpec) {
+      return new TableProvider() {
+        @Override
+        public Table getTable() {
+          return null;
+        }
+
+        @Override
+        public Map<String, String> generateConfig(Map<String, String> config) {
+          return null;
+        }
+
+        @Override
+        public void start() {
+
+        }
+
+        @Override
+        public void stop() {
+
+        }
+      };
+    }
+  }
+
+  private static class TestJoinTableStreamApplication implements StreamApplication {
+
+    TestJoinTableStreamApplication() {
+    }
+
+    @Override
+    public void init(StreamGraph graph, Config config) {
+      IntegerSerde integerSerde = new IntegerSerde();
+      KVSerde<Integer, Integer> kvSerde = KVSerde.of(integerSerde, integerSerde);
+      MessageStream<KV<Integer, Integer>> inStream = graph.getInputStream("instream", kvSerde);
+      MessageStream<Integer> inStream2 = graph.getInputStream("instream2", integerSerde);
+      Table<KV<Integer, Integer>> table = mock(Table.class);
+
+      SystemStream outputSystemStream = new SystemStream("outputSystem", "outputStream");
+      inStream
+          .join(table, (KeyedStreamTableJoinFunction<Integer, Integer, Integer, Integer>) (message, record) -> message.getValue() + record.getValue())
+          .sink((m, mc, tc) -> mc.send(new OutgoingMessageEnvelope(outputSystemStream, m)));
     }
   }
 }

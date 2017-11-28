@@ -31,7 +31,7 @@ import org.apache.samza.operators.KV;
  * @param <JM> type of join results
  */
 @InterfaceStability.Unstable
-public interface StreamTableJoinFunction<K, V, R, JM> extends InitableFunction, ClosableFunction {
+public interface StreamTableJoinFunction<K, M, R, JM> extends InitableFunction, ClosableFunction {
 
   /**
    * Joins the provided messages and table record, returns the joined message.
@@ -40,6 +40,10 @@ public interface StreamTableJoinFunction<K, V, R, JM> extends InitableFunction, 
    * @param record  the table record
    * @return  the join result
    */
-  JM apply(KV<K, V> message, R record);
+  JM apply(M message, R record);
+
+  K getMessageKey(M message);
+
+  K getRecordKey(R record);
 
 }

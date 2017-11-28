@@ -27,6 +27,7 @@ import org.apache.samza.annotation.InterfaceStability;
 import org.apache.samza.operators.functions.FilterFunction;
 import org.apache.samza.operators.functions.FlatMapFunction;
 import org.apache.samza.operators.functions.JoinFunction;
+import org.apache.samza.operators.functions.KeyedStreamTableJoinFunction;
 import org.apache.samza.operators.functions.MapFunction;
 import org.apache.samza.operators.functions.SinkFunction;
 import org.apache.samza.operators.functions.StreamTableJoinFunction;
@@ -177,8 +178,8 @@ public interface MessageStream<M> {
    * @param <JM> the type of messages resulting from the {@code joinFn}
    * @return the joined {@link MessageStream}
    */
-  <K, V, R, JM> MessageStream<JM> join(Table<K, R> table,
-      StreamTableJoinFunction<? extends K, ? super V, ? super R, ? extends JM> joinFn);
+  <K, R, JM> MessageStream<JM> join(Table<KV<K, R>> table,
+      StreamTableJoinFunction<K, M, KV<K, R>, ? extends JM> joinFn);
 
   /**
    * Merges all {@code otherStreams} with this {@link MessageStream}.
@@ -263,6 +264,6 @@ public interface MessageStream<M> {
    * @param <K> the type of key in the table
    * @param <V> the type of record in the table
    */
-  <K, V> void sendTo(Table<K, V> table);
+  <K, V> void sendTo(Table<KV<K, V>> table);
 
 }

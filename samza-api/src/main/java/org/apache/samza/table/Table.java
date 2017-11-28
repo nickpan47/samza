@@ -19,6 +19,8 @@
 package org.apache.samza.table;
 
 import org.apache.samza.annotation.InterfaceStability;
+import org.apache.samza.operators.KV;
+
 
 /**
  *
@@ -29,5 +31,5 @@ import org.apache.samza.annotation.InterfaceStability;
  * @param <V> the type of the value in this table
  */
 @InterfaceStability.Unstable
-public interface Table<K, V> {
+public interface Table<R extends KV> {
 }
